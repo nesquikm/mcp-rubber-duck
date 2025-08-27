@@ -6,7 +6,7 @@ export async function duckCouncilTool(
   providerManager: ProviderManager,
   args: any
 ) {
-  const { prompt } = args;
+  const { prompt, model } = args;
 
   if (!prompt) {
     throw new Error('Prompt is required for the duck council');
@@ -22,7 +22,7 @@ export async function duckCouncilTool(
   }
 
   // Get responses from all ducks
-  const responses = await providerManager.duckCouncil(prompt);
+  const responses = await providerManager.duckCouncil(prompt, { model });
 
   // Build council response with a panel discussion format
   let response = `${duckArt.panel}\n\n`;

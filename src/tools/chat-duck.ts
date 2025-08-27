@@ -8,7 +8,7 @@ export async function chatDuckTool(
   conversationManager: ConversationManager,
   args: any
 ) {
-  const { conversation_id, message, provider } = args;
+  const { conversation_id, message, provider, model } = args;
 
   if (!conversation_id || !message) {
     throw new Error('conversation_id and message are required');
@@ -42,6 +42,7 @@ export async function chatDuckTool(
   const providerToUse = provider || conversation.provider;
   const response = await providerManager.askDuck(providerToUse, '', {
     messages,
+    model,
   });
 
   // Add assistant response to conversation

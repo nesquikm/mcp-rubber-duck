@@ -8,17 +8,25 @@ export async function askDuckTool(
   cache: ResponseCache,
   args: any
 ) {
-  const { prompt, provider, temperature, max_tokens } = args;
+  const { prompt, provider, model, temperature, max_tokens } = args;
 
   if (!prompt) {
     throw new Error('Prompt is required');
+  }
+
+  // Validate model if provided
+  if (model && provider) {
+    const isValid = providerManager.validateModel(provider, model);
+    if (!isValid) {
+      logger.warn(`Model ${model} may not be valid for provider ${provider}`);
+    }
   }
 
   // Generate cache key
   const cacheKey = cache.generateKey(
     provider || 'default',
     prompt,
-    { temperature, max_tokens }
+    { model, temperature, max_tokens }
   );
 
   // Try to get cached response
@@ -26,6 +34,7 @@ export async function askDuckTool(
     cacheKey,
     async () => {
       return await providerManager.askDuck(provider, prompt, {
+        model,
         temperature,
         maxTokens: max_tokens,
       });

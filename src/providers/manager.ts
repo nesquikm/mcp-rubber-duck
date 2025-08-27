@@ -1,7 +1,7 @@
 import { DuckProvider } from './provider.js';
 import { ConfigManager } from '../config/config.js';
 import { ProviderConfig, ProviderHealth, DuckResponse } from '../config/types.js';
-import { ChatOptions } from './types.js';
+import { ChatOptions, ModelInfo } from './types.js';
 import { logger } from '../utils/logger.js';
 import { getRandomDuckMessage } from '../utils/ascii-art.js';
 
@@ -26,6 +26,7 @@ export class ProviderManager {
           apiKey: providerConfig.api_key,
           baseURL: providerConfig.base_url,
           model: providerConfig.default_model,
+          availableModels: providerConfig.models,
           temperature: providerConfig.temperature,
           maxTokens: providerConfig.max_tokens,
           timeout: providerConfig.timeout,
@@ -199,5 +200,44 @@ export class ProviderManager {
 
   getProviderNames(): string[] {
     return Array.from(this.providers.keys());
+  }
+
+  async getAvailableModels(providerName: string): Promise<ModelInfo[]> {
+    const provider = this.providers.get(providerName);
+    if (!provider) {
+      throw new Error(`Provider ${providerName} not found`);
+    }
+    return provider.listModels();
+  }
+
+  async getAllModels(): Promise<Map<string, ModelInfo[]>> {
+    const allModels = new Map<string, ModelInfo[]>();
+    
+    for (const [name, provider] of this.providers) {
+      try {
+        const models = await provider.listModels();
+        allModels.set(name, models);
+      } catch (error) {
+        logger.error(`Failed to get models for ${name}:`, error);
+        allModels.set(name, []);
+      }
+    }
+    
+    return allModels;
+  }
+
+  validateModel(providerName: string, modelId: string): boolean {
+    const provider = this.providers.get(providerName);
+    if (!provider) {
+      return false;
+    }
+    
+    const info = provider.getInfo();
+    if (info.availableModels) {
+      return info.availableModels.includes(modelId);
+    }
+    
+    // If no models list, accept any model (let the API validate)
+    return true;
   }
 }

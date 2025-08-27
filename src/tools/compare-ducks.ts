@@ -8,14 +8,14 @@ export async function compareDucksTool(
   cache: ResponseCache,
   args: any
 ) {
-  const { prompt, providers } = args;
+  const { prompt, providers, model } = args;
 
   if (!prompt) {
     throw new Error('Prompt is required');
   }
 
   // Get responses from multiple ducks
-  const responses = await providerManager.compareDucks(prompt, providers);
+  const responses = await providerManager.compareDucks(prompt, providers, { model });
 
   // Build comparison response
   let response = `${duckArt.panel}\n`;

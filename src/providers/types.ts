@@ -1,9 +1,19 @@
 import { ConversationMessage } from '../config/types.js';
 
+export interface ModelInfo {
+  id: string;
+  created?: number;
+  owned_by?: string;
+  object?: string;
+  context_window?: number;
+  description?: string;
+}
+
 export interface ProviderOptions {
   apiKey?: string;
   baseURL: string;
   model: string;
+  availableModels?: string[];
   temperature?: number;
   maxTokens?: number;
   timeout?: number;
@@ -13,6 +23,7 @@ export interface ProviderOptions {
 
 export interface ChatOptions {
   messages: ConversationMessage[];
+  model?: string;
   stream?: boolean;
   temperature?: number;
   maxTokens?: number;

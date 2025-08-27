@@ -18,6 +18,7 @@ import { duckArt, getRandomDuckMessage } from './utils/ascii-art.js';
 import { askDuckTool } from './tools/ask-duck.js';
 import { chatDuckTool } from './tools/chat-duck.js';
 import { listDucksTool } from './tools/list-ducks.js';
+import { listModelsTool } from './tools/list-models.js';
 import { compareDucksTool } from './tools/compare-ducks.js';
 import { duckCouncilTool } from './tools/duck-council.js';
 
@@ -85,6 +86,12 @@ export class RubberDuckServer {
               args
             );
 
+          case 'list_models':
+            return await listModelsTool(
+              this.providerManager,
+              args
+            );
+
           case 'compare_ducks':
             return await compareDucksTool(
               this.providerManager,
@@ -137,6 +144,10 @@ export class RubberDuckServer {
               type: 'string',
               description: 'The provider name (optional, uses default if not specified)',
             },
+            model: {
+              type: 'string',
+              description: 'Specific model to use (optional, uses provider default if not specified)',
+            },
             temperature: {
               type: 'number',
               description: 'Temperature for response generation (0-2)',
@@ -170,6 +181,10 @@ export class RubberDuckServer {
               type: 'string',
               description: 'Provider to use (can switch mid-conversation)',
             },
+            model: {
+              type: 'string',
+              description: 'Specific model to use (optional)',
+            },
           },
           required: ['conversation_id', 'message'],
         },
@@ -183,6 +198,24 @@ export class RubberDuckServer {
             check_health: {
               type: 'boolean',
               description: 'Perform health check on all providers',
+              default: false,
+            },
+          },
+        },
+      },
+      {
+        name: 'list_models',
+        description: 'List available models for LLM providers',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            provider: {
+              type: 'string',
+              description: 'Provider name (optional, lists all if not specified)',
+            },
+            fetch_latest: {
+              type: 'boolean',
+              description: 'Fetch latest models from API vs using cached/configured',
               default: false,
             },
           },
@@ -205,6 +238,10 @@ export class RubberDuckServer {
               },
               description: 'List of provider names to query (optional, uses all if not specified)',
             },
+            model: {
+              type: 'string',
+              description: 'Specific model to use for all providers (optional)',
+            },
           },
           required: ['prompt'],
         },
@@ -218,6 +255,10 @@ export class RubberDuckServer {
             prompt: {
               type: 'string',
               description: 'The question for the duck council',
+            },
+            model: {
+              type: 'string',
+              description: 'Specific model to use for all ducks (optional)',
             },
           },
           required: ['prompt'],
