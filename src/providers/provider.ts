@@ -6,6 +6,7 @@ import { logger } from '../utils/logger.js';
 export class DuckProvider {
   private client: OpenAI;
   private options: ProviderOptions;
+  private useMaxCompletionTokens: boolean | null = null; // Cache which parameter works
   public name: string;
   public nickname: string;
 
@@ -26,15 +27,16 @@ export class DuckProvider {
     try {
       const messages = this.prepareMessages(options.messages, options.systemPrompt);
       const modelToUse = options.model || this.options.model;
+      const maxTokens = options.maxTokens ?? this.options.maxTokens ?? 2000;
       
-      const response = await this.client.chat.completions.create({
+      const baseParams = {
         model: modelToUse,
         messages: messages as any,
         temperature: options.temperature ?? this.options.temperature ?? 0.7,
-        max_tokens: options.maxTokens ?? this.options.maxTokens ?? 2000,
         stream: false,
-      });
+      };
 
+      const response = await this.createChatCompletion(baseParams, maxTokens);
       const choice = response.choices[0];
       
       return {
@@ -53,18 +55,59 @@ export class DuckProvider {
     }
   }
 
+  private async createChatCompletion(baseParams: any, maxTokens: number): Promise<any> {
+    // If we already know which parameter to use, use it
+    if (this.useMaxCompletionTokens !== null) {
+      const params = { ...baseParams };
+      if (this.useMaxCompletionTokens) {
+        params.max_completion_tokens = maxTokens;
+      } else {
+        params.max_tokens = maxTokens;
+      }
+      return await this.client.chat.completions.create(params);
+    }
+
+    // First time - try max_completion_tokens first (newer)
+    try {
+      const response = await this.client.chat.completions.create({
+        ...baseParams,
+        max_completion_tokens: maxTokens,
+      });
+      this.useMaxCompletionTokens = true;
+      logger.debug(`Provider ${this.name} uses max_completion_tokens`);
+      return response;
+    } catch (error: any) {
+      // Check if error is about the parameter
+      if (error.message?.includes('max_completion_tokens') || 
+          error.message?.includes('Unsupported parameter')) {
+        // Fallback to max_tokens
+        const response = await this.client.chat.completions.create({
+          ...baseParams,
+          max_tokens: maxTokens,
+        });
+        this.useMaxCompletionTokens = false;
+        logger.debug(`Provider ${this.name} uses max_tokens`);
+        return response;
+      }
+      // Other error - rethrow
+      throw error;
+    }
+  }
+
   async *chatStream(options: ChatOptions): AsyncGenerator<StreamChunk> {
     try {
       const messages = this.prepareMessages(options.messages, options.systemPrompt);
       const modelToUse = options.model || this.options.model;
+      const maxTokens = options.maxTokens ?? this.options.maxTokens ?? 2000;
       
-      const stream = await this.client.chat.completions.create({
+      const baseParams = {
         model: modelToUse,
         messages: messages as any,
         temperature: options.temperature ?? this.options.temperature ?? 0.7,
-        max_tokens: options.maxTokens ?? this.options.maxTokens ?? 2000,
         stream: true,
-      });
+      };
+      
+      const stream = await this.createChatCompletion(baseParams, maxTokens);
 
       for await (const chunk of stream) {
         const content = chunk.choices[0]?.delta?.content || '';
@@ -80,11 +123,15 @@ export class DuckProvider {
 
   async healthCheck(): Promise<boolean> {
     try {
-      const response = await this.client.chat.completions.create({
+      const baseParams = {
         model: this.options.model,
         messages: [{ role: 'user', content: 'Quack?' }],
-        max_tokens: 10,
-      });
+        temperature: 0.5,
+        stream: false,
+      };
+      
+      // Use reasonable token limit for health check (not 10!)
+      const response = await this.createChatCompletion(baseParams, 100);
       
       return !!response.choices[0]?.message?.content;
     } catch (error) {
