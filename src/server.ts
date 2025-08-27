@@ -268,8 +268,12 @@ export class RubberDuckServer {
   }
 
   async start() {
-    console.log(duckArt.welcome);
-    console.log('\n' + getRandomDuckMessage('startup'));
+    // Only show welcome message when not running as MCP server
+    const isMCP = process.env.MCP_SERVER === 'true' || process.argv.includes('--mcp');
+    if (!isMCP) {
+      console.log(duckArt.welcome);
+      console.log('\n' + getRandomDuckMessage('startup'));
+    }
     
     // Start health monitoring
     this.healthMonitor.startMonitoring(60000);
