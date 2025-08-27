@@ -115,6 +115,17 @@ export class ConfigManager {
       };
     }
 
+    // Google Gemini
+    if (process.env.GEMINI_API_KEY) {
+      providers.gemini = {
+        api_key: process.env.GEMINI_API_KEY,
+        base_url: 'https://generativelanguage.googleapis.com/v1beta/openai',
+        models: ['gemini-2.5-flash', 'gemini-2.0-flash'],
+        default_model: 'gemini-2.5-flash',
+        nickname: 'Gemini Duck',
+      };
+    }
+
     // Groq
     if (process.env.GROQ_API_KEY) {
       providers.groq = {

@@ -5,6 +5,7 @@
       "args": ["/path/to/mcp-rubber-duck/dist/index.js"],
       "env": {
         "OPENAI_API_KEY": "your-openai-api-key",
+        "GEMINI_API_KEY": "your-gemini-api-key",
         "GROQ_API_KEY": "your-groq-api-key",
         "LOG_LEVEL": "info"
       }

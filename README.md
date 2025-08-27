@@ -25,6 +25,7 @@ An MCP (Model Context Protocol) server that acts as a bridge to query multiple O
 Any provider with an OpenAI-compatible API endpoint, including:
 
 - **OpenAI** (GPT-4, GPT-3.5)
+- **Google Gemini** (Gemini 2.5 Flash, Gemini 2.0 Flash)
 - **Anthropic** (via OpenAI-compatible endpoints)
 - **Groq** (Llama, Mixtral, Gemma)
 - **Together AI** (Llama, Mixtral, and more)
@@ -69,6 +70,9 @@ Create a `.env` file in the project root:
 ```env
 # OpenAI
 OPENAI_API_KEY=sk-...
+
+# Google Gemini
+GEMINI_API_KEY=...
 
 # Groq
 GROQ_API_KEY=gsk_...
@@ -228,6 +232,11 @@ ollama pull llama3.2
 1. Download LM Studio from https://lmstudio.ai/
 2. Load a model in LM Studio
 3. Start the local server (provides OpenAI-compatible endpoint at localhost:1234/v1)
+
+### Google Gemini
+1. Get API key from [Google AI Studio](https://aistudio.google.com/apikey)
+2. Add to environment: `GEMINI_API_KEY=...`
+3. Uses OpenAI-compatible endpoint (beta)
 
 ### Groq
 1. Get API key from https://console.groq.com/keys
