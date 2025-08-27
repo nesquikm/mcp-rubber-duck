@@ -36,6 +36,11 @@ Any provider with an OpenAI-compatible API endpoint, including:
 - **LM Studio** (Local models)
 - **Custom** (Any OpenAI-compatible endpoint)
 
+## Quick Start
+
+### For Claude Desktop Users
+👉 **[Claude Desktop Setup Guide](./CLAUDE_DESKTOP_SETUP.md)** - Complete setup instructions for using with Claude Desktop
+
 ## Installation
 
 ### Prerequisites
@@ -98,10 +103,11 @@ cp config/config.example.json config/config.json
 
 ### Method 3: Claude Desktop Configuration
 
-Add to your Claude Desktop configuration file:
+**📚 Full Setup Guide**: See [CLAUDE_DESKTOP_SETUP.md](./CLAUDE_DESKTOP_SETUP.md) for detailed Claude Desktop setup instructions.
 
-**macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`
-**Windows**: `%APPDATA%\Claude\claude_desktop_config.json`
+**Quick Config**:
+- **macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`
+- **Windows**: `%APPDATA%\Claude\claude_desktop_config.json`
 
 ```json
 {
@@ -110,8 +116,8 @@ Add to your Claude Desktop configuration file:
       "command": "node",
       "args": ["/absolute/path/to/mcp-rubber-duck/dist/index.js"],
       "env": {
-        "OPENAI_API_KEY": "sk-...",
-        "GROQ_API_KEY": "gsk_...",
+        "OPENAI_API_KEY": "your-api-key",
+        "GEMINI_API_KEY": "your-api-key",
         "DEFAULT_PROVIDER": "openai",
         "LOG_LEVEL": "info"
       }

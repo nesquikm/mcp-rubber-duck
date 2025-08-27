@@ -1,6 +1,6 @@
 import { DuckProvider } from './provider.js';
 import { ConfigManager } from '../config/config.js';
-import { ProviderConfig, ProviderHealth, DuckResponse } from '../config/types.js';
+import { ProviderHealth, DuckResponse } from '../config/types.js';
 import { ChatOptions, ModelInfo } from './types.js';
 import { logger } from '../utils/logger.js';
 import { getRandomDuckMessage } from '../utils/ascii-art.js';
@@ -104,7 +104,14 @@ export class ProviderManager {
         nickname: provider.nickname,
         model: response.model,
         content: response.content,
-        usage: response.usage,
+        usage: response.usage ? {
+          prompt_tokens: response.usage.promptTokens,
+          completion_tokens: response.usage.completionTokens,
+          total_tokens: response.usage.totalTokens,
+          promptTokens: response.usage.promptTokens,
+          completionTokens: response.usage.completionTokens,
+          totalTokens: response.usage.totalTokens,
+        } : undefined,
         latency: Date.now() - startTime,
         cached: false,
       };
@@ -132,14 +139,21 @@ export class ProviderManager {
     }
 
     const promises = providersToUse.map(provider => 
-      this.askDuck(provider.name, prompt, options).catch(error => ({
+      provider ? this.askDuck(provider.name, prompt, options).catch(error => ({
         provider: provider.name,
         nickname: provider.nickname,
         model: '',
         content: `Error: ${error.message}`,
         latency: 0,
         cached: false,
-      }))
+      })) : Promise.resolve({
+        provider: 'unknown',
+        nickname: 'Unknown',
+        model: '',
+        content: 'Error: Invalid provider',
+        latency: 0,
+        cached: false,
+      })
     );
 
     return Promise.all(promises);

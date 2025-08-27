@@ -58,6 +58,9 @@ export interface DuckResponse {
     prompt_tokens: number;
     completion_tokens: number;
     total_tokens: number;
+    promptTokens?: number;
+    completionTokens?: number;
+    totalTokens?: number;
   };
   latency: number;
   cached: boolean;

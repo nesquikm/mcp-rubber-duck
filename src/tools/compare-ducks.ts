@@ -1,11 +1,10 @@
 import { ProviderManager } from '../providers/manager.js';
-import { ResponseCache } from '../services/cache.js';
 import { duckArt } from '../utils/ascii-art.js';
 import { logger } from '../utils/logger.js';
 
 export async function compareDucksTool(
   providerManager: ProviderManager,
-  cache: ResponseCache,
+  _cache: any,
   args: any
 ) {
   const { prompt, providers, model } = args;
