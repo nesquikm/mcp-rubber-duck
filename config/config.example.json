@@ -1,0 +1,93 @@
+{
+  "providers": {
+    "openai": {
+      "api_key": "${OPENAI_API_KEY}",
+      "base_url": "https://api.openai.com/v1",
+      "models": ["gpt-4o", "gpt-4o-mini", "gpt-3.5-turbo"],
+      "default_model": "gpt-4o-mini",
+      "nickname": "GPT Duck",
+      "temperature": 0.7,
+      "max_tokens": 2000
+    },
+    "groq": {
+      "api_key": "${GROQ_API_KEY}",
+      "base_url": "https://api.groq.com/openai/v1",
+      "models": ["llama-3.3-70b-versatile", "mixtral-8x7b-32768", "gemma2-9b-it"],
+      "default_model": "llama-3.3-70b-versatile",
+      "nickname": "Groq Duck",
+      "temperature": 0.7,
+      "max_tokens": 2000
+    },
+    "together": {
+      "api_key": "${TOGETHER_API_KEY}",
+      "base_url": "https://api.together.xyz/v1",
+      "models": ["meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo", "mistralai/Mixtral-8x7B-Instruct-v0.1"],
+      "default_model": "meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo",
+      "nickname": "Together Duck",
+      "temperature": 0.7,
+      "max_tokens": 2000
+    },
+    "perplexity": {
+      "api_key": "${PERPLEXITY_API_KEY}",
+      "base_url": "https://api.perplexity.ai",
+      "models": ["llama-3.1-sonar-small-128k-online", "llama-3.1-sonar-large-128k-online"],
+      "default_model": "llama-3.1-sonar-small-128k-online",
+      "nickname": "Perplexity Duck",
+      "temperature": 0.7,
+      "max_tokens": 2000
+    },
+    "anyscale": {
+      "api_key": "${ANYSCALE_API_KEY}",
+      "base_url": "https://api.endpoints.anyscale.com/v1",
+      "models": ["meta-llama/Llama-3-70b-chat-hf", "mistralai/Mixtral-8x7B-Instruct-v0.1"],
+      "default_model": "meta-llama/Llama-3-70b-chat-hf",
+      "nickname": "Anyscale Duck",
+      "temperature": 0.7,
+      "max_tokens": 2000
+    },
+    "azure_openai": {
+      "api_key": "${AZURE_OPENAI_API_KEY}",
+      "base_url": "https://${AZURE_OPENAI_ENDPOINT}.openai.azure.com",
+      "models": ["gpt-4", "gpt-35-turbo"],
+      "default_model": "gpt-4",
+      "nickname": "Azure Duck",
+      "temperature": 0.7,
+      "max_tokens": 2000
+    },
+    "local_ollama": {
+      "api_key": "not-needed",
+      "base_url": "http://localhost:11434/v1",
+      "models": ["llama3.2", "mistral", "codellama", "phi3"],
+      "default_model": "llama3.2",
+      "nickname": "Local Ollama Duck",
+      "temperature": 0.7,
+      "max_tokens": 2000,
+      "timeout": 60000
+    },
+    "local_lmstudio": {
+      "api_key": "not-needed",
+      "base_url": "http://localhost:1234/v1",
+      "models": ["local-model"],
+      "default_model": "local-model",
+      "nickname": "LM Studio Duck",
+      "temperature": 0.7,
+      "max_tokens": 2000
+    },
+    "custom": {
+      "api_key": "${CUSTOM_API_KEY}",
+      "base_url": "${CUSTOM_BASE_URL}",
+      "models": ["custom-model"],
+      "default_model": "custom-model",
+      "nickname": "Custom Duck",
+      "temperature": 0.7,
+      "max_tokens": 2000,
+      "system_prompt": "You are a helpful assistant."
+    }
+  },
+  "default_provider": "openai",
+  "default_temperature": 0.7,
+  "default_max_tokens": 2000,
+  "cache_ttl": 300,
+  "enable_failover": true,
+  "log_level": "info"
+}

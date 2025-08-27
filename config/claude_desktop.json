@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "rubber-duck": {
+      "command": "node",
+      "args": ["/path/to/mcp-rubber-duck/dist/index.js"],
+      "env": {
+        "OPENAI_API_KEY": "your-openai-api-key",
+        "GROQ_API_KEY": "your-groq-api-key",
+        "LOG_LEVEL": "info"
+      }
+    }
+  }
+}
