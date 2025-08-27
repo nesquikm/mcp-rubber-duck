@@ -137,8 +137,8 @@ export class ConfigManager {
       };
     }
 
-    // Local Ollama (no API key needed)
-    if (process.env.OLLAMA_BASE_URL || this.isOllamaAvailable()) {
+    // Local Ollama (only if explicitly configured)
+    if (process.env.OLLAMA_BASE_URL || process.env.ENABLE_OLLAMA === 'true') {
       providers.ollama = {
         api_key: 'not-needed',
         base_url: process.env.OLLAMA_BASE_URL || 'http://localhost:11434/v1',
@@ -160,11 +160,6 @@ export class ConfigManager {
     }
 
     return providers;
-  }
-
-  private isOllamaAvailable(): boolean {
-    // Simple check - could be enhanced with actual HTTP check
-    return process.platform === 'darwin' || process.platform === 'linux';
   }
 
   getConfig(): Config {
