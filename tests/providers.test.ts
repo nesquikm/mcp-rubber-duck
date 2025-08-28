@@ -4,28 +4,29 @@ import { ProviderManager } from '../src/providers/manager';
 import { ConfigManager } from '../src/config/config';
 
 // Mock OpenAI
-jest.mock('openai', () => {
-  return {
-    default: jest.fn().mockImplementation(() => ({
-      chat: {
-        completions: {
-          create: jest.fn(() => Promise.resolve({
-            choices: [{
-              message: { content: 'Mocked response' },
-              finish_reason: 'stop',
-            }],
-            usage: {
-              prompt_tokens: 10,
-              completion_tokens: 20,
-              total_tokens: 30,
-            },
-            model: 'mock-model',
-          })),
-        },
+const mockCreate = jest.fn().mockImplementation(() => Promise.resolve({
+  choices: [{
+    message: { content: 'Mocked response' },
+    finish_reason: 'stop',
+  }],
+  usage: {
+    prompt_tokens: 10,
+    completion_tokens: 20,
+    total_tokens: 30,
+  },
+  model: 'mock-model',
+}));
+
+jest.mock('openai', () => ({
+  __esModule: true,
+  default: jest.fn().mockImplementation(() => ({
+    chat: {
+      completions: {
+        create: mockCreate,
       },
-    })),
-  };
-});
+    },
+  })),
+}));
 
 // Mock config manager
 jest.mock('../src/config/config');
@@ -35,6 +36,7 @@ describe('DuckProvider', () => {
   let provider: DuckProvider;
 
   beforeEach(() => {
+    jest.clearAllMocks();
     provider = new DuckProvider('test', 'Test Duck', {
       apiKey: 'test-key',
       baseURL: 'https://api.test.com/v1',
@@ -72,6 +74,81 @@ describe('DuckProvider', () => {
     expect(response.content).toBe('Mocked response');
     expect(response.usage).toBeDefined();
     expect(response.model).toBe('mock-model');
+  });
+
+  it('should use correct parameters for o1 models', async () => {
+    mockCreate.mockClear();
+
+    const testProvider = new DuckProvider('test', 'Test Duck', {
+      apiKey: 'test-key',
+      baseURL: 'https://api.test.com/v1',
+      model: 'o1',
+    });
+
+    await testProvider.chat({
+      messages: [{ role: 'user', content: 'Hello', timestamp: new Date() }],
+      model: 'o1',
+    });
+
+    expect(mockCreate).toHaveBeenCalledTimes(1);
+    const calls = (mockCreate as any).mock.calls;
+    expect(calls.length).toBeGreaterThan(0);
+    const callParams = calls[0][0];
+    
+    // o1 models should use max_completion_tokens and NOT have temperature
+    expect(callParams).toHaveProperty('max_completion_tokens');
+    expect(callParams).not.toHaveProperty('max_tokens');
+    expect(callParams).not.toHaveProperty('temperature');
+  });
+
+  it('should use correct parameters for GPT-5 models', async () => {
+    mockCreate.mockClear();
+
+    const testProvider = new DuckProvider('test', 'Test Duck', {
+      apiKey: 'test-key',
+      baseURL: 'https://api.test.com/v1',
+      model: 'gpt-5',
+    });
+
+    await testProvider.chat({
+      messages: [{ role: 'user', content: 'Hello', timestamp: new Date() }],
+      model: 'gpt-5',
+    });
+
+    expect(mockCreate).toHaveBeenCalledTimes(1);
+    const calls = (mockCreate as any).mock.calls;
+    expect(calls.length).toBeGreaterThan(0);
+    const callParams = calls[0][0];
+    
+    // GPT-5 models should use max_completion_tokens and NOT have temperature
+    expect(callParams).toHaveProperty('max_completion_tokens');
+    expect(callParams).not.toHaveProperty('max_tokens');
+    expect(callParams).not.toHaveProperty('temperature');
+  });
+
+  it('should use correct parameters for non-o1 models', async () => {
+    mockCreate.mockClear();
+
+    const testProvider = new DuckProvider('test', 'Test Duck', {
+      apiKey: 'test-key',
+      baseURL: 'https://api.test.com/v1',
+      model: 'gpt-4',
+    });
+
+    await testProvider.chat({
+      messages: [{ role: 'user', content: 'Hello', timestamp: new Date() }],
+      model: 'gpt-4',
+    });
+
+    expect(mockCreate).toHaveBeenCalledTimes(1);
+    const calls = (mockCreate as any).mock.calls;
+    expect(calls.length).toBeGreaterThan(0);
+    const callParams = calls[0][0];
+    
+    // non-o1 models should use max_tokens and have temperature
+    expect(callParams).toHaveProperty('max_tokens');
+    expect(callParams).toHaveProperty('temperature');
+    expect(callParams).not.toHaveProperty('max_completion_tokens');
   });
 });
 
