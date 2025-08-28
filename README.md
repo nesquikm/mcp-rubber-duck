@@ -160,6 +160,16 @@ List all configured providers and their health status.
 }
 ```
 
+### 📊 list_models
+List available models for LLM providers.
+
+```typescript
+{
+  "provider": "openai",     // Optional, lists all if not specified
+  "fetch_latest": false     // Optional, fetch latest from API vs cached
+}
+```
+
 ### 🔍 compare_ducks
 Ask the same question to multiple providers simultaneously.
 
