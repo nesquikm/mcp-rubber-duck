@@ -110,7 +110,7 @@ export class ConfigManager {
         api_key: process.env.OPENAI_API_KEY,
         base_url: 'https://api.openai.com/v1',
         models: ['gpt-4o', 'gpt-4o-mini', 'gpt-3.5-turbo'],
-        default_model: 'gpt-4o-mini',
+        default_model: process.env.OPENAI_DEFAULT_MODEL || 'gpt-4o-mini',
         nickname: 'GPT Duck',
       };
     }
@@ -121,7 +121,7 @@ export class ConfigManager {
         api_key: process.env.GEMINI_API_KEY,
         base_url: 'https://generativelanguage.googleapis.com/v1beta/openai/',
         models: ['gemini-2.5-flash', 'gemini-2.0-flash'],
-        default_model: 'gemini-2.5-flash',
+        default_model: process.env.GEMINI_DEFAULT_MODEL || 'gemini-2.5-flash',
         nickname: 'Gemini Duck',
       };
     }
@@ -132,7 +132,7 @@ export class ConfigManager {
         api_key: process.env.GROQ_API_KEY,
         base_url: 'https://api.groq.com/openai/v1',
         models: ['llama-3.3-70b-versatile', 'mixtral-8x7b-32768'],
-        default_model: 'llama-3.3-70b-versatile',
+        default_model: process.env.GROQ_DEFAULT_MODEL || 'llama-3.3-70b-versatile',
         nickname: 'Groq Duck',
       };
     }
@@ -143,7 +143,7 @@ export class ConfigManager {
         api_key: 'not-needed',
         base_url: process.env.OLLAMA_BASE_URL || 'http://localhost:11434/v1',
         models: ['llama3.2', 'mistral', 'codellama'],
-        default_model: 'llama3.2',
+        default_model: process.env.OLLAMA_DEFAULT_MODEL || 'llama3.2',
         nickname: 'Local Duck',
       };
     }

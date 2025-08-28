@@ -75,17 +75,29 @@ Create a `.env` file in the project root:
 ```env
 # OpenAI
 OPENAI_API_KEY=sk-...
+OPENAI_DEFAULT_MODEL=gpt-4o-mini  # Optional: defaults to gpt-4o-mini
 
 # Google Gemini
 GEMINI_API_KEY=...
+GEMINI_DEFAULT_MODEL=gemini-2.5-flash  # Optional: defaults to gemini-2.5-flash
 
 # Groq
 GROQ_API_KEY=gsk_...
+GROQ_DEFAULT_MODEL=llama-3.3-70b-versatile  # Optional: defaults to llama-3.3-70b-versatile
+
+# Ollama (Local)
+OLLAMA_BASE_URL=http://localhost:11434/v1  # Optional
+OLLAMA_DEFAULT_MODEL=llama3.2  # Optional: defaults to llama3.2
 
 # Together AI
 TOGETHER_API_KEY=...
 
-# Add more as needed
+# Custom Provider
+CUSTOM_API_KEY=...
+CUSTOM_BASE_URL=https://api.example.com/v1
+CUSTOM_DEFAULT_MODEL=custom-model  # Optional: defaults to custom-model
+
+# Global Settings
 DEFAULT_PROVIDER=openai
 DEFAULT_TEMPERATURE=0.7
 DEFAULT_MAX_TOKENS=2000
@@ -117,7 +129,9 @@ cp config/config.example.json config/config.json
       "args": ["/absolute/path/to/mcp-rubber-duck/dist/index.js"],
       "env": {
         "OPENAI_API_KEY": "your-api-key",
+        "OPENAI_DEFAULT_MODEL": "gpt-4o-mini",  // Optional
         "GEMINI_API_KEY": "your-api-key",
+        "GEMINI_DEFAULT_MODEL": "gemini-2.5-flash",  // Optional
         "DEFAULT_PROVIDER": "openai",
         "LOG_LEVEL": "info"
       }
