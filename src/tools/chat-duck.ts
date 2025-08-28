@@ -56,7 +56,8 @@ export async function chatDuckTool(
   // Format response
   const formattedResponse = formatDuckResponse(
     response.nickname,
-    response.content
+    response.content,
+    response.model
   );
 
   // Add conversation info

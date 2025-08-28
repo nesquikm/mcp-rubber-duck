@@ -9,7 +9,7 @@ jest.mock('openai', () => {
     default: jest.fn().mockImplementation(() => ({
       chat: {
         completions: {
-          create: jest.fn().mockResolvedValue({
+          create: jest.fn(() => Promise.resolve({
             choices: [{
               message: { content: 'Mocked response' },
               finish_reason: 'stop',
@@ -20,7 +20,7 @@ jest.mock('openai', () => {
               total_tokens: 30,
             },
             model: 'mock-model',
-          }),
+          })),
         },
       },
     })),

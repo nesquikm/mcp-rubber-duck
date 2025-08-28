@@ -77,6 +77,9 @@ export function getRandomDuckMessage(type: keyof typeof duckMessages): string {
   return messages[Math.floor(Math.random() * messages.length)];
 }
 
-export function formatDuckResponse(provider: string, message: string): string {
+export function formatDuckResponse(provider: string, message: string, model?: string): string {
+  if (model) {
+    return `🦆 [${provider} | ${model}]: ${message}`;
+  }
   return `🦆 [${provider}]: ${message}`;
 }

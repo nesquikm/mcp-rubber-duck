@@ -44,7 +44,8 @@ export async function askDuckTool(
   // Format the response
   const formattedResponse = formatDuckResponse(
     response.nickname,
-    response.content
+    response.content,
+    response.model
   );
 
   // Add usage info if available

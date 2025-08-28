@@ -29,9 +29,10 @@ export async function compareDucksTool(
       response += `❌ ${duckResponse.content}\n`;
     } else {
       response += `${duckResponse.content}\n`;
+      response += `\n📍 Model: ${duckResponse.model}`;
       
       if (duckResponse.usage) {
-        response += `\n📊 Tokens: ${duckResponse.usage.total_tokens}`;
+        response += ` | 📊 Tokens: ${duckResponse.usage.total_tokens}`;
       }
       if (duckResponse.latency > 0) {
         response += ` | ⏱️ ${duckResponse.latency}ms`;
