@@ -64,7 +64,7 @@ export class DuckProvider {
           completionTokens: response.usage.completion_tokens,
           totalTokens: response.usage.total_tokens,
         } : undefined,
-        model: response.model,
+        model: modelToUse,  // Return the requested model, not the resolved one
         finishReason: choice.finish_reason || undefined,
       };
     } catch (error: any) {
