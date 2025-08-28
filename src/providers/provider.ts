@@ -123,7 +123,7 @@ export class DuckProvider {
     try {
       const baseParams: any = {
         model: this.options.model,
-        messages: [{ role: 'user', content: 'Quack?' }],
+        messages: [{ role: 'user', content: 'Say "healthy"' }],
         stream: false,
       };
 
@@ -132,10 +132,21 @@ export class DuckProvider {
         baseParams.temperature = 0.5;
       }
       
-      // Use reasonable token limit for health check (not 10!)
-      const response = await this.createChatCompletion(baseParams, 100, this.options.model);
+      // Use higher token limit for health check to support reasoning models
+      const response = await this.createChatCompletion(baseParams, 500, this.options.model);
       
-      return !!response.choices[0]?.message?.content;
+      const content = response.choices[0]?.message?.content;
+      const hasContent = !!content;
+      
+      if (!hasContent) {
+        logger.warn(`Health check for ${this.name}: No content in response`, {
+          response: JSON.stringify(response, null, 2)
+        });
+      } else {
+        logger.debug(`Health check for ${this.name} succeeded with response: ${content}`);
+      }
+      
+      return hasContent;
     } catch (error) {
       logger.warn(`Health check failed for ${this.name}:`, error);
       return false;
