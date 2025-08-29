@@ -39,7 +39,7 @@ Any provider with an OpenAI-compatible API endpoint, including:
 ## Quick Start
 
 ### For Claude Desktop Users
-👉 **[Claude Desktop Setup Guide](./CLAUDE_DESKTOP_SETUP.md)** - Complete setup instructions for using with Claude Desktop
+👉 **Complete Claude Desktop setup instructions below in [Claude Desktop Configuration](#claude-desktop-configuration)**
 
 ## Installation
 
@@ -113,13 +113,32 @@ cp config/config.example.json config/config.json
 # Edit config/config.json with your API keys and preferences
 ```
 
-### Method 3: Claude Desktop Configuration
+## Claude Desktop Configuration
 
-**📚 Full Setup Guide**: See [CLAUDE_DESKTOP_SETUP.md](./CLAUDE_DESKTOP_SETUP.md) for detailed Claude Desktop setup instructions.
+This is the most common setup method for using MCP Rubber Duck with Claude Desktop.
 
-**Quick Config**:
+### Step 1: Build the Project
+
+First, ensure the project is built:
+
+```bash
+# Clone the repository
+git clone https://github.com/yourusername/mcp-rubber-duck.git
+cd mcp-rubber-duck
+
+# Install dependencies and build
+npm install
+npm run build
+```
+
+### Step 2: Configure Claude Desktop
+
+Edit your Claude Desktop config file:
+
 - **macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`
 - **Windows**: `%APPDATA%\Claude\claude_desktop_config.json`
+
+Add the MCP server configuration:
 
 ```json
 {
@@ -128,10 +147,10 @@ cp config/config.example.json config/config.json
       "command": "node",
       "args": ["/absolute/path/to/mcp-rubber-duck/dist/index.js"],
       "env": {
-        "OPENAI_API_KEY": "your-api-key",
-        "OPENAI_DEFAULT_MODEL": "gpt-4o-mini",  // Optional
-        "GEMINI_API_KEY": "your-api-key",
-        "GEMINI_DEFAULT_MODEL": "gemini-2.5-flash",  // Optional
+        "OPENAI_API_KEY": "your-openai-api-key-here",
+        "OPENAI_DEFAULT_MODEL": "gpt-4o-mini",
+        "GEMINI_API_KEY": "your-gemini-api-key-here", 
+        "GEMINI_DEFAULT_MODEL": "gemini-2.5-flash",
         "DEFAULT_PROVIDER": "openai",
         "LOG_LEVEL": "info"
       }
@@ -139,6 +158,68 @@ cp config/config.example.json config/config.json
   }
 }
 ```
+
+**Important**: Replace the placeholder API keys with your actual keys:
+- `your-openai-api-key-here` → Your OpenAI API key (starts with `sk-`)
+- `your-gemini-api-key-here` → Your Gemini API key from [Google AI Studio](https://aistudio.google.com/apikey)
+
+### Step 3: Restart Claude Desktop
+
+1. Completely quit Claude Desktop (⌘+Q on Mac)
+2. Launch Claude Desktop again
+3. The MCP server should connect automatically
+
+### Step 4: Test the Integration
+
+Once restarted, test these commands in Claude:
+
+#### Check Duck Health
+```
+Use the list_ducks tool with check_health: true
+```
+Should show:
+- ✅ **GPT Duck** (openai) - Healthy
+- ✅ **Gemini Duck** (gemini) - Healthy
+
+#### List Available Models
+```
+Use the list_models tool
+```
+
+#### Ask a Specific Duck
+```
+Use the ask_duck tool with prompt: "What is rubber duck debugging?", provider: "openai"
+```
+
+#### Compare Multiple Ducks
+```
+Use the compare_ducks tool with prompt: "Explain async/await in JavaScript"
+```
+
+#### Test Specific Models
+```
+Use the ask_duck tool with prompt: "Hello", provider: "openai", model: "gpt-4"
+```
+
+### Troubleshooting Claude Desktop Setup
+
+#### If Tools Don't Appear
+1. **Check API Keys**: Ensure your API keys are correctly entered without typos
+2. **Verify Build**: Run `ls -la dist/index.js` to confirm the project built successfully  
+3. **Check Logs**: Look for errors in Claude Desktop's developer console
+4. **Restart**: Fully quit and restart Claude Desktop after config changes
+
+#### Connection Issues
+1. **Config File Path**: Double-check you're editing the correct config file path
+2. **JSON Syntax**: Validate your JSON syntax (no trailing commas, proper quotes)
+3. **Absolute Paths**: Ensure you're using the full absolute path to `dist/index.js`
+4. **File Permissions**: Verify Claude Desktop can read the dist directory
+
+#### Health Check Failures
+If ducks show as unhealthy:
+1. **API Keys**: Verify keys are valid and have sufficient credits/quota
+2. **Network**: Check internet connection and firewall settings
+3. **Rate Limits**: Some providers have strict rate limits for new accounts
 
 ## Available Tools
 
