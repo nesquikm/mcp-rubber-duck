@@ -28,7 +28,6 @@ export class ProviderManager {
           model: providerConfig.default_model,
           availableModels: providerConfig.models,
           temperature: providerConfig.temperature,
-          maxTokens: providerConfig.max_tokens,
           timeout: providerConfig.timeout,
           maxRetries: providerConfig.max_retries,
           systemPrompt: providerConfig.system_prompt,

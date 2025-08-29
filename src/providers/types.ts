@@ -15,7 +15,6 @@ export interface ProviderOptions {
   model: string;
   availableModels?: string[];
   temperature?: number;
-  maxTokens?: number;
   timeout?: number;
   maxRetries?: number;
   systemPrompt?: string;
@@ -26,7 +25,6 @@ export interface ChatOptions {
   model?: string;
   stream?: boolean;
   temperature?: number;
-  maxTokens?: number;
   systemPrompt?: string;
 }
 

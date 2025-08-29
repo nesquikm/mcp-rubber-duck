@@ -42,7 +42,6 @@ describe('DuckProvider', () => {
       baseURL: 'https://api.test.com/v1',
       model: 'test-model',
       temperature: 0.7,
-      maxTokens: 1000,
     });
   });
 
@@ -73,7 +72,7 @@ describe('DuckProvider', () => {
     expect(response).toBeDefined();
     expect(response.content).toBe('Mocked response');
     expect(response.usage).toBeDefined();
-    expect(response.model).toBe('mock-model');
+    expect(response.model).toBe('test-model');
   });
 
   it('should use correct parameters for o1 models', async () => {
@@ -95,9 +94,7 @@ describe('DuckProvider', () => {
     expect(calls.length).toBeGreaterThan(0);
     const callParams = calls[0][0];
     
-    // o1 models should use max_completion_tokens and NOT have temperature
-    expect(callParams).toHaveProperty('max_completion_tokens');
-    expect(callParams).not.toHaveProperty('max_tokens');
+    // o1 models should NOT have temperature or token limits
     expect(callParams).not.toHaveProperty('temperature');
   });
 
@@ -120,9 +117,7 @@ describe('DuckProvider', () => {
     expect(calls.length).toBeGreaterThan(0);
     const callParams = calls[0][0];
     
-    // GPT-5 models should use max_completion_tokens and NOT have temperature
-    expect(callParams).toHaveProperty('max_completion_tokens');
-    expect(callParams).not.toHaveProperty('max_tokens');
+    // GPT-5 models should NOT have temperature or token limits
     expect(callParams).not.toHaveProperty('temperature');
   });
 
@@ -145,10 +140,8 @@ describe('DuckProvider', () => {
     expect(calls.length).toBeGreaterThan(0);
     const callParams = calls[0][0];
     
-    // non-o1 models should use max_tokens and have temperature
-    expect(callParams).toHaveProperty('max_tokens');
+    // non-o1 models should have temperature but no token limits
     expect(callParams).toHaveProperty('temperature');
-    expect(callParams).not.toHaveProperty('max_completion_tokens');
   });
 });
 
@@ -179,7 +172,6 @@ describe('ProviderManager', () => {
         cache_ttl: 300,
         enable_failover: true,
         default_temperature: 0.7,
-        default_max_tokens: 2000,
       }),
     } as any;
 

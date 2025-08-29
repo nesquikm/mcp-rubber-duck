@@ -17,31 +17,25 @@ export class DuckProvider {
     this.client = new OpenAI({
       apiKey: options.apiKey || 'not-needed',
       baseURL: options.baseURL,
-      timeout: options.timeout || 30000,
+      timeout: options.timeout || 300000,
       maxRetries: options.maxRetries || 3,
     });
   }
 
-  private usesMaxCompletionTokens(model: string): boolean {
-    // Reasoning models require max_completion_tokens
-    return model.startsWith('o1') || 
-           model.includes('o1-') ||
-           model.startsWith('o3') ||
-           model.includes('o3-') ||
-           model.startsWith('gpt-5') ||
-           model.includes('gpt-5');
-  }
-
   private supportsTemperature(model: string): boolean {
-    // o1 models don't support temperature parameter
-    return !this.usesMaxCompletionTokens(model);
+    // Reasoning models don't support temperature parameter
+    return !model.startsWith('o1') && 
+           !model.includes('o1-') &&
+           !model.startsWith('o3') &&
+           !model.includes('o3-') &&
+           !model.startsWith('gpt-5') &&
+           !model.includes('gpt-5');
   }
 
   async chat(options: ChatOptions): Promise<ChatResponse> {
     try {
       const messages = this.prepareMessages(options.messages, options.systemPrompt);
       const modelToUse = options.model || this.options.model;
-      const maxTokens = options.maxTokens ?? this.options.maxTokens ?? 2000;
       
       const baseParams: any = {
         model: modelToUse,
@@ -54,7 +48,7 @@ export class DuckProvider {
         baseParams.temperature = options.temperature ?? this.options.temperature ?? 0.7;
       }
 
-      const response = await this.createChatCompletion(baseParams, maxTokens, modelToUse);
+      const response = await this.createChatCompletion(baseParams);
       const choice = response.choices[0];
       
       return {
@@ -73,18 +67,8 @@ export class DuckProvider {
     }
   }
 
-  private async createChatCompletion(baseParams: any, maxTokens: number, model: string): Promise<any> {
+  private async createChatCompletion(baseParams: any): Promise<any> {
     const params = { ...baseParams };
-    
-    // Use the correct parameter based on model type
-    if (this.usesMaxCompletionTokens(model)) {
-      params.max_completion_tokens = maxTokens;
-      logger.debug(`Using max_completion_tokens for model ${model}`);
-    } else {
-      params.max_tokens = maxTokens;
-      logger.debug(`Using max_tokens for model ${model}`);
-    }
-    
     return await this.client.chat.completions.create(params);
   }
 
@@ -92,7 +76,6 @@ export class DuckProvider {
     try {
       const messages = this.prepareMessages(options.messages, options.systemPrompt);
       const modelToUse = options.model || this.options.model;
-      const maxTokens = options.maxTokens ?? this.options.maxTokens ?? 2000;
       
       const baseParams: any = {
         model: modelToUse,
@@ -105,7 +88,7 @@ export class DuckProvider {
         baseParams.temperature = options.temperature ?? this.options.temperature ?? 0.7;
       }
       
-      const stream = await this.createChatCompletion(baseParams, maxTokens, modelToUse);
+      const stream = await this.createChatCompletion(baseParams);
 
       for await (const chunk of stream) {
         const content = chunk.choices[0]?.delta?.content || '';
@@ -132,8 +115,8 @@ export class DuckProvider {
         baseParams.temperature = 0.5;
       }
       
-      // Use higher token limit for health check to support reasoning models
-      const response = await this.createChatCompletion(baseParams, 500, this.options.model);
+      // Health check without token limits
+      const response = await this.createChatCompletion(baseParams);
       
       const content = response.choices[0]?.message?.content;
       const hasContent = !!content;

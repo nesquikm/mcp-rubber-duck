@@ -91,9 +91,6 @@ export class ConfigManager {
     if (process.env.DEFAULT_TEMPERATURE) {
       merged.default_temperature = parseFloat(process.env.DEFAULT_TEMPERATURE);
     }
-    if (process.env.DEFAULT_MAX_TOKENS) {
-      merged.default_max_tokens = parseInt(process.env.DEFAULT_MAX_TOKENS);
-    }
     if (process.env.LOG_LEVEL) {
       merged.log_level = process.env.LOG_LEVEL;
     }

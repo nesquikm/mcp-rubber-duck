@@ -154,11 +154,6 @@ export class RubberDuckServer {
               minimum: 0,
               maximum: 2,
             },
-            max_tokens: {
-              type: 'number',
-              description: 'Maximum tokens for response',
-              minimum: 1,
-            },
           },
           required: ['prompt'],
         },

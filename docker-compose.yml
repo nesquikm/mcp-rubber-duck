@@ -31,7 +31,6 @@ services:
       # Configuration
       - DEFAULT_PROVIDER=${DEFAULT_PROVIDER:-openai}
       - DEFAULT_TEMPERATURE=${DEFAULT_TEMPERATURE:-0.7}
-      - DEFAULT_MAX_TOKENS=${DEFAULT_MAX_TOKENS:-2000}
       - LOG_LEVEL=${LOG_LEVEL:-info}
       
     volumes:

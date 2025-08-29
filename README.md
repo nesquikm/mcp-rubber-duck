@@ -100,7 +100,6 @@ CUSTOM_DEFAULT_MODEL=custom-model  # Optional: defaults to custom-model
 # Global Settings
 DEFAULT_PROVIDER=openai
 DEFAULT_TEMPERATURE=0.7
-DEFAULT_MAX_TOKENS=2000
 LOG_LEVEL=info
 ```
 
@@ -230,8 +229,7 @@ Ask a single question to a specific LLM provider.
 {
   "prompt": "What is rubber duck debugging?",
   "provider": "openai",  // Optional, uses default if not specified
-  "temperature": 0.7,     // Optional
-  "max_tokens": 2000      // Optional
+  "temperature": 0.7     // Optional
 }
 ```
 
