@@ -101,7 +101,16 @@ CUSTOM_DEFAULT_MODEL=custom-model  # Optional: defaults to custom-model
 DEFAULT_PROVIDER=openai
 DEFAULT_TEMPERATURE=0.7
 LOG_LEVEL=info
+
+# Optional: Custom Duck Nicknames (Have fun with these!)
+OPENAI_NICKNAME="DUCK-4"              # Optional: defaults to "GPT Duck"
+GEMINI_NICKNAME="Duckmini"            # Optional: defaults to "Gemini Duck"
+GROQ_NICKNAME="Quackers"              # Optional: defaults to "Groq Duck"
+OLLAMA_NICKNAME="Local Quacker"       # Optional: defaults to "Local Duck"
+CUSTOM_NICKNAME="My Special Duck"     # Optional: defaults to "Custom Duck"
 ```
+
+**Note:** Duck nicknames are completely optional! If you don't set them, you'll get the charming defaults (GPT Duck, Gemini Duck, etc.). If you use a `config.json` file, those nicknames take priority over environment variables.
 
 ### Method 2: Configuration File
 
