@@ -4,8 +4,8 @@ import { ConversationMessage } from '../config/types.js';
 import { logger } from '../utils/logger.js';
 
 export class DuckProvider {
-  private client: OpenAI;
-  private options: ProviderOptions;
+  protected client: OpenAI;
+  protected options: ProviderOptions;
   public name: string;
   public nickname: string;
 
@@ -22,7 +22,7 @@ export class DuckProvider {
     });
   }
 
-  private supportsTemperature(model: string): boolean {
+  protected supportsTemperature(model: string): boolean {
     // Reasoning models don't support temperature parameter
     return !model.startsWith('o1') && 
            !model.includes('o1-') &&
@@ -67,7 +67,7 @@ export class DuckProvider {
     }
   }
 
-  private async createChatCompletion(baseParams: any): Promise<any> {
+  protected async createChatCompletion(baseParams: any): Promise<any> {
     const params = { ...baseParams };
     return await this.client.chat.completions.create(params);
   }
@@ -136,7 +136,7 @@ export class DuckProvider {
     }
   }
 
-  private prepareMessages(
+  protected prepareMessages(
     messages: ConversationMessage[],
     systemPrompt?: string
   ): Array<{ role: string; content: string }> {

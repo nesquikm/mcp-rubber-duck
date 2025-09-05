@@ -12,6 +12,27 @@ export const ProviderConfigSchema = z.object({
   max_retries: z.number().min(0).max(5).optional(),
 });
 
+export const MCPServerConfigSchema = z.object({
+  name: z.string(),
+  type: z.enum(['stdio', 'http']),
+  command: z.string().optional(),
+  args: z.array(z.string()).optional(),
+  url: z.string().url().optional(),
+  apiKey: z.string().optional(),
+  enabled: z.boolean().default(true),
+  retryAttempts: z.number().min(0).max(10).default(3),
+  retryDelay: z.number().min(100).max(30000).default(1000),
+});
+
+export const MCPBridgeConfigSchema = z.object({
+  enabled: z.boolean().default(false),
+  approval_mode: z.enum(['always', 'trusted', 'never']).default('always'),
+  approval_timeout: z.number().min(30).max(3600).default(300), // 5 minutes
+  trusted_tools: z.array(z.string()).default([]), // Global fallback trusted tools
+  trusted_tools_by_server: z.record(z.string(), z.array(z.string())).optional(), // Per-server trusted tools
+  mcp_servers: z.array(MCPServerConfigSchema).default([]),
+});
+
 export const ConfigSchema = z.object({
   providers: z.record(z.string(), ProviderConfigSchema),
   default_provider: z.string().optional(),
@@ -19,9 +40,12 @@ export const ConfigSchema = z.object({
   cache_ttl: z.number().min(0).default(300), // 5 minutes
   enable_failover: z.boolean().default(true),
   log_level: z.enum(['debug', 'info', 'warn', 'error']).default('info'),
+  mcp_bridge: MCPBridgeConfigSchema.optional(),
 });
 
 export type ProviderConfig = z.infer<typeof ProviderConfigSchema>;
+export type MCPServerConfig = z.infer<typeof MCPServerConfigSchema>;
+export type MCPBridgeConfig = z.infer<typeof MCPBridgeConfigSchema>;
 export type Config = z.infer<typeof ConfigSchema>;
 
 export interface ConversationMessage {

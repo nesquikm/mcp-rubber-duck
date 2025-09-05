@@ -1,4 +1,5 @@
 import { ConversationMessage } from '../config/types.js';
+import { FunctionDefinition } from '../services/function-bridge.js';
 
 export interface ModelInfo {
   id: string;
@@ -20,12 +21,23 @@ export interface ProviderOptions {
   systemPrompt?: string;
 }
 
+export interface ToolCall {
+  id: string;
+  type: 'function';
+  function: {
+    name: string;
+    arguments: string; // JSON string
+  };
+}
+
 export interface ChatOptions {
   messages: ConversationMessage[];
   model?: string;
   stream?: boolean;
   temperature?: number;
   systemPrompt?: string;
+  tools?: FunctionDefinition[];
+  toolChoice?: 'auto' | 'none' | { type: 'function'; function: { name: string } };
 }
 
 export interface ChatResponse {
@@ -37,6 +49,7 @@ export interface ChatResponse {
   };
   model: string;
   finishReason?: string;
+  toolCalls?: ToolCall[];
 }
 
 export interface StreamChunk {

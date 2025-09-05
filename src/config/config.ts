@@ -95,6 +95,9 @@ export class ConfigManager {
       merged.log_level = process.env.LOG_LEVEL;
     }
 
+    // Apply MCP bridge configuration from environment
+    merged.mcp_bridge = this.getMCPBridgeConfig(merged.mcp_bridge);
+
     return merged;
   }
 
@@ -157,6 +160,136 @@ export class ConfigManager {
     }
 
     return providers;
+  }
+
+  private getMCPBridgeConfig(existingConfig: any = {}): any {
+    // Don't override if MCP is explicitly disabled
+    if (existingConfig?.enabled === false) {
+      return existingConfig;
+    }
+
+    const mcpConfig = { ...existingConfig };
+
+    // Enable MCP bridge if environment variables are present
+    if (process.env.MCP_BRIDGE_ENABLED !== undefined) {
+      mcpConfig.enabled = process.env.MCP_BRIDGE_ENABLED === 'true';
+    } else if (this.hasMCPServerConfig()) {
+      mcpConfig.enabled = true;
+    }
+
+    // Apply MCP bridge settings
+    if (process.env.MCP_APPROVAL_MODE) {
+      mcpConfig.approval_mode = process.env.MCP_APPROVAL_MODE;
+    }
+    if (process.env.MCP_APPROVAL_TIMEOUT) {
+      mcpConfig.approval_timeout = parseInt(process.env.MCP_APPROVAL_TIMEOUT);
+    }
+    if (process.env.MCP_TRUSTED_TOOLS) {
+      mcpConfig.trusted_tools = process.env.MCP_TRUSTED_TOOLS.split(',').map(t => t.trim());
+    }
+
+    // Parse per-server trusted tools from environment
+    mcpConfig.trusted_tools_by_server = this.getTrustedToolsByServerFromEnv();
+
+    // Configure MCP servers from environment
+    mcpConfig.mcp_servers = this.getMCPServersFromEnv();
+
+    return mcpConfig.enabled || mcpConfig.mcp_servers?.length > 0 ? mcpConfig : existingConfig;
+  }
+
+  private hasMCPServerConfig(): boolean {
+    // Check if any MCP server environment variables are present
+    return Object.keys(process.env).some(key => key.startsWith('MCP_SERVER_'));
+  }
+
+  private getTrustedToolsByServerFromEnv(): Record<string, string[]> {
+    const trustedToolsByServer: Record<string, string[]> = {};
+    
+    // Look for environment variables matching MCP_TRUSTED_TOOLS_{SERVER_NAME}
+    Object.keys(process.env).forEach(key => {
+      const match = key.match(/^MCP_TRUSTED_TOOLS_(.+)$/);
+      if (match) {
+        const serverName = match[1].toLowerCase().replace(/_/g, '-');
+        const toolsStr = process.env[key];
+        
+        if (toolsStr) {
+          if (toolsStr.trim() === '*') {
+            // Wildcard: trust all tools from this server
+            trustedToolsByServer[serverName] = ['*'];
+          } else {
+            // Parse comma-separated list of tools
+            trustedToolsByServer[serverName] = toolsStr.split(',').map(tool => tool.trim());
+          }
+          
+          logger.info(`Found trusted tools for server ${serverName}: ${JSON.stringify(trustedToolsByServer[serverName])}`);
+        }
+      }
+    });
+    
+    return trustedToolsByServer;
+  }
+
+  private getMCPServersFromEnv(): any[] {
+    const servers: any[] = [];
+    const serverNames = new Set<string>();
+
+    // Find all MCP server configurations
+    Object.keys(process.env).forEach(key => {
+      const match = key.match(/^MCP_SERVER_(.+)_(.+)$/);
+      if (match) {
+        serverNames.add(match[1]);
+      }
+    });
+
+    // Build server configurations
+    serverNames.forEach(serverName => {
+      const prefix = `MCP_SERVER_${serverName}_`;
+      const type = process.env[`${prefix}TYPE`];
+      const command = process.env[`${prefix}COMMAND`];
+      const url = process.env[`${prefix}URL`];
+      
+      // For stdio servers, we need type and command
+      // For http servers, we need type and url
+      if (type && ((type === 'stdio' && command) || (type === 'http' && url))) {
+        const server: any = {
+          name: serverName.toLowerCase().replace(/_/g, '-'),
+          type: type,
+          enabled: process.env[`${prefix}ENABLED`] !== 'false',
+        };
+
+        // Add command for stdio servers
+        if (type === 'stdio' && command) {
+          server.command = command;
+        }
+
+        // Optional arguments
+        if (process.env[`${prefix}ARGS`]) {
+          server.args = process.env[`${prefix}ARGS`]!.split(',').map(arg => arg.trim());
+        }
+
+        // Add URL for http servers (required) and stdio servers (optional)
+        if (process.env[`${prefix}URL`]) {
+          server.url = process.env[`${prefix}URL`];
+        }
+
+        // Optional API key
+        if (process.env[`${prefix}API_KEY`]) {
+          server.apiKey = process.env[`${prefix}API_KEY`];
+        }
+
+        // Retry configuration
+        if (process.env[`${prefix}RETRY_ATTEMPTS`]) {
+          server.retryAttempts = parseInt(process.env[`${prefix}RETRY_ATTEMPTS`]!);
+        }
+        if (process.env[`${prefix}RETRY_DELAY`]) {
+          server.retryDelay = parseInt(process.env[`${prefix}RETRY_DELAY`]!);
+        }
+
+        servers.push(server);
+      }
+    });
+
+    return servers;
   }
 
   getConfig(): Config {

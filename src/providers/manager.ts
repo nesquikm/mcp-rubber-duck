@@ -8,7 +8,7 @@ import { getRandomDuckMessage } from '../utils/ascii-art.js';
 export class ProviderManager {
   private providers: Map<string, DuckProvider> = new Map();
   private healthStatus: Map<string, ProviderHealth> = new Map();
-  private configManager: ConfigManager;
+  protected configManager: ConfigManager;
   private defaultProvider?: string;
 
   constructor(configManager: ConfigManager) {
