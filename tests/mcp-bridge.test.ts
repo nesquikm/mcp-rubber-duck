@@ -1,3 +1,4 @@
+import { jest } from '@jest/globals';
 import { ApprovalService } from '../src/services/approval';
 import { FunctionBridge } from '../src/services/function-bridge';
 import { MCPClientManager } from '../src/services/mcp-client-manager';
