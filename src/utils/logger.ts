@@ -1,12 +1,40 @@
 import winston from 'winston';
 import { existsSync, mkdirSync } from 'fs';
-import { join } from 'path';
+import { join, dirname } from 'path';
+import { fileURLToPath } from 'url';
+import { homedir } from 'os';
 
 const logLevel = process.env.LOG_LEVEL || 'info';
 const isMCP = process.env.MCP_SERVER === 'true' || process.argv.includes('--mcp');
 
+// Determine logs directory based on environment and execution context
+function getLogsDirectory(): string {
+  // Allow custom logs directory via environment variable
+  if (process.env.LOGS_DIR) {
+    return process.env.LOGS_DIR;
+  }
+
+  try {
+    // Try to use project directory when possible (development/direct execution)
+    const __filename = fileURLToPath(import.meta.url);
+    const __dirname = dirname(__filename);
+    const projectRoot = join(__dirname, '..', '..');
+    const projectLogsDir = join(projectRoot, 'logs');
+    
+    // Check if we can write to project directory
+    if (existsSync(projectRoot)) {
+      return projectLogsDir;
+    }
+  } catch (error) {
+    // Fall through to user directory if project root detection fails
+  }
+
+  // Fallback to user directory for MCP server or when project root isn't writable
+  return join(homedir(), '.mcp-rubber-duck', 'logs');
+}
+
 // Ensure logs directory exists
-const logsDir = join(process.cwd(), 'logs');
+const logsDir = getLogsDirectory();
 if (!existsSync(logsDir)) {
   mkdirSync(logsDir, { recursive: true });
 }
@@ -47,7 +75,7 @@ export const logger = winston.createLogger({
   transports: [
     new winston.transports.Console({
       format: consoleFormat,
-      silent: isMCP && logLevel !== 'debug', // Silence logs in MCP mode unless debugging
+      silent: isMCP, // Always silence console logs in MCP mode to avoid interfering with JSON-RPC
     }),
   ],
 });
