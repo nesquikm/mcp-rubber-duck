@@ -94,10 +94,19 @@ OLLAMA_DEFAULT_MODEL=llama3.2  # Optional: defaults to llama3.2
 # Together AI
 TOGETHER_API_KEY=...
 
-# Custom Provider
-CUSTOM_API_KEY=...
-CUSTOM_BASE_URL=https://api.example.com/v1
-CUSTOM_DEFAULT_MODEL=custom-model  # Optional: defaults to custom-model
+# Custom Providers (you can add multiple)
+# Format: CUSTOM_{NAME}_* where NAME becomes the provider key (lowercase)
+
+# Example: Add provider "myapi"
+CUSTOM_MYAPI_API_KEY=...
+CUSTOM_MYAPI_BASE_URL=https://api.example.com/v1
+CUSTOM_MYAPI_DEFAULT_MODEL=custom-model  # Optional
+CUSTOM_MYAPI_MODELS=model1,model2        # Optional: comma-separated list
+CUSTOM_MYAPI_NICKNAME=My Custom Duck     # Optional: display name
+
+# Example: Add provider "azure" 
+CUSTOM_AZURE_API_KEY=...
+CUSTOM_AZURE_BASE_URL=https://mycompany.openai.azure.com/v1
 
 # Global Settings
 DEFAULT_PROVIDER=openai
