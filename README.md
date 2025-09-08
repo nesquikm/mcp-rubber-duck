@@ -105,7 +105,7 @@ DEFAULT_TEMPERATURE=0.7
 LOG_LEVEL=info
 
 # MCP Bridge Settings (Optional)
-MCP_BRIDGE_ENABLED=true
+MCP_BRIDGE_ENABLED=true                      # Enable ducks to access external MCP servers
 MCP_APPROVAL_MODE=trusted                    # always, trusted, or never
 MCP_APPROVAL_TIMEOUT=300                     # seconds
 
@@ -170,6 +170,7 @@ Add the MCP server configuration:
       "command": "node",
       "args": ["/absolute/path/to/mcp-rubber-duck/dist/index.js"],
       "env": {
+        "MCP_SERVER": "true",
         "OPENAI_API_KEY": "your-openai-api-key-here",
         "OPENAI_DEFAULT_MODEL": "gpt-4o-mini",
         "GEMINI_API_KEY": "your-gemini-api-key-here", 
@@ -185,6 +186,8 @@ Add the MCP server configuration:
 **Important**: Replace the placeholder API keys with your actual keys:
 - `your-openai-api-key-here` → Your OpenAI API key (starts with `sk-`)
 - `your-gemini-api-key-here` → Your Gemini API key from [Google AI Studio](https://aistudio.google.com/apikey)
+
+**Note**: `MCP_SERVER: "true"` is required - this tells rubber-duck to run as an MCP server for any MCP client (not related to the MCP Bridge feature).
 
 ### Step 3: Restart Claude Desktop
 
@@ -248,13 +251,17 @@ If ducks show as unhealthy:
 
 The MCP Bridge allows your ducks to access tools from other MCP servers, extending their capabilities beyond just chat. Your ducks can now search documentation, access files, query APIs, and much more!
 
+**Note**: This is different from the MCP server integration above:
+- **MCP Bridge** (`MCP_BRIDGE_ENABLED`): Ducks USE external MCP servers as clients
+- **MCP Server** (`MCP_SERVER`): Rubber-duck SERVES as an MCP server to any MCP client
+
 ### Quick Setup
 
 Add these environment variables to enable MCP Bridge:
 
 ```bash
 # Basic MCP Bridge Configuration
-MCP_BRIDGE_ENABLED="true"
+MCP_BRIDGE_ENABLED="true"                # Enable ducks to access external MCP servers
 MCP_APPROVAL_MODE="trusted"              # always, trusted, or never
 MCP_APPROVAL_TIMEOUT="300"               # 5 minutes
 
