@@ -21,6 +21,7 @@ import { duckArt, getRandomDuckMessage } from './utils/ascii-art.js';
 // Import tools
 import { askDuckTool } from './tools/ask-duck.js';
 import { chatDuckTool } from './tools/chat-duck.js';
+import { clearConversationsTool } from './tools/clear-conversations.js';
 import { listDucksTool } from './tools/list-ducks.js';
 import { listModelsTool } from './tools/list-models.js';
 import { compareDucksTool } from './tools/compare-ducks.js';
@@ -141,6 +142,12 @@ export class RubberDuckServer {
           case 'chat_with_duck':
             return await chatDuckTool(
               this.providerManager,
+              this.conversationManager,
+              args
+            );
+
+          case 'clear_conversations':
+            return clearConversationsTool(
               this.conversationManager,
               args
             );
@@ -413,6 +420,14 @@ export class RubberDuckServer {
             },
           },
           required: ['conversation_id', 'message'],
+        },
+      },
+      {
+        name: 'clear_conversations',
+        description: 'Clear all conversation history and start fresh',
+        inputSchema: {
+          type: 'object',
+          properties: {},
         },
       },
       {

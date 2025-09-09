@@ -124,4 +124,23 @@ export class ConversationManager {
 
     return messages;
   }
+
+  clearAll(): { conversationsCleared: number; messagesCleared: number } {
+    let totalMessages = 0;
+    
+    // Count total messages across all conversations
+    for (const conversation of this.conversations.values()) {
+      totalMessages += conversation.messages.length;
+    }
+    
+    const conversationsCleared = this.conversations.size;
+    this.conversations.clear();
+    
+    logger.info(`Cleared ${conversationsCleared} conversations with ${totalMessages} total messages`);
+    
+    return {
+      conversationsCleared,
+      messagesCleared: totalMessages,
+    };
+  }
 }
