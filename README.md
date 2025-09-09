@@ -407,6 +407,15 @@ Have a conversation with context maintained across messages.
 }
 ```
 
+### 🧹 clear_conversations
+Clear all conversation history and start fresh. Useful when switching topics or when context becomes too large.
+
+```typescript
+{
+  // No parameters required
+}
+```
+
 ### 📋 list_ducks
 List all configured providers and their health status.
 
