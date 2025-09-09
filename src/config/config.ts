@@ -148,16 +148,9 @@ export class ConfigManager {
       };
     }
 
-    // Custom provider
-    if (process.env.CUSTOM_API_KEY && process.env.CUSTOM_BASE_URL) {
-      providers.custom = {
-        api_key: process.env.CUSTOM_API_KEY,
-        base_url: process.env.CUSTOM_BASE_URL,
-        models: process.env.CUSTOM_MODELS?.split(',') || ['custom-model'],
-        default_model: process.env.CUSTOM_DEFAULT_MODEL || 'custom-model',
-        nickname: process.env.CUSTOM_NICKNAME || 'Custom Duck',
-      };
-    }
+    // Add all custom providers from environment
+    const customProviders = this.getCustomProvidersFromEnv();
+    Object.assign(providers, customProviders);
 
     return providers;
   }
@@ -227,6 +220,47 @@ export class ConfigManager {
     });
     
     return trustedToolsByServer;
+  }
+
+  private getCustomProvidersFromEnv(): Record<string, any> {
+    const customProviders: Record<string, any> = {};
+    const providerNames = new Set<string>();
+
+    // Find all custom provider configurations
+    Object.keys(process.env).forEach(key => {
+      const match = key.match(/^CUSTOM_(.+)_(API_KEY|BASE_URL|MODELS|DEFAULT_MODEL|NICKNAME)$/);
+      if (match) {
+        const providerName = match[1];
+        providerNames.add(providerName);
+      }
+    });
+
+    // Build provider configurations
+    providerNames.forEach(providerName => {
+      const prefix = `CUSTOM_${providerName}_`;
+      const apiKey = process.env[`${prefix}API_KEY`];
+      const baseUrl = process.env[`${prefix}BASE_URL`];
+      
+      // Both API_KEY and BASE_URL are required
+      if (apiKey && baseUrl) {
+        const providerKey = providerName.toLowerCase();
+        
+        const modelsStr = process.env[`${prefix}MODELS`];
+        const models = modelsStr && modelsStr.trim() ? 
+          modelsStr.split(',').map(m => m.trim()).filter(m => m.length > 0) : 
+          ['custom-model'];
+
+        customProviders[providerKey] = {
+          api_key: apiKey,
+          base_url: baseUrl,
+          models: models.length > 0 ? models : ['custom-model'],
+          default_model: process.env[`${prefix}DEFAULT_MODEL`] || 'custom-model',
+          nickname: process.env[`${prefix}NICKNAME`] || `${providerName} Duck`,
+        };
+      }
+    });
+
+    return customProviders;
   }
 
   private getMCPServersFromEnv(): any[] {
