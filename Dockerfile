@@ -51,6 +51,10 @@ USER nodejs
 # Expose stdio
 EXPOSE 3000
 
+# Add healthcheck for monitoring
+HEALTHCHECK --interval=30s --timeout=10s --retries=3 --start-period=30s \
+  CMD node -e "process.exit(0)" || exit 1
+
 # Use dumb-init to handle signals properly
 ENTRYPOINT ["dumb-init", "--"]
 

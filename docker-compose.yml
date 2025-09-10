@@ -2,21 +2,61 @@ version: '3.8'
 
 services:
   mcp-rubber-duck:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    image: mcp-rubber-duck:latest
+    # Multi-platform Docker image (AMD64, ARM64)
+    # Works on: macOS, Linux, Windows, Raspberry Pi 3+
+    image: ${DOCKER_IMAGE:-ghcr.io/nesquikm/mcp-rubber-duck:latest}
     container_name: mcp-rubber-duck
+    init: true
     restart: unless-stopped
+    profiles:
+      - default
+      - lightweight
+      - desktop
+    
+    # Resource limits - adjust based on your platform
+    # Raspberry Pi: Use 'lightweight' profile (default settings below)
+    # Desktop/Server: Use 'desktop' profile with higher limits
+    deploy:
+      resources:
+        limits:
+          cpus: ${DOCKER_CPU_LIMIT:-1.5}
+          memory: ${DOCKER_MEMORY_LIMIT:-512M}
+        reservations:
+          memory: ${DOCKER_MEMORY_RESERVATION:-256M}
+    
+    # Fallback for older docker-compose versions
+    mem_limit: ${DOCKER_MEMORY_LIMIT:-512m}
+    cpus: ${DOCKER_CPU_LIMIT:-1.5}
+    
+    # Environment variables
     environment:
+      # Node.js optimizations - adjust based on available memory
+      # Pi/lightweight: --max-old-space-size=256
+      # Desktop/server: --max-old-space-size=1024
+      - NODE_OPTIONS=${NODE_OPTIONS:---max-old-space-size=256}
+      - NODE_ENV=production
+      
+      # MCP Server configuration
+      - MCP_SERVER=true
+      
+      # Logging
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+      
+      # Provider configuration
+      - DEFAULT_PROVIDER=${DEFAULT_PROVIDER:-openai}
+      - DEFAULT_TEMPERATURE=${DEFAULT_TEMPERATURE:-0.7}
+      
       # OpenAI Provider
       - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - OPENAI_DEFAULT_MODEL=${OPENAI_DEFAULT_MODEL:-gpt-4o-mini}
       
       # Google Gemini Provider
       - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - GEMINI_DEFAULT_MODEL=${GEMINI_DEFAULT_MODEL:-gemini-2.5-flash}
       
       # Groq Provider
       - GROQ_API_KEY=${GROQ_API_KEY}
+      - GROQ_DEFAULT_MODEL=${GROQ_DEFAULT_MODEL:-llama-3.3-70b-versatile}
       
       # Together AI Provider
       - TOGETHER_API_KEY=${TOGETHER_API_KEY}
@@ -24,42 +64,98 @@ services:
       # Perplexity Provider
       - PERPLEXITY_API_KEY=${PERPLEXITY_API_KEY}
       
-      # Custom Provider
+      # Ollama (Local AI - requires 'with-ollama' profile)
+      - OLLAMA_BASE_URL=${OLLAMA_BASE_URL:-http://ollama:11434/v1}
+      - OLLAMA_DEFAULT_MODEL=${OLLAMA_DEFAULT_MODEL:-llama3.2}
+      
+      # Custom providers (you can add multiple)
       - CUSTOM_API_KEY=${CUSTOM_API_KEY}
       - CUSTOM_BASE_URL=${CUSTOM_BASE_URL}
+      - CUSTOM_DEFAULT_MODEL=${CUSTOM_DEFAULT_MODEL}
       
-      # Configuration
-      - DEFAULT_PROVIDER=${DEFAULT_PROVIDER:-openai}
-      - DEFAULT_TEMPERATURE=${DEFAULT_TEMPERATURE:-0.7}
-      - LOG_LEVEL=${LOG_LEVEL:-info}
+      # MCP Bridge Settings (Optional)
+      - MCP_BRIDGE_ENABLED=${MCP_BRIDGE_ENABLED:-false}
+      - MCP_APPROVAL_MODE=${MCP_APPROVAL_MODE:-trusted}
+      - MCP_APPROVAL_TIMEOUT=${MCP_APPROVAL_TIMEOUT:-300}
       
+    # Volume mounts for persistent data and configuration
     volumes:
-      # Mount config file if needed
-      - ./config/config.json:/app/config/config.json:ro
+      # Mount config directory (read-only)
+      - ./config:/app/config:ro
+      # Mount data directory for logs and cache
+      - ./data:/app/data
+      # Optional: Mount custom .env file
+      - ./.env:/app/.env:ro
       
     # For MCP stdio communication
     stdin_open: true
     tty: true
     
-    # Health check
+    # Logging configuration to prevent disk space issues
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+        
+    # Health check configuration
     healthcheck:
       test: ["CMD", "node", "-e", "process.exit(0)"]
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 10s
-
-  # Optional: Local Ollama service
+      start_period: 30s
+      
+    # Network configuration (optional)
+    # ports:
+    #   - "3000:3000"  # Only uncomment if you need HTTP access
+      
+  # Optional: Local Ollama service (works on all platforms)
+  # Enable with: docker-compose --profile with-ollama up -d
   ollama:
     image: ollama/ollama:latest
     container_name: ollama
     restart: unless-stopped
-    ports:
-      - "11434:11434"
-    volumes:
-      - ollama_data:/root/.ollama
     profiles:
       - with-ollama
+    
+    # Resource limits - adjust based on your platform
+    # Pi: Use default settings below (1GB limit)
+    # Desktop: Increase memory for better performance
+    deploy:
+      resources:
+        limits:
+          cpus: ${OLLAMA_CPU_LIMIT:-2.0}
+          memory: ${OLLAMA_MEMORY_LIMIT:-1G}
+        reservations:
+          memory: ${OLLAMA_MEMORY_RESERVATION:-512M}
+    
+    # Fallback for older docker-compose versions
+    mem_limit: ${OLLAMA_MEMORY_LIMIT:-1g}
+    cpus: ${OLLAMA_CPU_LIMIT:-2.0}
+    
+    ports:
+      - "11434:11434"
+      
+    volumes:
+      - ollama_data:/root/.ollama
+      
+    # Environment for ARM optimization
+    environment:
+      - OLLAMA_HOST=0.0.0.0
+      - OLLAMA_ORIGINS=*
+      
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "3"
 
 volumes:
   ollama_data:
+    driver: local
+
+# Networks (optional)
+networks:
+  default:
+    name: mcp-rubber-duck-network
