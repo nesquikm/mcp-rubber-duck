@@ -1,0 +1,55 @@
+[Unit]
+Description=MCP Rubber Duck with Ollama - Multi-LLM AI Assistant
+Documentation=https://github.com/nesquikm/mcp-rubber-duck
+After=docker.service network-online.target
+Wants=network-online.target
+Requires=docker.service
+
+[Service]
+Type=forking
+Restart=always
+RestartSec=15
+TimeoutStartSec=600
+TimeoutStopSec=180
+
+# User and group
+User=pi
+Group=pi
+
+# Working directory (adjust path as needed)
+WorkingDirectory=/home/pi/mcp-rubber-duck
+
+# Environment
+Environment=COMPOSE_PROJECT_NAME=mcp-rubber-duck
+Environment=COMPOSE_FILE=docker-compose.yml
+Environment=COMPOSE_PROFILES=with-ollama
+
+# Commands
+ExecStartPre=/usr/bin/docker compose -f ${COMPOSE_FILE} down
+ExecStart=/usr/bin/docker compose -f ${COMPOSE_FILE} --profile with-ollama up -d
+ExecStop=/usr/bin/docker compose -f ${COMPOSE_FILE} down
+ExecReload=/usr/bin/docker compose -f ${COMPOSE_FILE} --profile with-ollama restart
+
+# Health check (wait longer for Ollama to start)
+ExecStartPost=/bin/sleep 60
+ExecStartPost=/bin/sh -c 'docker inspect --format="{{.State.Health.Status}}" mcp-rubber-duck | grep -q healthy || exit 1'
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=mcp-rubber-duck-ollama
+
+# Security settings
+NoNewPrivileges=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectHome=yes
+ProtectSystem=strict
+ReadWritePaths=/home/pi/mcp-rubber-duck
+
+# Resource limits (higher for Ollama)
+MemoryMax=2G
+CPUQuota=300%
+
+[Install]
+WantedBy=multi-user.target
