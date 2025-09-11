@@ -55,7 +55,10 @@ jobs:
     runs-on: ubuntu-latest
     # Only build images on push to master (not PRs)
     if: github.event_name == 'push' && github.ref == 'refs/heads/master'
-    
+    permissions:
+      contents: read
+      packages: write
+
     steps:
       - name: 📥 Checkout
         uses: actions/checkout@v4
@@ -109,7 +112,7 @@ jobs:
         run: |
           # Wait a moment for package to appear
           sleep 10
-          
+
           # Try to make package public (may fail if already public)
           gh api --method PATCH \
             "user/packages/container/${{ github.event.repository.name }}" \

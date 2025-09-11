@@ -44,7 +44,10 @@ jobs:
     name: 🐳 Build & Push Release
     needs: test
     runs-on: ubuntu-latest
-    
+    permissions:
+      contents: write
+      packages: write
+
     steps:
       - name: 📥 Checkout
         uses: actions/checkout@v4
@@ -97,7 +100,7 @@ jobs:
         run: |
           # Wait a moment for package to appear
           sleep 10
-          
+
           # Try to make package public (may fail if already public)
           gh api --method PATCH \
             "user/packages/container/${{ github.event.repository.name }}" \
