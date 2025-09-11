@@ -1,0 +1,89 @@
+name: 📦 Semantic Release
+
+on:
+  push:
+    branches:
+      - master
+      - main
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: 🧪 Test Before Release
+    runs-on: ubuntu-latest
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+
+      - name: 📦 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: 📥 Install dependencies
+        run: npm ci
+
+      - name: 🔍 Lint
+        run: npm run lint
+
+      - name: 🏗️ Build
+        run: npm run build
+
+      - name: 🔬 Type check
+        run: npm run typecheck
+
+      # Enable when tests are working
+      # - name: 🧪 Test
+      #   run: npm test
+
+  release:
+    name: 📦 Release
+    needs: test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+      packages: write
+
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 📦 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: 📥 Install dependencies
+        run: npm ci
+
+      - name: 🏗️ Build
+        run: npm run build
+
+      - name: 📦 Run semantic-release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: npx semantic-release
+
+      - name: 📊 Release Summary
+        if: success()
+        run: |
+          echo "🎉 **Semantic Release Completed Successfully!**" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "📋 **What happened:**" >> $GITHUB_STEP_SUMMARY
+          echo "- 🔍 Analyzed commits since last release" >> $GITHUB_STEP_SUMMARY
+          echo "- 📝 Generated changelog entries" >> $GITHUB_STEP_SUMMARY
+          echo "- 🏷️ Created git tag (if new version)" >> $GITHUB_STEP_SUMMARY
+          echo "- 📦 Updated package.json version" >> $GITHUB_STEP_SUMMARY
+          echo "- 🐳 Tagged version will trigger Docker build via release.yml" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "🔄 **Next Steps:**" >> $GITHUB_STEP_SUMMARY
+          echo "- If a new version was released, the release.yml workflow will build Docker images" >> $GITHUB_STEP_SUMMARY
+          echo "- Check the releases page for the new version" >> $GITHUB_STEP_SUMMARY

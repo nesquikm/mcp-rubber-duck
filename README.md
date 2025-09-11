@@ -781,6 +781,10 @@ MIT License - see LICENSE file for details
 - Built on the Model Context Protocol (MCP)
 - Uses OpenAI SDK for universal compatibility
 
+## 📝 Changelog
+
+See [CHANGELOG.md](./CHANGELOG.md) for a detailed history of changes and releases.
+
 ## Support
 
 - Report issues: https://github.com/yourusername/mcp-rubber-duck/issues
