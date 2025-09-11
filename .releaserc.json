@@ -12,7 +12,6 @@
         "changelogFile": "CHANGELOG.md"
       }
     ],
-    "@semantic-release/npm",
     [
       "@semantic-release/git",
       {
@@ -23,14 +22,7 @@
         "message": "chore(release): ${nextRelease.version} [skip ci]\n\n${nextRelease.notes}"
       }
     ],
-    [
-      "@semantic-release/github",
-      {
-        "successComment": "🎉 This ${issue.pull_request ? 'PR is included' : 'issue has been resolved'} in version [${nextRelease.version}](${releases.filter(release => !!release.name)[0].url}) :tada:",
-        "failTitle": "The automated release is failing 🚨",
-        "failComment": "This release from branch `${branch.name}` had failed due to the following errors:\n- ${errors.map(err => err.message).join('\\n- ')}"
-      }
-    ]
+    "@semantic-release/github"
   ],
   "preset": "conventionalcommits",
   "releaseRules": [
