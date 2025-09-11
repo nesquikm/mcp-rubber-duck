@@ -36,6 +36,7 @@ jobs:
         if: always()
         with:
           sarif_file: 'trivy-results.sarif'
+          category: 'trivy-filesystem'
 
       - name: 🐳 Build Docker image for security scan
         if: github.event_name != 'schedule'
@@ -55,6 +56,7 @@ jobs:
         if: always() && github.event_name != 'schedule'
         with:
           sarif_file: 'trivy-docker-results.sarif'
+          category: 'trivy-docker'
 
   dependency-check:
     name: 📦 Dependency Check
@@ -103,6 +105,7 @@ jobs:
         if: always()
         with:
           sarif_file: hadolint-results.sarif
+          category: 'hadolint'
 
   quality-gates:
     name: 🚀 Quality Gates
