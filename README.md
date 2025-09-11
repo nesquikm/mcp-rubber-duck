@@ -765,11 +765,18 @@ mcp-rubber-duck/
 
 ## Contributing
 
-Contributions are welcome! Please:
+🦆 **Want to help make our duck pond better?** 
+
+We love contributions! Whether you're fixing bugs, adding features, or teaching our ducks new tricks, we'd love to have you join the flock.
+
+Check out our [Contributing Guide](./CONTRIBUTING.md) to get started. We promise it's more fun than a regular contributing guide - it has ducks! 🦆
+
+**Quick start for contributors:**
 1. Fork the repository
-2. Create a feature branch
-3. Add tests for new functionality
-4. Submit a pull request
+2. Create a feature branch  
+3. Follow our [conventional commit guidelines](./CONTRIBUTING.md#commit-messages-duck-communication-protocol)
+4. Add tests for new functionality
+5. Submit a pull request
 
 ## License
 
