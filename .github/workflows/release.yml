@@ -1,0 +1,178 @@
+name: 🚀 Release & Deploy
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  test:
+    name: 🧪 Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+
+      - name: 📦 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: 📥 Install dependencies
+        run: npm ci
+
+      - name: 🔍 Lint
+        run: npm run lint
+
+      - name: 🏗️ Build
+        run: npm run build
+
+      - name: 🔬 Type check
+        run: npm run typecheck
+
+      - name: 🧪 Test
+        run: npm test
+
+  build-and-push:
+    name: 🐳 Build & Push Release
+    needs: test
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+
+      - name: 🛠️ Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: 🛠️ Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: 🔑 Login to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 🏷️ Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=ref,event=tag
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
+            type=raw,value=latest
+          labels: |
+            org.opencontainers.image.title=MCP Rubber Duck
+            org.opencontainers.image.description=Multi-platform MCP server for multiple OpenAI-compatible LLMs
+            org.opencontainers.image.version=${{ github.ref_name }}
+
+      - name: 🐳 Build and push Docker image
+        id: build
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            BUILDKIT_INLINE_CACHE=1
+
+      - name: 🔧 Make package public
+        if: success()
+        run: |
+          # Wait a moment for package to appear
+          sleep 10
+          
+          # Try to make package public (may fail if already public)
+          gh api --method PATCH \
+            "user/packages/container/${{ github.event.repository.name }}" \
+            --field visibility=public \
+            --silent || echo "Package may already be public or visibility change failed"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 📋 Generate Release Notes
+        id: release_notes
+        run: |
+          echo "## 🦆 MCP Rubber Duck ${{ github.ref_name }}" > release_notes.md
+          echo "" >> release_notes.md
+          echo "### 🐳 Docker Images" >> release_notes.md
+          echo "" >> release_notes.md
+          echo "**Multi-platform support:** AMD64, ARM64 (works on Mac, Linux, Windows, Raspberry Pi 3+)" >> release_notes.md
+          echo "" >> release_notes.md
+          echo "\`\`\`bash" >> release_notes.md
+          echo "# Pull the latest release" >> release_notes.md
+          echo "docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }}" >> release_notes.md
+          echo "" >> release_notes.md
+          echo "# Or use latest tag" >> release_notes.md
+          echo "docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest" >> release_notes.md
+          echo "" >> release_notes.md
+          echo "# Quick start" >> release_notes.md
+          echo "cp .env.template .env" >> release_notes.md
+          echo "# Edit .env with your API keys" >> release_notes.md
+          echo "docker compose up -d" >> release_notes.md
+          echo "\`\`\`" >> release_notes.md
+          echo "" >> release_notes.md
+          echo "### 📦 Available Tags" >> release_notes.md
+          echo "" >> release_notes.md
+          for tag in $(echo '${{ steps.meta.outputs.tags }}' | tr ',' '\n'); do
+            echo "- \`$tag\`" >> release_notes.md
+          done
+          echo "" >> release_notes.md
+          echo "### 🚀 Deployment Options" >> release_notes.md
+          echo "" >> release_notes.md
+          echo "- **🖥️ Desktop/Server:** Use \`.env.desktop.example\` for optimal performance" >> release_notes.md
+          echo "- **🥧 Raspberry Pi:** Use \`.env.pi.example\` for memory-optimized settings" >> release_notes.md
+          echo "- **☁️ Remote:** Deploy via SSH with \`./scripts/deploy.sh --mode ssh\`" >> release_notes.md
+          echo "" >> release_notes.md
+          echo "### ✨ Features" >> release_notes.md
+          echo "" >> release_notes.md
+          echo "- 🦆 **Multiple AI Ducks:** Query OpenAI, Gemini, Groq, Ollama, and more" >> release_notes.md
+          echo "- 💬 **Conversation Management:** Maintain context across messages" >> release_notes.md
+          echo "- 🏛️ **Duck Council:** Get responses from all configured LLMs" >> release_notes.md
+          echo "- 🔗 **MCP Bridge:** Connect to external MCP servers" >> release_notes.md
+          echo "- 🚀 **Universal Deployment:** Same image works on all platforms" >> release_notes.md
+
+      - name: 🎉 Create GitHub Release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref_name }}
+          release_name: MCP Rubber Duck ${{ github.ref_name }}
+          body_path: release_notes.md
+          draft: false
+          prerelease: false
+
+      - name: 📊 Success Summary
+        if: success()
+        run: |
+          echo "🎉 **Release ${{ github.ref_name }} Published Successfully!**" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "📦 **Docker Images Built:**" >> $GITHUB_STEP_SUMMARY
+          for tag in $(echo '${{ steps.meta.outputs.tags }}' | tr ',' '\n'); do
+            echo "- \`$tag\`" >> $GITHUB_STEP_SUMMARY
+          done
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "🏗️ **Platforms:** AMD64, ARM64" >> $GITHUB_STEP_SUMMARY
+          echo "📍 **Registry:** ${{ env.REGISTRY }}" >> $GITHUB_STEP_SUMMARY
+          echo "🔗 **Package URL:** https://github.com/${{ github.repository }}/pkgs/container/${{ github.event.repository.name }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "🚀 **Quick Test:**" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`bash" >> $GITHUB_STEP_SUMMARY
+          echo "docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "docker run --rm -e OPENAI_API_KEY=your-key ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
