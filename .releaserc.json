@@ -24,7 +24,6 @@
     ],
     "@semantic-release/github"
   ],
-  "preset": "conventionalcommits",
   "releaseRules": [
     {
       "type": "feat",
