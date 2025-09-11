@@ -1,5 +1,5 @@
 import OpenAI from 'openai';
-import { ChatOptions, ChatResponse, ProviderOptions, StreamChunk, ModelInfo } from './types.js';
+import { ChatOptions, ChatResponse, ProviderOptions, StreamChunk, ModelInfo, OpenAIChatParams, OpenAIChatResponse, OpenAIMessage } from './types.js';
 import { ConversationMessage } from '../config/types.js';
 import { logger } from '../utils/logger.js';
 
@@ -37,9 +37,9 @@ export class DuckProvider {
       const messages = this.prepareMessages(options.messages, options.systemPrompt);
       const modelToUse = options.model || this.options.model;
       
-      const baseParams: any = {
+      const baseParams: Partial<OpenAIChatParams> = {
         model: modelToUse,
-        messages: messages as any,
+        messages: messages as OpenAIMessage[],
         stream: false,
       };
 
@@ -61,14 +61,15 @@ export class DuckProvider {
         model: modelToUse,  // Return the requested model, not the resolved one
         finishReason: choice.finish_reason || undefined,
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error(`Provider ${this.name} chat error:`, error);
-      throw new Error(`Duck ${this.nickname} couldn't respond: ${error.message}`);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      throw new Error(`Duck ${this.nickname} couldn't respond: ${errorMessage}`);
     }
   }
 
-  protected async createChatCompletion(baseParams: any): Promise<any> {
-    const params = { ...baseParams };
+  protected async createChatCompletion(baseParams: Partial<OpenAIChatParams>): Promise<OpenAIChatResponse> {
+    const params = { ...baseParams } as OpenAIChatParams;
     return await this.client.chat.completions.create(params);
   }
 
@@ -77,18 +78,16 @@ export class DuckProvider {
       const messages = this.prepareMessages(options.messages, options.systemPrompt);
       const modelToUse = options.model || this.options.model;
       
-      const baseParams: any = {
+      const streamParams = {
         model: modelToUse,
-        messages: messages as any,
-        stream: true,
+        messages: messages as OpenAIMessage[],
+        stream: true as const,
+        ...(this.supportsTemperature(modelToUse) && {
+          temperature: options.temperature ?? this.options.temperature ?? 0.7
+        })
       };
-
-      // Only add temperature if the model supports it
-      if (this.supportsTemperature(modelToUse)) {
-        baseParams.temperature = options.temperature ?? this.options.temperature ?? 0.7;
-      }
       
-      const stream = await this.createChatCompletion(baseParams);
+      const stream = await this.client.chat.completions.create(streamParams);
 
       for await (const chunk of stream) {
         const content = chunk.choices[0]?.delta?.content || '';
@@ -96,17 +95,18 @@ export class DuckProvider {
         
         yield { content, done };
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error(`Provider ${this.name} stream error:`, error);
-      throw new Error(`Duck ${this.nickname} stream failed: ${error.message}`);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      throw new Error(`Duck ${this.nickname} stream failed: ${errorMessage}`);
     }
   }
 
   async healthCheck(): Promise<boolean> {
     try {
-      const baseParams: any = {
+      const baseParams: Partial<OpenAIChatParams> = {
         model: this.options.model,
-        messages: [{ role: 'user', content: 'Say "healthy"' }],
+        messages: [{ role: 'user', content: 'Say "healthy"' }] as OpenAIMessage[],
         stream: false,
       };
 
@@ -176,8 +176,9 @@ export class DuckProvider {
       
       logger.debug(`Fetched ${models.length} models from ${this.name}`);
       return models;
-    } catch (error: any) {
-      logger.warn(`Failed to fetch models from ${this.name}: ${error.message}`);
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      logger.warn(`Failed to fetch models from ${this.name}: ${errorMessage}`);
       // Fall back to configured models
       if (this.options.availableModels && this.options.availableModels.length > 0) {
         return this.options.availableModels.map(id => ({

@@ -53,8 +53,8 @@ const fileFormat = winston.format.combine(
   winston.format.errors({ stack: true }),
   winston.format.splat(),
   winston.format.printf(({ timestamp, level, message, stack, ...meta }) => {
-    let log = `${timestamp} [${level.toUpperCase()}]: ${message}`;
-    if (stack) {
+    let log = `${String(timestamp)} [${String(level).toUpperCase()}]: ${String(message)}`;
+    if (stack && typeof stack === 'string') {
       log += `\nStack: ${stack}`;
     }
     if (Object.keys(meta).length > 0) {

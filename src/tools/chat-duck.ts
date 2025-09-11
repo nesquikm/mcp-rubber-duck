@@ -6,9 +6,14 @@ import { logger } from '../utils/logger.js';
 export async function chatDuckTool(
   providerManager: ProviderManager,
   conversationManager: ConversationManager,
-  args: any
+  args: Record<string, unknown>
 ) {
-  const { conversation_id, message, provider, model } = args;
+  const { conversation_id, message, provider, model } = args as {
+    conversation_id?: string;
+    message?: string;
+    provider?: string;
+    model?: string;
+  };
 
   if (!conversation_id || !message) {
     throw new Error('conversation_id and message are required');

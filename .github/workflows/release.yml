@@ -26,9 +26,8 @@ jobs:
       - name: 📥 Install dependencies
         run: npm ci
 
-      # Temporarily disabled lint to fix deployment
-      # - name: 🔍 Lint
-      #   run: npm run lint
+      - name: 🔍 Lint
+        run: npm run lint
 
       - name: 🏗️ Build
         run: npm run build

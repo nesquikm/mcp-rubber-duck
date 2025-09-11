@@ -6,9 +6,11 @@ import { logger } from '../utils/logger.js';
 export async function listDucksTool(
   providerManager: ProviderManager,
   healthMonitor: HealthMonitor,
-  args: any
+  args: Record<string, unknown>
 ) {
-  const { check_health = false } = args;
+  const { check_health = false } = args as {
+    check_health?: boolean;
+  };
 
   // Perform health check if requested
   if (check_health) {

@@ -1,5 +1,11 @@
 import { ConversationMessage } from '../config/types.js';
 import { FunctionDefinition } from '../services/function-bridge.js';
+import type { 
+  ChatCompletion, 
+  ChatCompletionMessageParam,
+  ChatCompletionMessageToolCall,
+  ChatCompletionCreateParamsNonStreaming
+} from 'openai/resources/chat/completions';
 
 export interface ModelInfo {
   id: string;
@@ -55,4 +61,18 @@ export interface ChatResponse {
 export interface StreamChunk {
   content: string;
   done: boolean;
+}
+
+// OpenAI API parameter types
+export type OpenAIChatParams = ChatCompletionCreateParamsNonStreaming;
+export type OpenAIMessage = ChatCompletionMessageParam;
+export type OpenAIChatResponse = ChatCompletion;
+export type OpenAIToolCall = ChatCompletionMessageToolCall;
+
+// Enhanced response type with MCP functionality
+export interface MCPResult {
+  id: string;
+  success: boolean;
+  data?: unknown;
+  error?: string;
 }

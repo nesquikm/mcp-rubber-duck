@@ -31,7 +31,7 @@ const SENSITIVE_PATTERNS = [
 /**
  * Sanitizes an object by redacting sensitive fields
  */
-function sanitizeObject(obj: any, maxDepth = 5, currentDepth = 0): any {
+function sanitizeObject(obj: unknown, maxDepth = 5, currentDepth = 0): unknown {
   if (currentDepth >= maxDepth) {
     return '[Max depth exceeded]';
   }
@@ -53,13 +53,13 @@ function sanitizeObject(obj: any, maxDepth = 5, currentDepth = 0): any {
   }
 
   if (Array.isArray(obj)) {
-    return obj.map(item => sanitizeObject(item, maxDepth, currentDepth + 1));
+    return obj.map((item: unknown) => sanitizeObject(item, maxDepth, currentDepth + 1));
   }
 
   if (typeof obj === 'object') {
-    const sanitized: any = {};
+    const sanitized: Record<string, unknown> = {};
     
-    for (const [key, value] of Object.entries(obj)) {
+    for (const [key, value] of Object.entries(obj as Record<string, unknown>)) {
       const keyLower = key.toLowerCase();
       
       // Check if the field name is sensitive
@@ -87,7 +87,7 @@ function sanitizeObject(obj: any, maxDepth = 5, currentDepth = 0): any {
  * Safe logger that sanitizes sensitive data before logging
  */
 export class SafeLogger {
-  static debug(message: string, data?: any): void {
+  static debug(message: string, data?: unknown): void {
     if (data) {
       const sanitizedData = sanitizeObject(data);
       logger.debug(message, sanitizedData);
@@ -96,7 +96,7 @@ export class SafeLogger {
     }
   }
 
-  static info(message: string, data?: any): void {
+  static info(message: string, data?: unknown): void {
     if (data) {
       const sanitizedData = sanitizeObject(data);
       logger.info(message, sanitizedData);
@@ -105,7 +105,7 @@ export class SafeLogger {
     }
   }
 
-  static warn(message: string, data?: any): void {
+  static warn(message: string, data?: unknown): void {
     if (data) {
       const sanitizedData = sanitizeObject(data);
       logger.warn(message, sanitizedData);
@@ -114,7 +114,7 @@ export class SafeLogger {
     }
   }
 
-  static error(message: string, data?: any): void {
+  static error(message: string, data?: unknown): void {
     if (data) {
       const sanitizedData = sanitizeObject(data);
       logger.error(message, sanitizedData);
@@ -126,20 +126,21 @@ export class SafeLogger {
   /**
    * Sanitize arguments object specifically for MCP tool calls
    */
-  static sanitizeToolArgs(args: any): any {
+  static sanitizeToolArgs(args: unknown): unknown {
     const sanitized = sanitizeObject(args);
     
     // Additional sanitization for common patterns in tool arguments
     if (typeof sanitized === 'object' && sanitized !== null) {
+      const objSanitized = sanitized as Record<string, unknown>;
       // Sanitize file paths that might contain usernames
-      if (sanitized.path && typeof sanitized.path === 'string') {
-        sanitized.path = sanitized.path.replace(/\/Users\/[^\/]+/, '/Users/[USER]');
-        sanitized.path = sanitized.path.replace(/\\Users\\[^\\]+/, '\\Users\\[USER]');
+      if (objSanitized.path && typeof objSanitized.path === 'string') {
+        objSanitized.path = objSanitized.path.replace(/\/Users\/[^/]+/, '/Users/[USER]');
+        objSanitized.path = (objSanitized.path as string).replace(/\\Users\\[^\\]+/, '\\Users\\[USER]');
       }
       
       // Sanitize URLs that might contain credentials
-      if (sanitized.url && typeof sanitized.url === 'string') {
-        sanitized.url = sanitized.url.replace(
+      if (objSanitized.url && typeof objSanitized.url === 'string') {
+        objSanitized.url = objSanitized.url.replace(
           /(https?:\/\/)([^:]+):([^@]+)@/,
           '$1[USER]:[REDACTED]@'
         );
@@ -152,7 +153,7 @@ export class SafeLogger {
   /**
    * Create a safe message for approval requests
    */
-  static createApprovalMessage(duckName: string, server: string, tool: string, args: any): string {
+  static createApprovalMessage(duckName: string, server: string, tool: string, args: unknown): string {
     const sanitizedArgs = this.sanitizeToolArgs(args);
     const argsStr = JSON.stringify(sanitizedArgs, null, 2);
     

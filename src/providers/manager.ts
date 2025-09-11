@@ -68,12 +68,12 @@ export class ProviderManager {
         
         this.healthStatus.set(provider.name, health);
         results.push(health);
-      } catch (error: any) {
+      } catch (error: unknown) {
         const health: ProviderHealth = {
           provider: provider.name,
           healthy: false,
           lastCheck: new Date(),
-          error: error.message,
+          error: error instanceof Error ? error.message : String(error),
         };
         
         this.healthStatus.set(provider.name, health);
@@ -114,10 +114,11 @@ export class ProviderManager {
         latency: Date.now() - startTime,
         cached: false,
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       // Try failover if enabled
       if (this.configManager.getConfig().enable_failover && providerName === undefined) {
-        logger.warn(`Primary provider failed, attempting failover: ${error.message}`);
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        logger.warn(`Primary provider failed, attempting failover: ${errorMessage}`);
         return this.askWithFailover(prompt, options, provider.name);
       }
       throw error;
@@ -142,7 +143,7 @@ export class ProviderManager {
         provider: provider.name,
         nickname: provider.nickname,
         model: '',
-        content: `Error: ${error.message}`,
+        content: `Error: ${error instanceof Error ? error.message : String(error)}`,
         latency: 0,
         cached: false,
       })) : Promise.resolve({
@@ -203,7 +204,7 @@ export class ProviderManager {
     return provider;
   }
 
-  getAllProviders(): Array<{ name: string; info: any; health?: ProviderHealth }> {
+  getAllProviders(): Array<{ name: string; info: ReturnType<DuckProvider['getInfo']>; health?: ProviderHealth }> {
     return Array.from(this.providers.entries()).map(([name, provider]) => ({
       name,
       info: provider.getInfo(),

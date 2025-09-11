@@ -1,10 +1,14 @@
 import { ApprovalService } from '../services/approval.js';
 
-export async function approveMCPRequestTool(
+export function approveMCPRequestTool(
   approvalService: ApprovalService,
-  args: any
+  args: Record<string, unknown>
 ) {
-  const { approval_id, decision, reason } = args;
+  const { approval_id, decision, reason } = args as {
+    approval_id?: string;
+    decision?: string;
+    reason?: string;
+  };
 
   if (!approval_id || !decision) {
     return {
@@ -108,12 +112,12 @@ export async function approveMCPRequestTool(
       isError: !success,
     };
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     return {
       content: [
         {
           type: 'text',
-          text: `❌ Error processing approval: ${error.message}`,
+          text: `❌ Error processing approval: ${error instanceof Error ? error.message : String(error)}`,
         },
       ],
       isError: true,

@@ -4,10 +4,14 @@ import { logger } from '../utils/logger.js';
 
 export async function compareDucksTool(
   providerManager: ProviderManager,
-  _cache: any,
-  args: any
+  _cache: unknown,
+  args: Record<string, unknown>
 ) {
-  const { prompt, providers, model } = args;
+  const { prompt, providers, model } = args as {
+    prompt?: string;
+    providers?: string[];
+    model?: string;
+  };
 
   if (!prompt) {
     throw new Error('Prompt is required');

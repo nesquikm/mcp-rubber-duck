@@ -6,7 +6,7 @@ export async function mcpStatusTool(
   mcpManager: MCPClientManager,
   approvalService: ApprovalService,
   functionBridge: FunctionBridge,
-  _args: any
+  _args: Record<string, unknown>
 ) {
   try {
     // Get MCP server status
@@ -21,7 +21,7 @@ export async function mcpStatusTool(
       }
       acc[tool.serverName].push(tool);
       return acc;
-    }, {} as Record<string, any[]>);
+    }, {} as Record<string, Array<{name: string; serverName: string}>>);
 
     // Get approval statistics
     const approvalStats = approvalService.getStats();
@@ -103,12 +103,12 @@ export async function mcpStatusTool(
       ],
     };
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     return {
       content: [
         {
           type: 'text',
-          text: `❌ Failed to get MCP status: ${error.message}`,
+          text: `❌ Failed to get MCP status: ${error instanceof Error ? error.message : String(error)}`,
         },
       ],
       isError: true,

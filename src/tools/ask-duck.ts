@@ -6,9 +6,14 @@ import { logger } from '../utils/logger.js';
 export async function askDuckTool(
   providerManager: ProviderManager,
   cache: ResponseCache,
-  args: any
+  args: Record<string, unknown>
 ) {
-  const { prompt, provider, model, temperature } = args;
+  const { prompt, provider, model, temperature } = args as {
+    prompt?: string;
+    provider?: string;
+    model?: string;
+    temperature?: number;
+  };
 
   if (!prompt) {
     throw new Error('Prompt is required');

@@ -1,48 +1,59 @@
 import { describe, it, expect, jest, beforeEach } from '@jest/globals';
-import { DuckProvider } from '../src/providers/provider';
-import { ProviderManager } from '../src/providers/manager';
-import { ConfigManager } from '../src/config/config';
 
-// Mock OpenAI
-const mockCreate = jest.fn().mockImplementation(() => Promise.resolve({
-  choices: [{
-    message: { content: 'Mocked response' },
-    finish_reason: 'stop',
-  }],
-  usage: {
-    prompt_tokens: 10,
-    completion_tokens: 20,
-    total_tokens: 30,
-  },
-  model: 'mock-model',
-}));
-
-jest.mock('openai', () => ({
-  __esModule: true,
-  default: jest.fn().mockImplementation(() => ({
+// Mock OpenAI BEFORE importing the provider
+const mockCreate = jest.fn();
+jest.mock('openai', () => {
+  const MockOpenAI = jest.fn().mockImplementation(() => ({
     chat: {
       completions: {
         create: mockCreate,
       },
     },
-  })),
-}));
+  }));
+  return {
+    __esModule: true,
+    default: MockOpenAI,
+  };
+});
 
-// Mock config manager
+// Mock config manager and logger
 jest.mock('../src/config/config');
 jest.mock('../src/utils/logger');
+
+// NOW import the modules after setting up mocks
+import { DuckProvider } from '../src/providers/provider';
+import { ProviderManager } from '../src/providers/manager';
+import { ConfigManager } from '../src/config/config';
 
 describe('DuckProvider', () => {
   let provider: DuckProvider;
 
   beforeEach(() => {
     jest.clearAllMocks();
+    
+    // Setup mock response
+    mockCreate.mockResolvedValue({
+      choices: [{
+        message: { content: 'Mocked response' },
+        finish_reason: 'stop',
+      }],
+      usage: {
+        prompt_tokens: 10,
+        completion_tokens: 20,
+        total_tokens: 30,
+      },
+      model: 'mock-model',
+    });
+    
     provider = new DuckProvider('test', 'Test Duck', {
       apiKey: 'test-key',
       baseURL: 'https://api.test.com/v1',
       model: 'test-model',
       temperature: 0.7,
     });
+    
+    // Override the method on the actual instance since Jest ESM mocking isn't working
+    provider['client'].chat.completions.create = mockCreate;
   });
 
   it('should create a provider instance', () => {
@@ -63,12 +74,16 @@ describe('DuckProvider', () => {
   });
 
   it('should send chat request', async () => {
+    console.log('Starting chat request test');
+    console.log('Mock create has been called:', mockCreate.mock.calls.length, 'times');
+    
     const response = await provider.chat({
       messages: [
         { role: 'user', content: 'Hello', timestamp: new Date() },
       ],
     });
 
+    console.log('Chat response received:', response);
     expect(response).toBeDefined();
     expect(response.content).toBe('Mocked response');
     expect(response.usage).toBeDefined();
@@ -83,6 +98,9 @@ describe('DuckProvider', () => {
       baseURL: 'https://api.test.com/v1',
       model: 'o1',
     });
+
+    // Override the method on the actual instance since Jest ESM mocking isn't working
+    testProvider['client'].chat.completions.create = mockCreate;
 
     await testProvider.chat({
       messages: [{ role: 'user', content: 'Hello', timestamp: new Date() }],
@@ -107,6 +125,9 @@ describe('DuckProvider', () => {
       model: 'gpt-5',
     });
 
+    // Override the method on the actual instance since Jest ESM mocking isn't working
+    testProvider['client'].chat.completions.create = mockCreate;
+
     await testProvider.chat({
       messages: [{ role: 'user', content: 'Hello', timestamp: new Date() }],
       model: 'gpt-5',
@@ -130,6 +151,9 @@ describe('DuckProvider', () => {
       model: 'gpt-4',
     });
 
+    // Override the method on the actual instance since Jest ESM mocking isn't working
+    testProvider['client'].chat.completions.create = mockCreate;
+
     await testProvider.chat({
       messages: [{ role: 'user', content: 'Hello', timestamp: new Date() }],
       model: 'gpt-4',
@@ -150,6 +174,22 @@ describe('ProviderManager', () => {
   let mockConfigManager: jest.Mocked<ConfigManager>;
 
   beforeEach(() => {
+    jest.clearAllMocks();
+    
+    // Setup mock response
+    mockCreate.mockResolvedValue({
+      choices: [{
+        message: { content: 'Mocked response' },
+        finish_reason: 'stop',
+      }],
+      usage: {
+        prompt_tokens: 10,
+        completion_tokens: 20,
+        total_tokens: 30,
+      },
+      model: 'mock-model',
+    });
+    
     mockConfigManager = {
       getConfig: jest.fn().mockReturnValue({
         providers: {
@@ -176,6 +216,12 @@ describe('ProviderManager', () => {
     } as any;
 
     manager = new ProviderManager(mockConfigManager);
+    
+    // Override the client method on all providers in the manager
+    const provider1 = manager.getProvider('test1');
+    const provider2 = manager.getProvider('test2');
+    provider1['client'].chat.completions.create = mockCreate;
+    provider2['client'].chat.completions.create = mockCreate;
   });
 
   it('should initialize providers from config', () => {

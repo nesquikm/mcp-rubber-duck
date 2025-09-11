@@ -15,11 +15,11 @@ process.on('uncaughtException', (error) => {
   process.exit(1);
 });
 
-process.on('unhandledRejection', (reason, promise) => {
+process.on('unhandledRejection', (reason, _promise) => {
   logger.error('FATAL: Unhandled Promise Rejection', {
     reason: reason instanceof Error ? reason.message : String(reason),
     stack: reason instanceof Error ? reason.stack : undefined,
-    promise: promise.toString(),
+    promise: '[Promise object]',
     pid: process.pid,
     memory: process.memoryUsage(),
     uptime: process.uptime(),
@@ -48,34 +48,38 @@ async function main() {
     const server = new RubberDuckServer();
     
     // Handle graceful shutdown
-    process.on('SIGINT', async () => {
-      logger.info('Received SIGINT, shutting down gracefully...', {
-        pid: process.pid,
-        uptime: process.uptime(),
-      });
-      try {
-        await server.stop();
-        logger.info('Server stopped gracefully');
-        process.exit(0);
-      } catch (error) {
-        logger.error('Error during graceful shutdown:', error);
-        process.exit(1);
-      }
+    process.on('SIGINT', () => {
+      void (async () => {
+        logger.info('Received SIGINT, shutting down gracefully...', {
+          pid: process.pid,
+          uptime: process.uptime(),
+        });
+        try {
+          await server.stop();
+          logger.info('Server stopped gracefully');
+          process.exit(0);
+        } catch (error) {
+          logger.error('Error during graceful shutdown:', error);
+          process.exit(1);
+        }
+      })();
     });
 
-    process.on('SIGTERM', async () => {
-      logger.info('Received SIGTERM, shutting down gracefully...', {
-        pid: process.pid,
-        uptime: process.uptime(),
-      });
-      try {
-        await server.stop();
-        logger.info('Server stopped gracefully');
-        process.exit(0);
-      } catch (error) {
-        logger.error('Error during graceful shutdown:', error);
-        process.exit(1);
-      }
+    process.on('SIGTERM', () => {
+      void (async () => {
+        logger.info('Received SIGTERM, shutting down gracefully...', {
+          pid: process.pid,
+          uptime: process.uptime(),
+        });
+        try {
+          await server.stop();
+          logger.info('Server stopped gracefully');
+          process.exit(0);
+        } catch (error) {
+          logger.error('Error during graceful shutdown:', error);
+          process.exit(1);
+        }
+      })();
     });
 
     // Start the server

@@ -1,19 +1,19 @@
 import { MCPClientManager, MCPTool } from './mcp-client-manager.js';
 import { ApprovalService } from './approval.js';
 import { logger } from '../utils/logger.js';
-import Ajv from 'ajv';
+import Ajv, { ValidateFunction } from 'ajv';
 
 export interface FunctionDefinition {
   name: string;
   description: string;
-  parameters: any; // JSON Schema
+  parameters: Record<string, unknown>; // JSON Schema
 }
 
 export interface FunctionCallResult {
   success: boolean;
   needsApproval?: boolean;
   approvalId?: string;
-  data?: any;
+  data?: unknown;
   error?: string;
   message?: string;
 }
@@ -23,8 +23,8 @@ export class FunctionBridge {
   private approvalService: ApprovalService;
   private trustedTools: Set<string> = new Set();
   private trustedToolsByServer: Map<string, Set<string>> = new Map();
-  private ajv: any;
-  private toolSchemas: Map<string, any> = new Map();
+  private ajv: unknown;
+  private toolSchemas: Map<string, Record<string, unknown>> = new Map();
   private approvalMode: 'always' | 'trusted' | 'never';
 
   constructor(
@@ -37,7 +37,8 @@ export class FunctionBridge {
     this.mcpManager = mcpManager;
     this.approvalService = approvalService;
     this.trustedTools = new Set(trustedTools);
-    this.ajv = new (Ajv as any)({ allErrors: true, removeAdditional: 'all' });
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call
+    this.ajv = new (Ajv as unknown as new (options: unknown) => unknown)({ allErrors: true, removeAdditional: 'all' });
     this.approvalMode = approvalMode;
     
     // Initialize per-server trusted tools
@@ -61,8 +62,9 @@ export class FunctionBridge {
       logger.debug(`Generated ${functionDefinitions.length} function definitions from MCP tools`);
       return functionDefinitions;
       
-    } catch (error: any) {
-      logger.error('Failed to generate function definitions:', error.message);
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      logger.error('Failed to generate function definitions:', errorMessage);
       return [];
     }
   }
@@ -75,7 +77,7 @@ export class FunctionBridge {
         type: 'object',
         properties: {
           // Include the MCP tool's original parameters
-          ...(mcpTool.inputSchema?.properties || {}),
+          ...((mcpTool.inputSchema as { properties?: Record<string, unknown> })?.properties || {}),
           
           // Add our internal parameters
           _mcp_server: {
@@ -93,31 +95,33 @@ export class FunctionBridge {
             description: 'Internal: Approval ID if pre-approved',
           },
         },
-        required: mcpTool.inputSchema?.required || [],
+        required: ((mcpTool.inputSchema as { required?: string[] })?.required || []),
       },
     };
   }
 
-  private validateToolArguments(toolKey: string, args: any): { valid: boolean; errors?: string[] } {
+  private validateToolArguments(toolKey: string, args: Record<string, unknown>): { valid: boolean; errors?: string[] } {
     const schema = this.toolSchemas.get(toolKey);
     if (!schema) {
       return { valid: true }; // No schema available, skip validation
     }
 
     try {
-      const validate = this.ajv.compile(schema);
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+      const validate: ValidateFunction = (this.ajv as { compile: (schema: unknown) => ValidateFunction }).compile(schema);
       const valid = validate(args);
       
       if (!valid && validate.errors) {
-        const errors = validate.errors.map((err: any) => 
-          `${err.instancePath || 'root'}: ${err.message}`
+        const errors = validate.errors.map(err => 
+          `${err.instancePath || 'root'}: ${err.message || 'validation error'}`
         );
         return { valid: false, errors };
       }
       
       return { valid: true };
-    } catch (error: any) {
-      logger.warn(`Failed to validate schema for ${toolKey}:`, error.message);
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      logger.warn(`Failed to validate schema for ${toolKey}:`, errorMessage);
       return { valid: true }; // Skip validation on error
     }
   }
@@ -125,7 +129,7 @@ export class FunctionBridge {
   async handleFunctionCall(
     duckName: string,
     functionName: string,
-    args: any
+    args: Record<string, unknown>
   ): Promise<FunctionCallResult> {
     try {
       logger.info(`FunctionBridge.handleFunctionCall called: ${duckName} -> ${functionName}`);
@@ -141,9 +145,9 @@ export class FunctionBridge {
       }
 
       // Extract MCP server and tool names from args or function name
-      const mcpServer = args._mcp_server || this.extractServerFromFunctionName(functionName);
-      const mcpTool = args._mcp_tool || this.extractToolFromFunctionName(functionName);
-      const approvalId = args._approval_id;
+      const mcpServer = (args._mcp_server as string) || this.extractServerFromFunctionName(functionName);
+      const mcpTool = (args._mcp_tool as string) || this.extractToolFromFunctionName(functionName);
+      const approvalId = args._approval_id as string;
 
       if (!mcpServer || !mcpTool) {
         return {
@@ -177,7 +181,7 @@ export class FunctionBridge {
         isTrusted = serverTrustedTools.has('*') || // Wildcard for all tools from server
                     serverTrustedTools.has(mcpTool) || // Tool name only
                     serverTrustedTools.has(toolKey); // Full server:tool format
-        logger.debug(`Server-specific trust check for ${mcpServer}: ${Array.from(serverTrustedTools)} - isTrusted: ${isTrusted}`);
+        logger.debug(`Server-specific trust check for ${mcpServer}: ${Array.from(serverTrustedTools).join(', ')} - isTrusted: ${isTrusted}`);
       } else {
         // Fall back to global trusted tools
         isTrusted = this.trustedTools.has(toolKey) || this.trustedTools.has(mcpTool);
@@ -241,11 +245,12 @@ export class FunctionBridge {
         data: result,
       };
 
-    } catch (error: any) {
-      logger.error(`Function call failed for ${functionName}:`, error.message);
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      logger.error(`Function call failed for ${functionName}:`, errorMessage);
       return {
         success: false,
-        error: `MCP tool execution failed: ${error.message}`,
+        error: `MCP tool execution failed: ${errorMessage}`,
       };
     }
   }
@@ -286,8 +291,9 @@ export class FunctionBridge {
       });
 
       return toolsByServer;
-    } catch (error: any) {
-      logger.error('Failed to get tools by server:', error.message);
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      logger.error('Failed to get tools by server:', errorMessage);
       return {};
     }
   }

@@ -3,7 +3,7 @@ import { logger } from '../utils/logger.js';
 
 export function clearConversationsTool(
   conversationManager: ConversationManager,
-  _args: any
+  _args: Record<string, unknown>
 ) {
   const result = conversationManager.clearAll();
   

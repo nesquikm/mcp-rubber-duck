@@ -17,7 +17,7 @@ export class ResponseCache {
     });
   }
 
-  generateKey(provider: string, prompt: string, options?: any): string {
+  generateKey(provider: string, prompt: string, options?: Record<string, unknown>): string {
     const data = JSON.stringify({ provider, prompt, options });
     return createHash('sha256').update(data).digest('hex');
   }

@@ -1,6 +1,6 @@
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
-import { 
+import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
   Tool,
@@ -13,6 +13,7 @@ import { ConversationManager } from './services/conversation.js';
 import { ResponseCache } from './services/cache.js';
 import { HealthMonitor } from './services/health.js';
 import { MCPClientManager } from './services/mcp-client-manager.js';
+import { DuckResponse } from './config/types.js';
 import { ApprovalService } from './services/approval.js';
 import { FunctionBridge } from './services/function-bridge.js';
 import { logger } from './utils/logger.js';
@@ -40,7 +41,7 @@ export class RubberDuckServer {
   private conversationManager: ConversationManager;
   private cache: ResponseCache;
   private healthMonitor: HealthMonitor;
-  
+
   // MCP Bridge components
   private mcpClientManager?: MCPClientManager;
   private approvalService?: ApprovalService;
@@ -73,7 +74,7 @@ export class RubberDuckServer {
     this.setupHandlers();
   }
 
-  private async initializeMCPBridge() {
+  private initializeMCPBridge(): void {
     const config = this.configManager.getConfig();
     const mcpConfig = config.mcp_bridge;
 
@@ -87,10 +88,10 @@ export class RubberDuckServer {
 
       // Initialize MCP client manager
       this.mcpClientManager = new MCPClientManager(mcpConfig.mcp_servers);
-      
+
       // Initialize approval service
       this.approvalService = new ApprovalService(mcpConfig.approval_timeout);
-      
+
       // Initialize function bridge
       this.functionBridge = new FunctionBridge(
         this.mcpClientManager,
@@ -99,18 +100,18 @@ export class RubberDuckServer {
         mcpConfig.approval_mode,
         mcpConfig.trusted_tools_by_server || {}
       );
-      
+
       // Initialize enhanced provider manager
       this.enhancedProviderManager = new EnhancedProviderManager(
         this.configManager,
         this.functionBridge
       );
-      
+
       this.mcpEnabled = true;
       logger.info('MCP bridge initialized successfully');
-      
-    } catch (error: any) {
-      logger.error('Failed to initialize MCP bridge:', error.message);
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      logger.error('Failed to initialize MCP bridge:', errorMessage);
       logger.warn('Falling back to regular duck provider functionality');
       this.mcpEnabled = false;
     }
@@ -118,9 +119,9 @@ export class RubberDuckServer {
 
   private setupHandlers() {
     // List available tools
-    this.server.setRequestHandler(ListToolsRequestSchema, async () => ({
-      tools: this.getTools(),
-    }));
+    this.server.setRequestHandler(ListToolsRequestSchema, () => {
+      return { tools: this.getTools() };
+    });
 
     // Handle tool calls
     this.server.setRequestHandler(CallToolRequestSchema, async (request) => {
@@ -131,73 +132,48 @@ export class RubberDuckServer {
           case 'ask_duck':
             // Use enhanced provider manager if MCP is enabled
             if (this.mcpEnabled && this.enhancedProviderManager) {
-              return await this.handleAskDuckWithMCP(args);
+              return await this.handleAskDuckWithMCP(args || {});
             }
-            return await askDuckTool(
-              this.providerManager,
-              this.cache,
-              args
-            );
+            return await askDuckTool(this.providerManager, this.cache, args || {});
 
           case 'chat_with_duck':
-            return await chatDuckTool(
-              this.providerManager,
-              this.conversationManager,
-              args
-            );
+            return await chatDuckTool(this.providerManager, this.conversationManager, args || {});
 
           case 'clear_conversations':
-            return clearConversationsTool(
-              this.conversationManager,
-              args
-            );
+            return clearConversationsTool(this.conversationManager, args || {});
 
           case 'list_ducks':
-            return await listDucksTool(
-              this.providerManager,
-              this.healthMonitor,
-              args
-            );
+            return await listDucksTool(this.providerManager, this.healthMonitor, args || {});
 
           case 'list_models':
-            return await listModelsTool(
-              this.providerManager,
-              args
-            );
+            return await listModelsTool(this.providerManager, args || {});
 
           case 'compare_ducks':
             // Use enhanced provider manager if MCP is enabled
             if (this.mcpEnabled && this.enhancedProviderManager) {
-              return await this.handleCompareDucksWithMCP(args);
+              return await this.handleCompareDucksWithMCP(args || {});
             }
-            return await compareDucksTool(
-              this.providerManager,
-              this.cache,
-              args
-            );
+            return await compareDucksTool(this.providerManager, this.cache, args || {});
 
           case 'duck_council':
             // Use enhanced provider manager if MCP is enabled
             if (this.mcpEnabled && this.enhancedProviderManager) {
-              return await this.handleDuckCouncilWithMCP(args);
+              return await this.handleDuckCouncilWithMCP(args || {});
             }
-            return await duckCouncilTool(
-              this.providerManager,
-              args
-            );
+            return await duckCouncilTool(this.providerManager, args || {});
 
           // MCP-specific tools
           case 'get_pending_approvals':
             if (!this.approvalService) {
               throw new Error('MCP bridge not enabled');
             }
-            return await getPendingApprovalsTool(this.approvalService, args);
+            return getPendingApprovalsTool(this.approvalService, args || {});
 
           case 'approve_mcp_request':
             if (!this.approvalService) {
               throw new Error('MCP bridge not enabled');
             }
-            return await approveMCPRequestTool(this.approvalService, args);
+            return approveMCPRequestTool(this.approvalService, args || {});
 
           case 'mcp_status':
             if (!this.mcpClientManager || !this.approvalService || !this.functionBridge) {
@@ -207,19 +183,20 @@ export class RubberDuckServer {
               this.mcpClientManager,
               this.approvalService,
               this.functionBridge,
-              args
+              args || {}
             );
 
           default:
             throw new Error(`Unknown tool: ${name}`);
         }
-      } catch (error: any) {
+      } catch (error: unknown) {
         logger.error(`Tool execution error for ${name}:`, error);
+        const errorMessage = error instanceof Error ? error.message : String(error);
         return {
           content: [
             {
               type: 'text',
-              text: `${getRandomDuckMessage('error')}\n\nError: ${error.message}`,
+              text: `${getRandomDuckMessage('error')}\n\nError: ${errorMessage}`,
             },
           ],
           isError: true,
@@ -234,34 +211,32 @@ export class RubberDuckServer {
   }
 
   // MCP-enhanced tool handlers
-  private async handleAskDuckWithMCP(args: any) {
+  private async handleAskDuckWithMCP(args: Record<string, unknown>) {
     if (!this.enhancedProviderManager || !this.cache) {
       throw new Error('Enhanced provider manager not available');
     }
 
-    const { prompt, provider, model, temperature } = args;
+    const { prompt, provider, model, temperature } = args as {
+      prompt?: string;
+      provider?: string;
+      model?: string;
+      temperature?: number;
+    };
 
     if (!prompt) {
       throw new Error('Prompt is required');
     }
 
     // Generate cache key (same as regular ask_duck)
-    const cacheKey = this.cache.generateKey(
-      provider || 'default',
-      prompt,
-      { model, temperature }
-    );
+    const cacheKey = this.cache.generateKey(provider || 'default', prompt, { model, temperature });
 
     // Try to get cached response
-    const { value: response, cached } = await this.cache.getOrSet(
-      cacheKey,
-      async () => {
-        return await this.enhancedProviderManager!.askDuckWithMCP(provider, prompt, {
-          model,
-          temperature,
-        });
-      }
-    );
+    const { value: response, cached } = await this.cache.getOrSet(cacheKey, async () => {
+      return await this.enhancedProviderManager!.askDuckWithMCP(provider, prompt, {
+        model,
+        temperature,
+      });
+    });
 
     // Format the response with MCP information
     const formattedResponse = this.formatEnhancedDuckResponse(response, cached);
@@ -276,21 +251,23 @@ export class RubberDuckServer {
     };
   }
 
-  private async handleCompareDucksWithMCP(args: any) {
+  private async handleCompareDucksWithMCP(args: Record<string, unknown>) {
     if (!this.enhancedProviderManager) {
       throw new Error('Enhanced provider manager not available');
     }
 
-    const { prompt, providers, model } = args;
-    
-    const responses = await this.enhancedProviderManager.compareDucksWithMCP(
-      prompt,
-      providers,
-      { model }
-    );
+    const { prompt, providers, model } = args as {
+      prompt: string;
+      providers?: string[];
+      model?: string;
+    };
+
+    const responses = await this.enhancedProviderManager.compareDucksWithMCP(prompt, providers, {
+      model,
+    });
 
     const formattedResponse = responses
-      .map(response => this.formatEnhancedDuckResponse(response))
+      .map((response) => this.formatEnhancedDuckResponse(response))
       .join('\n\n═══════════════════════════════════════\n\n');
 
     return {
@@ -303,21 +280,18 @@ export class RubberDuckServer {
     };
   }
 
-  private async handleDuckCouncilWithMCP(args: any) {
+  private async handleDuckCouncilWithMCP(args: Record<string, unknown>) {
     if (!this.enhancedProviderManager) {
       throw new Error('Enhanced provider manager not available');
     }
 
-    const { prompt, model } = args;
-    
-    const responses = await this.enhancedProviderManager.duckCouncilWithMCP(
-      prompt,
-      { model }
-    );
+    const { prompt, model } = args as { prompt: string; model?: string };
+
+    const responses = await this.enhancedProviderManager.duckCouncilWithMCP(prompt, { model });
 
     const header = '🦆 Duck Council in Session 🦆\n=============================';
     const formattedResponse = responses
-      .map(response => this.formatEnhancedDuckResponse(response))
+      .map((response) => this.formatEnhancedDuckResponse(response))
       .join('\n\n═══════════════════════════════════════\n\n');
 
     return {
@@ -330,16 +304,23 @@ export class RubberDuckServer {
     };
   }
 
-  private formatEnhancedDuckResponse(response: any, cached?: boolean): string {
+  private formatEnhancedDuckResponse(
+    response: DuckResponse & {
+      pendingApprovals?: { id: string; message: string }[];
+      mcpResults?: unknown[];
+    },
+    cached?: boolean
+  ): string {
     let formatted = `🦆 **${response.nickname}** (${response.provider})\n─────────────────────────────────────\n${response.content}`;
 
     // Add pending approvals if any
     if (response.pendingApprovals && response.pendingApprovals.length > 0) {
       formatted += '\n\n⏳ **Pending Approvals:**';
-      response.pendingApprovals.forEach((approval: any) => {
+      response.pendingApprovals.forEach((approval) => {
         formatted += `\n- ${approval.message} (ID: ${approval.id})`;
       });
-      formatted += '\n\n💡 Use `get_pending_approvals` and `approve_mcp_request` to manage approvals';
+      formatted +=
+        '\n\n💡 Use `get_pending_approvals` and `approve_mcp_request` to manage approvals';
     }
 
     // Add MCP results indicator
@@ -368,7 +349,7 @@ export class RubberDuckServer {
     const baseTools: Tool[] = [
       {
         name: 'ask_duck',
-        description: this.mcpEnabled 
+        description: this.mcpEnabled
           ? 'Ask a question to a specific LLM provider (duck) with MCP tool access'
           : 'Ask a question to a specific LLM provider (duck)',
         inputSchema: {
@@ -384,7 +365,8 @@ export class RubberDuckServer {
             },
             model: {
               type: 'string',
-              description: 'Specific model to use (optional, uses provider default if not specified)',
+              description:
+                'Specific model to use (optional, uses provider default if not specified)',
             },
             temperature: {
               type: 'number',
@@ -525,7 +507,7 @@ export class RubberDuckServer {
         },
         {
           name: 'approve_mcp_request',
-          description: 'Approve or deny a duck\'s MCP tool request',
+          description: "Approve or deny a duck's MCP tool request",
           inputSchema: {
             type: 'object',
             properties: {
@@ -564,32 +546,35 @@ export class RubberDuckServer {
     // Only show welcome message when not running as MCP server
     const isMCP = process.env.MCP_SERVER === 'true' || process.argv.includes('--mcp');
     if (!isMCP) {
+      // eslint-disable-next-line no-console
       console.log(duckArt.welcome);
+      // eslint-disable-next-line no-console
       console.log('\n' + getRandomDuckMessage('startup'));
     }
-    
+
     // Initialize MCP connections if enabled
     if (this.mcpEnabled && this.mcpClientManager) {
       try {
         logger.info('Connecting to MCP servers...');
         await this.mcpClientManager.initialize();
         logger.info('MCP servers connected successfully');
-      } catch (error: any) {
-        logger.error('Failed to connect to some MCP servers:', error.message);
+      } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        logger.error('Failed to connect to some MCP servers:', errorMessage);
         logger.warn('Some MCP functionality may not be available');
       }
     }
-    
+
     // Start health monitoring
     this.healthMonitor.startMonitoring(60000);
-    
+
     // Initial health check
     await this.healthMonitor.performHealthChecks();
-    
+
     // Start the server
     const transport = new StdioServerTransport();
     await this.server.connect(transport);
-    
+
     if (this.mcpEnabled) {
       logger.info('🦆 MCP Rubber Duck server with MCP bridge started successfully!');
     } else {
@@ -600,19 +585,19 @@ export class RubberDuckServer {
   async stop() {
     // Stop health monitoring
     this.healthMonitor.stopMonitoring();
-    
+
     // Cleanup MCP resources
     if (this.approvalService) {
       this.approvalService.shutdown();
     }
-    
+
     if (this.mcpClientManager) {
       await this.mcpClientManager.disconnectAll();
     }
-    
+
     // Stop the server
     await this.server.close();
-    
+
     logger.info('Server stopped');
   }
 }

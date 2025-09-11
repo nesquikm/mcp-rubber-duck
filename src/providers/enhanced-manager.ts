@@ -3,7 +3,7 @@ import { ProviderManager } from './manager.js';
 import { ConfigManager } from '../config/config.js';
 import { FunctionBridge } from '../services/function-bridge.js';
 import { DuckResponse } from '../config/types.js';
-import { ChatOptions } from './types.js';
+import { ChatOptions, MCPResult } from './types.js';
 import { logger } from '../utils/logger.js';
 
 export class EnhancedProviderManager extends ProviderManager {
@@ -83,7 +83,7 @@ export class EnhancedProviderManager extends ProviderManager {
     providerName: string | undefined,
     prompt: string,
     options?: Partial<ChatOptions>
-  ): Promise<DuckResponse & { pendingApprovals?: any[]; mcpResults?: any[] }> {
+  ): Promise<DuckResponse & { pendingApprovals?: { id: string; message: string }[]; mcpResults?: MCPResult[] }> {
     if (!this.mcpEnabled) {
       // Fall back to regular provider
       return this.askDuck(providerName, prompt, options);
@@ -116,10 +116,11 @@ export class EnhancedProviderManager extends ProviderManager {
         pendingApprovals: response.pendingApprovals,
         mcpResults: response.mcpResults,
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       // Try failover if enabled
       if (this.configManager.getConfig().enable_failover && providerName === undefined) {
-        logger.warn(`Primary enhanced provider failed, attempting failover: ${error.message}`);
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        logger.warn(`Primary enhanced provider failed, attempting failover: ${errorMessage}`);
         return this.askDuckWithMCPFailover(prompt, options, provider.name);
       }
       throw error;
@@ -130,7 +131,7 @@ export class EnhancedProviderManager extends ProviderManager {
     prompt: string,
     options: Partial<ChatOptions> | undefined,
     failedProvider: string
-  ): Promise<DuckResponse & { pendingApprovals?: any[]; mcpResults?: any[] }> {
+  ): Promise<DuckResponse & { pendingApprovals?: { id: string; message: string }[]; mcpResults?: MCPResult[] }> {
     const availableProviders = Array.from(this.enhancedProviders.keys()).filter(
       name => name !== failedProvider
     );
@@ -152,7 +153,7 @@ export class EnhancedProviderManager extends ProviderManager {
     prompt: string,
     providerNames?: string[],
     options?: Partial<ChatOptions>
-  ): Promise<Array<DuckResponse & { pendingApprovals?: any[]; mcpResults?: any[] }>> {
+  ): Promise<Array<DuckResponse & { pendingApprovals?: { id: string; message: string }[]; mcpResults?: MCPResult[] }>> {
     if (!this.mcpEnabled) {
       // Fall back to regular comparison
       return this.compareDucks(prompt, providerNames, options);
@@ -171,7 +172,7 @@ export class EnhancedProviderManager extends ProviderManager {
         provider: provider.name,
         nickname: provider.nickname,
         model: '',
-        content: `Error: ${error.message}`,
+        content: `Error: ${error instanceof Error ? error.message : String(error)}`,
         latency: 0,
         cached: false,
       })) : Promise.resolve({
@@ -190,7 +191,7 @@ export class EnhancedProviderManager extends ProviderManager {
   async duckCouncilWithMCP(
     prompt: string,
     options?: Partial<ChatOptions>
-  ): Promise<Array<DuckResponse & { pendingApprovals?: any[]; mcpResults?: any[] }>> {
+  ): Promise<Array<DuckResponse & { pendingApprovals?: { id: string; message: string }[]; mcpResults?: MCPResult[] }>> {
     return this.compareDucksWithMCP(prompt, undefined, options);
   }
 
@@ -200,7 +201,7 @@ export class EnhancedProviderManager extends ProviderManager {
     providerName: string | undefined,
     prompt: string,
     options?: Partial<ChatOptions>
-  ): Promise<DuckResponse & { pendingApprovals?: any[]; mcpResults?: any[] }> {
+  ): Promise<DuckResponse & { pendingApprovals?: { id: string; message: string }[]; mcpResults?: MCPResult[] }> {
     if (!this.mcpEnabled) {
       throw new Error('MCP bridge is not enabled');
     }
@@ -236,17 +237,18 @@ export class EnhancedProviderManager extends ProviderManager {
         pendingApprovals: response.pendingApprovals,
         mcpResults: response.mcpResults,
       };
-    } catch (error: any) {
-      throw new Error(`Failed to retry with approval: ${error.message}`);
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      throw new Error(`Failed to retry with approval: ${errorMessage}`);
     }
   }
 
   // Get enhanced provider statistics
   getAllEnhancedProviders(): Array<{ 
     name: string; 
-    info: any; 
+    info: ReturnType<EnhancedDuckProvider['getInfo']>; 
     mcpEnabled: boolean;
-    mcpStats?: any;
+    mcpStats?: ReturnType<EnhancedDuckProvider['getMCPStats']>;
     functionCount?: number;
   }> {
     return Array.from(this.enhancedProviders.entries()).map(([name, provider]) => ({

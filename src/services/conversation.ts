@@ -27,7 +27,7 @@ export class ConversationManager {
     conversationId: string,
     message: ConversationMessage
   ): Conversation {
-    let conversation = this.conversations.get(conversationId);
+    const conversation = this.conversations.get(conversationId);
     
     if (!conversation) {
       throw new Error(`Conversation ${conversationId} not found`);

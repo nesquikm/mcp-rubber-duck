@@ -5,9 +5,12 @@ import { logger } from '../utils/logger.js';
 
 export async function listModelsTool(
   providerManager: ProviderManager,
-  args: any
+  args: Record<string, unknown>
 ) {
-  const { provider, fetch_latest = false } = args;
+  const { provider, fetch_latest = false } = args as {
+    provider?: string;
+    fetch_latest?: boolean;
+  };
 
   try {
     let response = `${duckArt.panel}\n📋 **Available Models**\n\n`;
@@ -56,7 +59,7 @@ export async function listModelsTool(
         },
       ],
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Error listing models:', error);
     throw error;
   }

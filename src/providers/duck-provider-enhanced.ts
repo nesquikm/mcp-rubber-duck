@@ -1,5 +1,5 @@
 import { DuckProvider } from './provider.js';
-import { ChatOptions, ChatResponse } from './types.js';
+import { ChatOptions, ChatResponse, ProviderOptions, OpenAIChatParams, OpenAIMessage, MCPResult, OpenAIToolCall } from './types.js';
 import { FunctionBridge } from '../services/function-bridge.js';
 import { ConversationMessage } from '../config/types.js';
 import { logger } from '../utils/logger.js';
@@ -10,7 +10,7 @@ export interface EnhancedChatResponse extends ChatResponse {
     id: string;
     message: string;
   }[];
-  mcpResults?: any[];
+  mcpResults?: MCPResult[];
 }
 
 export class EnhancedDuckProvider extends DuckProvider {
@@ -20,7 +20,7 @@ export class EnhancedDuckProvider extends DuckProvider {
   constructor(
     name: string,
     nickname: string,
-    options: any,
+    options: ProviderOptions,
     functionBridge: FunctionBridge,
     mcpEnabled: boolean = true
   ) {
@@ -45,9 +45,9 @@ export class EnhancedDuckProvider extends DuckProvider {
       const messages = this.prepareMessages(options.messages, options.systemPrompt);
       const modelToUse = options.model || this.options.model;
 
-      const baseParams: any = {
+      const baseParams: Partial<OpenAIChatParams> = {
         model: modelToUse,
-        messages: messages as any,
+        messages: messages as OpenAIMessage[],
         stream: false,
       };
 
@@ -77,7 +77,7 @@ export class EnhancedDuckProvider extends DuckProvider {
       if (choice.message?.tool_calls && choice.message.tool_calls.length > 0) {
         return await this.handleToolCalls(
           choice.message.tool_calls,
-          messages,
+          messages as OpenAIMessage[],
           baseParams,
           modelToUse
         );
@@ -95,25 +95,26 @@ export class EnhancedDuckProvider extends DuckProvider {
         finishReason: choice.finish_reason || undefined,
       };
 
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error(`Enhanced provider ${this.name} chat error:`, error);
-      throw new Error(`Duck ${this.nickname} couldn't respond: ${error.message}`);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      throw new Error(`Duck ${this.nickname} couldn't respond: ${errorMessage}`);
     }
   }
 
   private async handleToolCalls(
-    toolCalls: any[],
-    messages: any[],
-    baseParams: any,
+    toolCalls: OpenAIToolCall[],
+    messages: OpenAIMessage[],
+    baseParams: Partial<OpenAIChatParams>,
     modelToUse: string
   ): Promise<EnhancedChatResponse> {
     const pendingApprovals: { id: string; message: string }[] = [];
-    const toolMessages: any[] = [];
+    const toolMessages: OpenAIMessage[] = [];
     let hasExecutedTools = false;
 
     // Add the assistant message with tool calls
-    const assistantMessage = {
-      role: 'assistant',
+    const assistantMessage: OpenAIMessage = {
+      role: 'assistant' as const,
       content: null,
       tool_calls: toolCalls,
     };
@@ -123,7 +124,7 @@ export class EnhancedDuckProvider extends DuckProvider {
     for (const toolCall of toolCalls) {
       try {
         const functionName = toolCall.function.name;
-        const args = JSON.parse(toolCall.function.arguments);
+        const args = JSON.parse(toolCall.function.arguments) as Record<string, unknown>;
 
         logger.info(`${this.nickname} wants to call function: ${functionName}`);
         SafeLogger.debug(`Function call arguments for ${functionName}:`, args);
@@ -145,7 +146,6 @@ export class EnhancedDuckProvider extends DuckProvider {
           toolMessages.push({
             role: 'tool',
             tool_call_id: toolCall.id,
-            name: functionName,
             content: JSON.stringify({
               status: 'approval_needed',
               approval_id: result.approvalId,
@@ -159,7 +159,6 @@ export class EnhancedDuckProvider extends DuckProvider {
           toolMessages.push({
             role: 'tool',
             tool_call_id: toolCall.id,
-            name: functionName,
             content: typeof result.data === 'string' 
               ? result.data 
               : JSON.stringify(result.data),
@@ -170,21 +169,20 @@ export class EnhancedDuckProvider extends DuckProvider {
           toolMessages.push({
             role: 'tool',
             tool_call_id: toolCall.id,
-            name: functionName,
             content: JSON.stringify({
               error: result.error || 'Unknown error',
             }),
           });
         }
 
-      } catch (error: any) {
+      } catch (error: unknown) {
         logger.error(`Error processing tool call ${toolCall.id}:`, error);
+        const errorMessage = error instanceof Error ? error.message : String(error);
         toolMessages.push({
           role: 'tool',
           tool_call_id: toolCall.id,
-          name: toolCall.function.name,
           content: JSON.stringify({
-            error: `Tool execution failed: ${error.message}`,
+            error: `Tool execution failed: ${errorMessage}`,
           }),
         });
       }
@@ -227,7 +225,7 @@ export class EnhancedDuckProvider extends DuckProvider {
       } : undefined,
       model: modelToUse,
       finishReason: finalChoice.finish_reason || undefined,
-      mcpResults: hasExecutedTools ? toolMessages : undefined,
+      mcpResults: hasExecutedTools ? (toolMessages as unknown as MCPResult[]) : undefined,
     };
   }
 
@@ -244,7 +242,7 @@ export class EnhancedDuckProvider extends DuckProvider {
         parameters: {
           ...tool.parameters,
           properties: {
-            ...tool.parameters.properties,
+            ...(tool.parameters.properties as Record<string, unknown>),
             _approval_id: {
               type: 'string',
               default: approvalId,

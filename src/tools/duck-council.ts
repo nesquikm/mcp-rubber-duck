@@ -4,9 +4,12 @@ import { logger } from '../utils/logger.js';
 
 export async function duckCouncilTool(
   providerManager: ProviderManager,
-  args: any
+  args: Record<string, unknown>
 ) {
-  const { prompt, model } = args;
+  const { prompt, model } = args as {
+    prompt?: string;
+    model?: string;
+  };
 
   if (!prompt) {
     throw new Error('Prompt is required for the duck council');

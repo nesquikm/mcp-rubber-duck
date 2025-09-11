@@ -1,10 +1,12 @@
 import { ApprovalService } from '../services/approval.js';
 
-export async function getPendingApprovalsTool(
+export function getPendingApprovalsTool(
   approvalService: ApprovalService,
-  args: any
+  args: Record<string, unknown>
 ) {
-  const { duck } = args;
+  const { duck } = args as {
+    duck?: string;
+  };
 
   try {
     let approvals = approvalService.getPendingApprovals();
@@ -74,12 +76,12 @@ export async function getPendingApprovalsTool(
       ],
     };
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     return {
       content: [
         {
           type: 'text',
-          text: `❌ Failed to get pending approvals: ${error.message}`,
+          text: `❌ Failed to get pending approvals: ${error instanceof Error ? error.message : String(error)}`,
         },
       ],
       isError: true,

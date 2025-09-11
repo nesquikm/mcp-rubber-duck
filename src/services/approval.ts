@@ -8,7 +8,7 @@ export interface ApprovalRequest {
   duckName: string;
   mcpServer: string;
   toolName: string;
-  arguments: any;
+  arguments: Record<string, unknown>;
   status: 'pending' | 'approved' | 'denied' | 'expired';
   approvedBy?: string;
   deniedReason?: string;
@@ -32,7 +32,7 @@ export class ApprovalService {
     duckName: string,
     mcpServer: string,
     toolName: string,
-    args: any
+    args: Record<string, unknown>
   ): ApprovalRequest {
     const id = randomUUID();
     const now = Date.now();

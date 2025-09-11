@@ -1,7 +1,7 @@
 import { readFileSync, existsSync } from 'fs';
 import { join } from 'path';
 import * as dotenv from 'dotenv';
-import { Config, ConfigSchema } from './types.js';
+import { Config, ConfigSchema, ProviderConfig, MCPBridgeConfig, MCPServerConfig } from './types.js';
 import { logger } from '../utils/logger.js';
 
 dotenv.config();
@@ -35,15 +35,15 @@ export class ConfigManager {
   }
 
   private loadConfig(): Config {
-    let rawConfig: any = {};
+    let rawConfig: Record<string, unknown> = {};
 
     // Load from file if exists
     if (this.configPath && existsSync(this.configPath)) {
       try {
         const fileContent = readFileSync(this.configPath, 'utf-8');
-        rawConfig = JSON.parse(fileContent);
+        rawConfig = JSON.parse(fileContent) as Record<string, unknown>;
       } catch (error) {
-        logger.error(`Failed to load config file: ${error}`);
+        logger.error(`Failed to load config file: ${String(error)}`);
       }
     }
 
@@ -66,15 +66,15 @@ export class ConfigManager {
 
       return config;
     } catch (error) {
-      logger.error(`Invalid configuration: ${error}`);
-      throw new Error(`Configuration validation failed: ${error}`);
+      logger.error(`Invalid configuration: ${String(error)}`);
+      throw new Error(`Configuration validation failed: ${String(error)}`);
     }
   }
 
-  private mergeWithEnv(config: any): any {
+  private mergeWithEnv(config: Record<string, unknown>): Record<string, unknown> {
     // Replace ${ENV_VAR} patterns with actual environment values
     const configStr = JSON.stringify(config);
-    const replaced = configStr.replace(/\$\{([^}]+)\}/g, (match, envVar) => {
+    const replaced = configStr.replace(/\$\{([^}]+)\}/g, (match, envVar: string) => {
       const value = process.env[envVar];
       if (!value && envVar.includes('API_KEY')) {
         logger.warn(`Environment variable ${envVar} not found`);
@@ -82,7 +82,7 @@ export class ConfigManager {
       return value || match;
     });
     
-    const merged = JSON.parse(replaced);
+    const merged = JSON.parse(replaced) as Record<string, unknown>;
 
     // Apply environment overrides
     if (process.env.DEFAULT_PROVIDER) {
@@ -96,13 +96,13 @@ export class ConfigManager {
     }
 
     // Apply MCP bridge configuration from environment
-    merged.mcp_bridge = this.getMCPBridgeConfig(merged.mcp_bridge);
+    merged.mcp_bridge = this.getMCPBridgeConfig(merged.mcp_bridge as Partial<MCPBridgeConfig>);
 
     return merged;
   }
 
-  private getDefaultProviders(): Record<string, any> {
-    const providers: Record<string, any> = {};
+  private getDefaultProviders(): Record<string, ProviderConfig> {
+    const providers: Record<string, ProviderConfig> = {};
 
     // OpenAI
     if (process.env.OPENAI_API_KEY) {
@@ -155,13 +155,13 @@ export class ConfigManager {
     return providers;
   }
 
-  private getMCPBridgeConfig(existingConfig: any = {}): any {
+  private getMCPBridgeConfig(existingConfig: Partial<MCPBridgeConfig> = {}): Partial<MCPBridgeConfig> {
     // Don't override if MCP is explicitly disabled
     if (existingConfig?.enabled === false) {
       return existingConfig;
     }
 
-    const mcpConfig = { ...existingConfig };
+    const mcpConfig: Partial<MCPBridgeConfig> = { ...existingConfig };
 
     // Enable MCP bridge if environment variables are present
     if (process.env.MCP_BRIDGE_ENABLED !== undefined) {
@@ -172,7 +172,10 @@ export class ConfigManager {
 
     // Apply MCP bridge settings
     if (process.env.MCP_APPROVAL_MODE) {
-      mcpConfig.approval_mode = process.env.MCP_APPROVAL_MODE;
+      const approvalMode = process.env.MCP_APPROVAL_MODE;
+      if (approvalMode === 'always' || approvalMode === 'trusted' || approvalMode === 'never') {
+        mcpConfig.approval_mode = approvalMode;
+      }
     }
     if (process.env.MCP_APPROVAL_TIMEOUT) {
       mcpConfig.approval_timeout = parseInt(process.env.MCP_APPROVAL_TIMEOUT);
@@ -222,8 +225,8 @@ export class ConfigManager {
     return trustedToolsByServer;
   }
 
-  private getCustomProvidersFromEnv(): Record<string, any> {
-    const customProviders: Record<string, any> = {};
+  private getCustomProvidersFromEnv(): Record<string, ProviderConfig> {
+    const customProviders: Record<string, ProviderConfig> = {};
     const providerNames = new Set<string>();
 
     // Find all custom provider configurations
@@ -263,8 +266,8 @@ export class ConfigManager {
     return customProviders;
   }
 
-  private getMCPServersFromEnv(): any[] {
-    const servers: any[] = [];
+  private getMCPServersFromEnv(): MCPServerConfig[] {
+    const servers: MCPServerConfig[] = [];
     const serverNames = new Set<string>();
 
     // Find all MCP server configurations
@@ -285,9 +288,9 @@ export class ConfigManager {
       // For stdio servers, we need type and command
       // For http servers, we need type and url
       if (type && ((type === 'stdio' && command) || (type === 'http' && url))) {
-        const server: any = {
+        const server: Partial<MCPServerConfig> = {
           name: serverName.toLowerCase().replace(/_/g, '-'),
-          type: type,
+          type: type as 'stdio' | 'http',
           enabled: process.env[`${prefix}ENABLED`] !== 'false',
         };
 
@@ -297,8 +300,9 @@ export class ConfigManager {
         }
 
         // Optional arguments
-        if (process.env[`${prefix}ARGS`]) {
-          server.args = process.env[`${prefix}ARGS`]!.split(',').map(arg => arg.trim());
+        const argsEnv = process.env[`${prefix}ARGS`];
+        if (argsEnv) {
+          server.args = argsEnv.split(',').map(arg => arg.trim());
         }
 
         // Add URL for http servers (required) and stdio servers (optional)
@@ -312,14 +316,16 @@ export class ConfigManager {
         }
 
         // Retry configuration
-        if (process.env[`${prefix}RETRY_ATTEMPTS`]) {
-          server.retryAttempts = parseInt(process.env[`${prefix}RETRY_ATTEMPTS`]!);
+        const retryAttemptsEnv = process.env[`${prefix}RETRY_ATTEMPTS`];
+        if (retryAttemptsEnv) {
+          server.retryAttempts = parseInt(retryAttemptsEnv);
         }
-        if (process.env[`${prefix}RETRY_DELAY`]) {
-          server.retryDelay = parseInt(process.env[`${prefix}RETRY_DELAY`]!);
+        const retryDelayEnv = process.env[`${prefix}RETRY_DELAY`];
+        if (retryDelayEnv) {
+          server.retryDelay = parseInt(retryDelayEnv);
         }
 
-        servers.push(server);
+        servers.push(server as MCPServerConfig);
       }
     });
 
