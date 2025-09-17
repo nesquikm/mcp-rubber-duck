@@ -26,8 +26,17 @@
     "ai",
     "rubber-duck"
   ],
-  "author": "",
+  "mcpName": "io.github.nesquikm.rubber-duck",
+  "author": "nesquikm",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/nesquikm/mcp-rubber-duck.git"
+  },
+  "homepage": "https://github.com/nesquikm/mcp-rubber-duck#readme",
+  "bugs": {
+    "url": "https://github.com/nesquikm/mcp-rubber-duck/issues"
+  },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.0.0",
     "ajv": "^8.17.1",

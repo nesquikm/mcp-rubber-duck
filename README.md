@@ -55,7 +55,7 @@ Any provider with an OpenAI-compatible API endpoint, including:
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/mcp-rubber-duck.git
+git clone https://github.com/nesquikm/mcp-rubber-duck.git
 cd mcp-rubber-duck
 
 # Install dependencies
@@ -155,7 +155,7 @@ First, ensure the project is built:
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/mcp-rubber-duck.git
+git clone https://github.com/nesquikm/mcp-rubber-duck.git
 cd mcp-rubber-duck
 
 # Install dependencies and build
@@ -794,9 +794,9 @@ See [CHANGELOG.md](./CHANGELOG.md) for a detailed history of changes and release
 
 ## Support
 
-- Report issues: https://github.com/yourusername/mcp-rubber-duck/issues
-- Documentation: https://github.com/yourusername/mcp-rubber-duck/wiki
-- Discussions: https://github.com/yourusername/mcp-rubber-duck/discussions
+- Report issues: https://github.com/nesquikm/mcp-rubber-duck/issues
+- Documentation: https://github.com/nesquikm/mcp-rubber-duck/wiki
+- Discussions: https://github.com/nesquikm/mcp-rubber-duck/discussions
 
 ---
 

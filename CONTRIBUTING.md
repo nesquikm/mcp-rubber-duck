@@ -24,7 +24,7 @@ Before you can swim with the ducks, let's make sure you have everything set up p
 
 1. **Fork and clone the repository**
    ```bash
-   git clone https://github.com/yourusername/mcp-rubber-duck.git
+   git clone https://github.com/nesquikm/mcp-rubber-duck.git
    cd mcp-rubber-duck
    ```
 

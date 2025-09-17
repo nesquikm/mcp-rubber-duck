@@ -1,0 +1,8 @@
+{
+  "name": "io.github.nesquikm.rubber-duck",
+  "version": "1.0.0",
+  "description": "An MCP server that bridges to multiple OpenAI-compatible LLMs - your AI rubber duck debugging panel",
+  "packages": {
+    "npm": "mcp-rubber-duck"
+  }
+}
