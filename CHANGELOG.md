@@ -1,3 +1,11 @@
+## [1.1.1](https://github.com/nesquikm/mcp-rubber-duck/compare/v1.1.0...v1.1.1) (2025-09-17)
+
+
+### Bug Fixes
+
+* update mcpName format for GitHub namespace ([0786914](https://github.com/nesquikm/mcp-rubber-duck/commit/078691426d54f6ddc4feac7ffd9c5f7fdc15ac34))
+* update server.json name format for GitHub namespace ([fe866ff](https://github.com/nesquikm/mcp-rubber-duck/commit/fe866ffabdae8bfd066c809bc4c8e04a18562ec8))
+
 # [1.1.0](https://github.com/nesquikm/mcp-rubber-duck/compare/v1.0.0...v1.1.0) (2025-09-17)
 
 
