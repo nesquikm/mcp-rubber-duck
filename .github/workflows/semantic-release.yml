@@ -7,6 +7,18 @@ on:
       - main
   workflow_dispatch:
 
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+  packages: write
+  security-events: write
+  actions: read
+
 jobs:
   test:
     name: 🧪 Test Before Release
@@ -37,15 +49,103 @@ jobs:
       # - name: 🧪 Test
       #   run: npm test
 
+  security-scan:
+    name: 🔍 Security Scan
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+
+      - name: 🔒 Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+
+      - name: 📤 Upload Trivy scan results to GitHub Security
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: 'trivy-results.sarif'
+          category: 'trivy-filesystem'
+
+      - name: 🐳 Build Docker image for security scan
+        run: |
+          docker build -t security-scan-image .
+
+      - name: 🔒 Run Trivy on Docker image
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: 'security-scan-image'
+          format: 'sarif'
+          output: 'trivy-docker-results.sarif'
+
+      - name: 📤 Upload Docker scan results
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: 'trivy-docker-results.sarif'
+          category: 'trivy-docker'
+
+  dependency-check:
+    name: 📦 Dependency Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+
+      - name: 📦 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: 📥 Install dependencies
+        run: npm ci
+
+      - name: 🔍 Audit dependencies
+        run: npm audit --audit-level=moderate
+
+      - name: 📊 Check for outdated packages
+        run: npm outdated || true
+
+      - name: 🔒 Check for known vulnerabilities
+        run: npx audit-ci --config audit-ci.json || true
+
+  dockerfile-lint:
+    name: 🐳 Dockerfile Lint
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+
+      - name: 🔍 Lint Dockerfile
+        uses: hadolint/hadolint-action@v3.1.0
+        with:
+          dockerfile: Dockerfile
+          format: sarif
+          output-file: hadolint-results.sarif
+          no-fail: true
+
+      - name: 📤 Upload Dockerfile lint results
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: hadolint-results.sarif
+          category: 'hadolint'
+
   release:
     name: 📦 Release
-    needs: test
+    needs: [test, security-scan, dependency-check, dockerfile-lint]
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      issues: write
-      pull-requests: write
-      packages: write
+    outputs:
+      release-version: ${{ steps.get-version.outputs.version }}
+      new-release-published: ${{ steps.check-release.outputs.released }}
 
     steps:
       - name: 📥 Checkout
@@ -66,11 +166,48 @@ jobs:
       - name: 🏗️ Build
         run: npm run build
 
+      - name: 🏷️ Get latest tag before release
+        id: tag-before
+        run: |
+          latest_tag=$(git describe --tags --abbrev=0 2>/dev/null || echo "none")
+          echo "tag=$latest_tag" >> $GITHUB_OUTPUT
+          echo "Latest tag before release: $latest_tag"
+
       - name: 📦 Run semantic-release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: npx semantic-release
+
+      - name: 🏷️ Get latest tag after release
+        id: tag-after
+        run: |
+          git fetch --tags
+          latest_tag=$(git describe --tags --abbrev=0 2>/dev/null || echo "none")
+          echo "tag=$latest_tag" >> $GITHUB_OUTPUT
+          echo "Latest tag after release: $latest_tag"
+
+      - name: 📦 Extract version from new tag
+        id: get-version
+        run: |
+          if [ "${{ steps.tag-after.outputs.tag }}" != "none" ]; then
+            version=$(echo "${{ steps.tag-after.outputs.tag }}" | sed 's/^v//')
+            echo "version=$version" >> $GITHUB_OUTPUT
+            echo "Extracted version: $version"
+          else
+            echo "version=" >> $GITHUB_OUTPUT
+          fi
+
+      - name: 🔍 Check if new release was published
+        id: check-release
+        run: |
+          if [ "${{ steps.tag-before.outputs.tag }}" != "${{ steps.tag-after.outputs.tag }}" ] && [ "${{ steps.tag-after.outputs.tag }}" != "none" ]; then
+            echo "released=true" >> $GITHUB_OUTPUT
+            echo "New release detected: ${{ steps.tag-after.outputs.tag }}"
+          else
+            echo "released=false" >> $GITHUB_OUTPUT
+            echo "No new release"
+          fi
 
       - name: 📊 Release Summary
         if: success()
@@ -82,8 +219,100 @@ jobs:
           echo "- 📝 Generated changelog entries" >> $GITHUB_STEP_SUMMARY
           echo "- 🏷️ Created git tag (if new version)" >> $GITHUB_STEP_SUMMARY
           echo "- 📦 Updated package.json version" >> $GITHUB_STEP_SUMMARY
-          echo "- 🐳 Tagged version will trigger Docker build via release.yml" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ steps.check-release.outputs.released }}" == "true" ]; then
+            echo "- ✅ **New version released:** ${{ steps.get-version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+            echo "- 🐳 Docker images will be built next" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "- ℹ️ **No new version:** No changes warranted a release" >> $GITHUB_STEP_SUMMARY
+          fi
+
+  docker:
+    name: 🐳 Build & Push Docker Images
+    needs: release
+    runs-on: ubuntu-latest
+    if: needs.release.outputs.new-release-published == 'true'
+
+    steps:
+      - name: 📥 Checkout release tag
+        uses: actions/checkout@v4
+        with:
+          ref: v${{ needs.release.outputs.release-version }}
+          fetch-depth: 0
+
+      - name: 🛠️ Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: 🛠️ Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: 🔑 Login to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 🏷️ Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=semver,pattern={{version}},value=${{ needs.release.outputs.release-version }}
+            type=semver,pattern={{major}}.{{minor}},value=${{ needs.release.outputs.release-version }}
+            type=semver,pattern={{major}},value=${{ needs.release.outputs.release-version }}
+            type=raw,value=latest
+          labels: |
+            org.opencontainers.image.title=MCP Rubber Duck
+            org.opencontainers.image.description=Multi-platform MCP server for multiple OpenAI-compatible LLMs
+            org.opencontainers.image.version=${{ needs.release.outputs.release-version }}
+
+      - name: 🐳 Build and push Docker image
+        id: build
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            BUILDKIT_INLINE_CACHE=1
+
+      - name: 🔧 Make package public
+        if: success()
+        run: |
+          # Wait a moment for package to appear
+          sleep 10
+
+          # Try to make package public (may fail if already public)
+          gh api --method PATCH \
+            "user/packages/container/${{ github.event.repository.name }}" \
+            --field visibility=public \
+            --silent || echo "Package may already be public or visibility change failed"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 📊 Docker Success Summary
+        if: success()
+        run: |
+          echo "🎉 **Docker Images Built Successfully!**" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "🔄 **Next Steps:**" >> $GITHUB_STEP_SUMMARY
-          echo "- If a new version was released, the release.yml workflow will build Docker images" >> $GITHUB_STEP_SUMMARY
-          echo "- Check the releases page for the new version" >> $GITHUB_STEP_SUMMARY
+          echo "📦 **Built for version:** ${{ needs.release.outputs.release-version }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "🐳 **Docker Images Published:**" >> $GITHUB_STEP_SUMMARY
+          for tag in $(echo '${{ steps.meta.outputs.tags }}' | tr ',' '\n'); do
+            echo "- \`$tag\`" >> $GITHUB_STEP_SUMMARY
+          done
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "🏗️ **Platforms:** AMD64, ARM64" >> $GITHUB_STEP_SUMMARY
+          echo "📍 **Registry:** ${{ env.REGISTRY }}" >> $GITHUB_STEP_SUMMARY
+          echo "🔗 **Package URL:** https://github.com/${{ github.repository }}/pkgs/container/${{ github.event.repository.name }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "🚀 **Quick Test:**" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`bash" >> $GITHUB_STEP_SUMMARY
+          echo "docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.release.outputs.release-version }}" >> $GITHUB_STEP_SUMMARY
+          echo "docker run --rm -e OPENAI_API_KEY=your-key ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.release.outputs.release-version }}" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
