@@ -2,6 +2,10 @@
 
 An MCP (Model Context Protocol) server that acts as a bridge to query multiple OpenAI-compatible LLMs. Just like rubber duck debugging, explain your problems to various AI "ducks" and get different perspectives!
 
+[![npm version](https://badge.fury.io/js/mcp-rubber-duck.svg)](https://www.npmjs.com/package/mcp-rubber-duck)
+[![Docker Image](https://img.shields.io/badge/docker-ghcr.io-blue)](https://github.com/nesquikm/mcp-rubber-duck/pkgs/container/mcp-rubber-duck)
+[![MCP Registry](https://img.shields.io/badge/MCP-Registry-green)](https://modelcontextprotocol.io/registry)
+
 ```
      __
    <(o )___
@@ -51,7 +55,15 @@ Any provider with an OpenAI-compatible API endpoint, including:
 - npm or yarn
 - At least one API key for a supported provider
 
-### Install from Source
+### Installation Methods
+
+#### Option 1: Install from NPM
+
+```bash
+npm install -g mcp-rubber-duck
+```
+
+#### Option 2: Install from Source
 
 ```bash
 # Clone the repository
@@ -791,6 +803,16 @@ MIT License - see LICENSE file for details
 ## 📝 Changelog
 
 See [CHANGELOG.md](./CHANGELOG.md) for a detailed history of changes and releases.
+
+## 📦 Registry & Directory
+
+MCP Rubber Duck is available through multiple channels:
+
+- **NPM Package**: [npmjs.com/package/mcp-rubber-duck](https://www.npmjs.com/package/mcp-rubber-duck)
+- **Docker Images**: [ghcr.io/nesquikm/mcp-rubber-duck](https://github.com/nesquikm/mcp-rubber-duck/pkgs/container/mcp-rubber-duck)
+- **MCP Registry**: Official MCP server `io.github.nesquikm/rubber-duck`
+- **Glama Directory**: [glama.ai/mcp/servers/@nesquikm/mcp-rubber-duck](https://glama.ai/mcp/servers/@nesquikm/mcp-rubber-duck)
+- **Awesome MCP Servers**: Listed in the [community directory](https://github.com/punkpeye/awesome-mcp-servers)
 
 ## Support
 
