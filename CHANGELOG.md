@@ -1,3 +1,10 @@
+# [1.1.0](https://github.com/nesquikm/mcp-rubber-duck/compare/v1.0.0...v1.1.0) (2025-09-17)
+
+
+### Features
+
+* add NPM publishing for MCP Registry ([96a7a5b](https://github.com/nesquikm/mcp-rubber-duck/commit/96a7a5b6e2e25f7113c0ec87880e39d4a2fae02f))
+
 # 1.0.0 (2025-09-11)
 
 
