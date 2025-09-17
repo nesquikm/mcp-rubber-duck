@@ -54,3 +54,9 @@ config/*.json
 # Temporary files
 tmp/
 temp/
+
+# MCP Publisher tokens
+.mcpregistry_*
+
+# Backup files
+*.backup
