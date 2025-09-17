@@ -565,11 +565,6 @@ export class RubberDuckServer {
       }
     }
 
-    // Start health monitoring
-    this.healthMonitor.startMonitoring(60000);
-
-    // Initial health check
-    await this.healthMonitor.performHealthChecks();
 
     // Start the server
     const transport = new StdioServerTransport();
@@ -583,9 +578,6 @@ export class RubberDuckServer {
   }
 
   async stop() {
-    // Stop health monitoring
-    this.healthMonitor.stopMonitoring();
-
     // Cleanup MCP resources
     if (this.approvalService) {
       this.approvalService.shutdown();

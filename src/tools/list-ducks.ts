@@ -1,5 +1,6 @@
 import { ProviderManager } from '../providers/manager.js';
 import { HealthMonitor } from '../services/health.js';
+import { ProviderHealth } from '../config/types.js';
 import { duckArt } from '../utils/ascii-art.js';
 import { logger } from '../utils/logger.js';
 
@@ -12,14 +13,15 @@ export async function listDucksTool(
     check_health?: boolean;
   };
 
-  // Perform health check if requested
-  if (check_health) {
-    await healthMonitor.performHealthChecks();
-  }
-
   // Get all providers with their info
   const providers = providerManager.getAllProviders();
-  const healthStatus = healthMonitor.getHealthStatus();
+
+  // Perform health check if requested
+  let healthStatus = new Map<string, ProviderHealth>();
+  if (check_health) {
+    const healthResults = await healthMonitor.performHealthChecks();
+    healthStatus = new Map(healthResults.map(result => [result.provider, result]));
+  }
 
   // Build response
   let response = `${duckArt.panel}\n\n`;
