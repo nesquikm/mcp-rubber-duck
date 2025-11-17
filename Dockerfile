@@ -32,12 +32,14 @@ WORKDIR /app
 # Copy package files
 COPY package*.json ./
 
-# Install production dependencies only
-RUN npm ci --only=production && \
-    npm cache clean --force
+# Copy production node_modules from builder (avoids npm ci issues with QEMU)
+COPY --from=builder /app/node_modules ./node_modules
 
 # Copy built application from builder
 COPY --from=builder /app/dist ./dist
+
+# Remove dev dependencies to reduce image size
+RUN npm prune --production
 
 # Copy configuration examples
 COPY config/config.example.json ./config/
