@@ -1,6 +1,6 @@
 {
   "name": "mcp-rubber-duck",
-  "version": "1.2.3",
+  "version": "1.2.4",
   "description": "An MCP server that bridges to multiple OpenAI-compatible LLMs - your AI rubber duck debugging panel",
   "main": "dist/index.js",
   "type": "module",

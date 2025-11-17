@@ -1,3 +1,10 @@
+## [1.2.4](https://github.com/nesquikm/mcp-rubber-duck/compare/v1.2.3...v1.2.4) (2025-11-17)
+
+
+### Bug Fixes
+
+* avoid npm ci on ARM64 by copying node_modules from builder ([b5a9777](https://github.com/nesquikm/mcp-rubber-duck/commit/b5a977772c44a138dc65554e8f2448be63fb0976))
+
 ## [1.2.3](https://github.com/nesquikm/mcp-rubber-duck/compare/v1.2.2...v1.2.3) (2025-11-17)
 
 
