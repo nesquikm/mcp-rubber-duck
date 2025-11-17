@@ -1,3 +1,10 @@
+## [1.2.3](https://github.com/nesquikm/mcp-rubber-duck/compare/v1.2.2...v1.2.3) (2025-11-17)
+
+
+### Bug Fixes
+
+* resolve js-yaml security vulnerability with package override ([822a550](https://github.com/nesquikm/mcp-rubber-duck/commit/822a550397cb9b3e3966a8c5335c2ab1182bfd91))
+
 ## [1.2.2](https://github.com/nesquikm/mcp-rubber-duck/compare/v1.2.1...v1.2.2) (2025-09-17)
 
 ## [1.2.1](https://github.com/nesquikm/mcp-rubber-duck/compare/v1.2.0...v1.2.1) (2025-09-17)
