@@ -1,3 +1,15 @@
+# [1.3.0](https://github.com/nesquikm/mcp-rubber-duck/compare/v1.2.5...v1.3.0) (2025-11-24)
+
+
+### Bug Fixes
+
+* improve JSON parsing in consensus and judge tools ([92f64e5](https://github.com/nesquikm/mcp-rubber-duck/commit/92f64e525681886bfe791d72b07f71511da62ee0))
+
+
+### Features
+
+* add multi-agent consensus and debate tools ([55352d8](https://github.com/nesquikm/mcp-rubber-duck/commit/55352d856d59ede6cb0e8a9d763c27afe3a9e33e))
+
 ## [1.2.5](https://github.com/nesquikm/mcp-rubber-duck/compare/v1.2.4...v1.2.5) (2025-11-24)
 
 
