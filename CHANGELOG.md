@@ -1,3 +1,11 @@
+## [1.2.5](https://github.com/nesquikm/mcp-rubber-duck/compare/v1.2.4...v1.2.5) (2025-11-24)
+
+
+### Bug Fixes
+
+* align semantic-release audit config with security workflow ([940a160](https://github.com/nesquikm/mcp-rubber-duck/commit/940a1605874bb3f7c435ecde2e25c135b8a4b5c8))
+* improve security workflow and update dependencies ([55703a4](https://github.com/nesquikm/mcp-rubber-duck/commit/55703a4f50cef0066d63512c3cbd44c1c90ce111))
+
 ## [1.2.4](https://github.com/nesquikm/mcp-rubber-duck/compare/v1.2.3...v1.2.4) (2025-11-17)
 
 
