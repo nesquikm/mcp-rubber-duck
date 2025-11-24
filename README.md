@@ -16,11 +16,15 @@ An MCP (Model Context Protocol) server that acts as a bridge to query multiple O
 ## Features
 
 - 🔌 **Universal OpenAI Compatibility**: Works with any OpenAI-compatible API endpoint
-- 🦆 **Multiple Ducks**: Configure and query multiple LLM providers simultaneously  
+- 🦆 **Multiple Ducks**: Configure and query multiple LLM providers simultaneously
 - 💬 **Conversation Management**: Maintain context across multiple messages
 - 🏛️ **Duck Council**: Get responses from all your configured LLMs at once
+- 🗳️ **Consensus Voting**: Multi-duck voting with reasoning and confidence scores
+- ⚖️ **LLM-as-Judge**: Have ducks evaluate and rank each other's responses
+- 🔄 **Iterative Refinement**: Two ducks collaboratively improve responses
+- 🎓 **Structured Debates**: Oxford, Socratic, and adversarial debate formats
 - 💾 **Response Caching**: Avoid duplicate API calls with intelligent caching
-- 🔄 **Automatic Failover**: Falls back to other providers if primary fails
+- 🔁 **Automatic Failover**: Falls back to other providers if primary fails
 - 📊 **Health Monitoring**: Real-time health checks for all providers
 - 🔗 **MCP Bridge**: Connect ducks to other MCP servers for extended functionality
 - 🛡️ **Granular Security**: Per-server approval controls with session-based approvals
@@ -466,6 +470,70 @@ Get responses from all configured ducks - like a panel discussion!
 }
 ```
 
+## Multi-Agent Consensus & Debate Tools
+
+Research-backed tools for multi-agent coordination. See [Multi-Agent Features](docs/MULTI_AGENT_FEATURES.md) for detailed documentation.
+
+### 🗳️ duck_vote
+Have multiple ducks vote on options with reasoning and confidence scores.
+
+```typescript
+{
+  "question": "Best approach for error handling?",
+  "options": ["try-catch", "Result type", "Either monad"],
+  "voters": ["openai", "gemini"],     // Optional, uses all if not specified
+  "require_reasoning": true            // Optional, default: true
+}
+```
+
+Returns vote tally, confidence scores, and consensus level (unanimous, majority, plurality, split, none).
+
+### ⚖️ duck_judge
+Have one duck evaluate and rank other ducks' responses. Use after `duck_council`.
+
+```typescript
+{
+  "responses": [/* responses from duck_council */],
+  "judge": "openai",                   // Optional, uses first available
+  "criteria": ["accuracy", "completeness", "clarity"],  // Optional
+  "persona": "senior engineer"         // Optional, e.g., "security expert"
+}
+```
+
+### 🔄 duck_iterate
+Iteratively refine a response between two ducks.
+
+```typescript
+{
+  "prompt": "Write a function to validate email addresses",
+  "providers": ["openai", "gemini"],   // Exactly 2 providers
+  "mode": "critique-improve",          // or "refine"
+  "iterations": 3                      // Optional, default: 3, max: 10
+}
+```
+
+Modes:
+- **refine**: Each duck improves the previous response
+- **critique-improve**: Alternates between critiquing and improving
+
+### 🎓 duck_debate
+Structured multi-round debate between ducks.
+
+```typescript
+{
+  "prompt": "Should startups use microservices or monolith for MVP?",
+  "format": "oxford",                  // "oxford", "socratic", or "adversarial"
+  "rounds": 2,                         // Optional, default: 3
+  "providers": ["openai", "gemini"],   // Optional, uses all if not specified
+  "synthesizer": "openai"              // Optional, duck to synthesize debate
+}
+```
+
+Formats:
+- **oxford**: Structured pro/con arguments
+- **socratic**: Question-based philosophical exploration
+- **adversarial**: One defends, others attack weaknesses
+
 ## Usage Examples
 
 ### Basic Query
@@ -505,6 +573,52 @@ await compare_ducks({
 // Convene the council for important decisions
 await duck_council({
   prompt: "Should I use REST or GraphQL for my API?"
+});
+```
+
+### Multi-Agent Voting
+```javascript
+// Have ducks vote on a decision
+await duck_vote({
+  question: "Best database for a real-time chat app?",
+  options: ["PostgreSQL", "MongoDB", "Redis", "Cassandra"]
+});
+// Returns: Winner with consensus level (unanimous/majority/split)
+```
+
+### Judge Responses
+```javascript
+// First, get responses from council
+const responses = await duck_council({
+  prompt: "Implement a rate limiter"
+});
+
+// Then have a duck judge them
+await duck_judge({
+  responses: responses,
+  criteria: ["correctness", "efficiency", "readability"],
+  persona: "senior backend engineer"
+});
+```
+
+### Iterative Refinement
+```javascript
+// Two ducks collaborate to improve a solution
+await duck_iterate({
+  prompt: "Write a TypeScript function to deep clone objects",
+  providers: ["openai", "gemini"],
+  mode: "critique-improve",
+  iterations: 3
+});
+```
+
+### Structured Debate
+```javascript
+// Oxford-style debate on architecture
+await duck_debate({
+  prompt: "Monorepo vs polyrepo for a growing startup",
+  format: "oxford",
+  rounds: 3
 });
 ```
 

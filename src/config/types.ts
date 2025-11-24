@@ -87,3 +87,95 @@ export interface DuckResponse {
   latency: number;
   cached: boolean;
 }
+
+// Consensus & Voting Types
+export interface VoteResult {
+  voter: string;
+  nickname: string;
+  choice: string;
+  confidence: number;
+  reasoning: string;
+  rawResponse: string;
+}
+
+export interface AggregatedVote {
+  question: string;
+  options: string[];
+  winner: string | null;
+  isTie: boolean;
+  tally: Record<string, number>;
+  confidenceByOption: Record<string, number>;
+  votes: VoteResult[];
+  totalVoters: number;
+  validVotes: number;
+  consensusLevel: 'unanimous' | 'majority' | 'plurality' | 'split' | 'none';
+}
+
+// Judge Evaluation Types
+export interface JudgeRanking {
+  provider: string;
+  nickname: string;
+  rank: number;
+  score: number;
+  justification: string;
+}
+
+export interface JudgeEvaluation {
+  judge: string;
+  judgeNickname: string;
+  prompt: string;
+  criteria: string[];
+  rankings: JudgeRanking[];
+  criteriaScores: Record<string, Record<string, number>>;
+  summary: string;
+  rawResponse: string;
+}
+
+// Iteration Types
+export interface IterationRound {
+  round: number;
+  provider: string;
+  nickname: string;
+  role: 'generator' | 'critic' | 'refiner';
+  content: string;
+  timestamp: Date;
+}
+
+export interface IterationResult {
+  prompt: string;
+  mode: 'refine' | 'critique-improve';
+  providers: [string, string];
+  rounds: IterationRound[];
+  finalResponse: string;
+  totalIterations: number;
+  converged: boolean;
+}
+
+// Debate Types
+export type DebateFormat = 'oxford' | 'socratic' | 'adversarial';
+export type DebatePosition = 'pro' | 'con' | 'neutral';
+
+export interface DebateParticipant {
+  provider: string;
+  nickname: string;
+  position: DebatePosition;
+}
+
+export interface DebateArgument {
+  round: number;
+  provider: string;
+  nickname: string;
+  position: DebatePosition;
+  content: string;
+  timestamp: Date;
+}
+
+export interface DebateResult {
+  topic: string;
+  format: DebateFormat;
+  participants: DebateParticipant[];
+  rounds: DebateArgument[][];
+  synthesis: string;
+  synthesizer: string;
+  totalRounds: number;
+}

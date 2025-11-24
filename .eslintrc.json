@@ -35,6 +35,7 @@
     "dist/",
     "node_modules/",
     "coverage/",
+    "tests/",
     "*.config.js"
   ]
 }

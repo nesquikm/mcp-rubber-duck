@@ -27,6 +27,10 @@ import { listDucksTool } from './tools/list-ducks.js';
 import { listModelsTool } from './tools/list-models.js';
 import { compareDucksTool } from './tools/compare-ducks.js';
 import { duckCouncilTool } from './tools/duck-council.js';
+import { duckVoteTool } from './tools/duck-vote.js';
+import { duckJudgeTool } from './tools/duck-judge.js';
+import { duckIterateTool } from './tools/duck-iterate.js';
+import { duckDebateTool } from './tools/duck-debate.js';
 
 // Import MCP tools
 import { getPendingApprovalsTool } from './tools/get-pending-approvals.js';
@@ -161,6 +165,18 @@ export class RubberDuckServer {
               return await this.handleDuckCouncilWithMCP(args || {});
             }
             return await duckCouncilTool(this.providerManager, args || {});
+
+          case 'duck_vote':
+            return await duckVoteTool(this.providerManager, args || {});
+
+          case 'duck_judge':
+            return await duckJudgeTool(this.providerManager, args || {});
+
+          case 'duck_iterate':
+            return await duckIterateTool(this.providerManager, args || {});
+
+          case 'duck_debate':
+            return await duckDebateTool(this.providerManager, args || {});
 
           // MCP-specific tools
           case 'get_pending_approvals':
@@ -485,6 +501,144 @@ export class RubberDuckServer {
             },
           },
           required: ['prompt'],
+        },
+      },
+      {
+        name: 'duck_vote',
+        description: 'Have multiple ducks vote on options with reasoning. Returns vote tally, confidence scores, and consensus level.',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            question: {
+              type: 'string',
+              description: 'The question to vote on (e.g., "Best approach for error handling?")',
+            },
+            options: {
+              type: 'array',
+              items: { type: 'string' },
+              minItems: 2,
+              maxItems: 10,
+              description: 'The options to vote on (2-10 options)',
+            },
+            voters: {
+              type: 'array',
+              items: { type: 'string' },
+              description: 'List of provider names to vote (optional, uses all if not specified)',
+            },
+            require_reasoning: {
+              type: 'boolean',
+              default: true,
+              description: 'Require ducks to explain their vote (default: true)',
+            },
+          },
+          required: ['question', 'options'],
+        },
+      },
+      {
+        name: 'duck_judge',
+        description: 'Have one duck evaluate and rank other ducks\' responses. Use after duck_council to get a comparative evaluation.',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            responses: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  provider: { type: 'string' },
+                  nickname: { type: 'string' },
+                  model: { type: 'string' },
+                  content: { type: 'string' },
+                },
+                required: ['provider', 'nickname', 'content'],
+              },
+              minItems: 2,
+              description: 'Array of duck responses to evaluate (from duck_council output)',
+            },
+            judge: {
+              type: 'string',
+              description: 'Provider name of the judge duck (optional, uses first available)',
+            },
+            criteria: {
+              type: 'array',
+              items: { type: 'string' },
+              description: 'Evaluation criteria (default: ["accuracy", "completeness", "clarity"])',
+            },
+            persona: {
+              type: 'string',
+              description: 'Judge persona (e.g., "senior engineer", "security expert")',
+            },
+          },
+          required: ['responses'],
+        },
+      },
+      {
+        name: 'duck_iterate',
+        description: 'Iteratively refine a response between two ducks. One generates, the other critiques/improves, alternating for multiple rounds.',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            prompt: {
+              type: 'string',
+              description: 'The initial prompt/task to iterate on',
+            },
+            iterations: {
+              type: 'number',
+              minimum: 1,
+              maximum: 10,
+              default: 3,
+              description: 'Number of iteration rounds (default: 3, max: 10)',
+            },
+            providers: {
+              type: 'array',
+              items: { type: 'string' },
+              minItems: 2,
+              maxItems: 2,
+              description: 'Exactly 2 provider names for the ping-pong iteration',
+            },
+            mode: {
+              type: 'string',
+              enum: ['refine', 'critique-improve'],
+              description: 'refine: each duck improves the previous response. critique-improve: alternates between critiquing and improving.',
+            },
+          },
+          required: ['prompt', 'providers', 'mode'],
+        },
+      },
+      {
+        name: 'duck_debate',
+        description: 'Structured multi-round debate between ducks. Supports oxford (pro/con), socratic (questioning), and adversarial (attack/defend) formats.',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            prompt: {
+              type: 'string',
+              description: 'The debate topic or proposition',
+            },
+            rounds: {
+              type: 'number',
+              minimum: 1,
+              maximum: 10,
+              default: 3,
+              description: 'Number of debate rounds (default: 3)',
+            },
+            providers: {
+              type: 'array',
+              items: { type: 'string' },
+              minItems: 2,
+              description: 'Provider names to participate (min 2, uses all if not specified)',
+            },
+            format: {
+              type: 'string',
+              enum: ['oxford', 'socratic', 'adversarial'],
+              description: 'Debate format: oxford (pro/con), socratic (questioning), adversarial (attack/defend)',
+            },
+            synthesizer: {
+              type: 'string',
+              description: 'Provider to synthesize the debate (optional, uses first provider)',
+            },
+          },
+          required: ['prompt', 'format'],
         },
       },
     ];
