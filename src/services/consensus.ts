@@ -69,8 +69,8 @@ IMPORTANT:
     };
 
     try {
-      // Try to extract JSON from the response
-      const jsonMatch = response.match(/\{[\s\S]*?\}/);
+      // Try to extract JSON from the response (greedy to handle nested objects)
+      const jsonMatch = response.match(/\{[\s\S]*\}/);
       if (!jsonMatch) {
         logger.warn(`No JSON found in vote response from ${voter}`);
         return this.fallbackParse(response, voter, nickname, options);

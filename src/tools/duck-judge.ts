@@ -118,7 +118,7 @@ Respond with ONLY a JSON object in this exact format:
     {"provider": "<provider name>", "score": <0-100>, "justification": "<brief explanation>"}
   ],
   "criteria_scores": {
-    "<provider>": {"${criteria.join('": <0-100>, "')}":<0-100>}
+    "<provider>": {${criteria.map(c => `"${c}": <0-100>`).join(', ')}}
   },
   "summary": "<overall assessment and recommendation>"
 }
