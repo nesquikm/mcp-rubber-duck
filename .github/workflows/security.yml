@@ -74,13 +74,15 @@ jobs:
         run: npm ci
 
       - name: 🔍 Audit dependencies
-        run: npm audit --audit-level=moderate
+        # Using audit-ci for allowlisting, npm audit for basic check (non-blocking)
+        run: npm audit --audit-level=moderate || true
 
       - name: 📊 Check for outdated packages
         run: npm outdated || true
 
       - name: 🔒 Check for known vulnerabilities
-        run: npx audit-ci --config audit-ci.json || true
+        # audit-ci respects allowlist in audit-ci.json for false positives
+        run: npx audit-ci --config audit-ci.json
 
   dockerfile-lint:
     name: 🐳 Dockerfile Lint

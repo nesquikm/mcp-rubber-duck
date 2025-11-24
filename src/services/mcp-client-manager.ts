@@ -82,9 +82,7 @@ export class MCPClientManager {
           name: 'mcp-rubber-duck',
           version: '1.0.0',
         }, {
-          capabilities: {
-            tools: {},
-          },
+          capabilities: {},
         });
         
         // Create transport based on type

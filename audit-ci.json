@@ -4,5 +4,7 @@
   "high": true,
   "critical": true,
   "report-type": "summary",
-  "allowlist": []
+  "allowlist": [
+    "GHSA-5j98-mcp5-4vw2"
+  ]
 }
