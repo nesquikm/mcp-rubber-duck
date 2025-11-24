@@ -472,7 +472,7 @@ Get responses from all configured ducks - like a panel discussion!
 
 ## Multi-Agent Consensus & Debate Tools
 
-Research-backed tools for multi-agent coordination. See [Multi-Agent Features](docs/MULTI_AGENT_FEATURES.md) for detailed documentation.
+Research-backed tools for multi-agent coordination.
 
 ### 🗳️ duck_vote
 Have multiple ducks vote on options with reasoning and confidence scores.
