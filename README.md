@@ -6,12 +6,9 @@ An MCP (Model Context Protocol) server that acts as a bridge to query multiple O
 [![Docker Image](https://img.shields.io/badge/docker-ghcr.io-blue)](https://github.com/nesquikm/mcp-rubber-duck/pkgs/container/mcp-rubber-duck)
 [![MCP Registry](https://img.shields.io/badge/MCP-Registry-green)](https://modelcontextprotocol.io/registry)
 
-```
-     __
-   <(o )___
-    ( ._> /
-     `---'  Quack! Ready to debug!
-```
+<p align="center">
+  <img src="assets/mcp-rubber-duck.png" alt="MCP Rubber Duck - AI ducks helping debug code" width="600">
+</p>
 
 ## Features
 
@@ -891,7 +888,14 @@ mcp-rubber-duck/
 
 ## Contributing
 
-🦆 **Want to help make our duck pond better?** 
+```
+     __
+   <(o )___
+    ( ._> /
+     `---'  Quack! Ready to debug!
+```
+
+🦆 **Want to help make our duck pond better?**
 
 We love contributions! Whether you're fixing bugs, adding features, or teaching our ducks new tricks, we'd love to have you join the flock.
 
