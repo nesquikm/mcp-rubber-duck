@@ -1,3 +1,10 @@
+# [1.4.0](https://github.com/nesquikm/mcp-rubber-duck/compare/v1.3.0...v1.4.0) (2025-11-30)
+
+
+### Features
+
+* add support for latest LLM models (Nov 2025) ([80ce45f](https://github.com/nesquikm/mcp-rubber-duck/commit/80ce45f8222762ea1b12af07fd54e9a19ac8532c))
+
 # [1.3.0](https://github.com/nesquikm/mcp-rubber-duck/compare/v1.2.5...v1.3.0) (2025-11-24)
 
 
