@@ -48,7 +48,7 @@ services:
       
       # OpenAI Provider
       - OPENAI_API_KEY=${OPENAI_API_KEY}
-      - OPENAI_DEFAULT_MODEL=${OPENAI_DEFAULT_MODEL:-gpt-4o-mini}
+      - OPENAI_DEFAULT_MODEL=${OPENAI_DEFAULT_MODEL:-gpt-5.1}
       
       # Google Gemini Provider
       - GEMINI_API_KEY=${GEMINI_API_KEY}

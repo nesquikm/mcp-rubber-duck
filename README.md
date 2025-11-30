@@ -117,7 +117,7 @@ Create a `.env` file in the project root:
 ```env
 # OpenAI
 OPENAI_API_KEY=sk-...
-OPENAI_DEFAULT_MODEL=gpt-4o-mini  # Optional: defaults to gpt-4o-mini
+OPENAI_DEFAULT_MODEL=gpt-5.1  # Optional: defaults to gpt-5.1
 
 # Google Gemini
 GEMINI_API_KEY=...

@@ -109,8 +109,8 @@ export class ConfigManager {
       providers.openai = {
         api_key: process.env.OPENAI_API_KEY,
         base_url: 'https://api.openai.com/v1',
-        models: ['gpt-4o', 'gpt-4o-mini', 'gpt-3.5-turbo'],
-        default_model: process.env.OPENAI_DEFAULT_MODEL || 'gpt-4o-mini',
+        models: ['gpt-5.1', 'gpt-4.1', 'gpt-4o'],
+        default_model: process.env.OPENAI_DEFAULT_MODEL || 'gpt-5.1',
         nickname: process.env.OPENAI_NICKNAME || 'GPT Duck',
       };
     }
@@ -120,7 +120,7 @@ export class ConfigManager {
       providers.gemini = {
         api_key: process.env.GEMINI_API_KEY,
         base_url: 'https://generativelanguage.googleapis.com/v1beta/openai/',
-        models: ['gemini-2.5-flash', 'gemini-2.0-flash'],
+        models: ['gemini-3-pro-preview', 'gemini-2.5-pro', 'gemini-2.5-flash'],
         default_model: process.env.GEMINI_DEFAULT_MODEL || 'gemini-2.5-flash',
         nickname: process.env.GEMINI_NICKNAME || 'Gemini Duck',
       };
@@ -131,7 +131,7 @@ export class ConfigManager {
       providers.groq = {
         api_key: process.env.GROQ_API_KEY,
         base_url: 'https://api.groq.com/openai/v1',
-        models: ['llama-3.3-70b-versatile', 'mixtral-8x7b-32768'],
+        models: ['meta-llama/llama-4-scout-17b-16e-instruct', 'meta-llama/llama-4-maverick-17b-128e-instruct', 'llama-3.3-70b-versatile'],
         default_model: process.env.GROQ_DEFAULT_MODEL || 'llama-3.3-70b-versatile',
         nickname: process.env.GROQ_NICKNAME || 'Groq Duck',
       };
