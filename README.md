@@ -10,6 +10,26 @@ An MCP (Model Context Protocol) server that acts as a bridge to query multiple O
   <img src="assets/mcp-rubber-duck.png" alt="MCP Rubber Duck - AI ducks helping debug code" width="600">
 </p>
 
+## Table of Contents
+
+- [Features](#features)
+- [Supported Providers](#supported-providers)
+- [Quick Start](#quick-start)
+- [Installation](#installation)
+- [Configuration](#configuration)
+- [Claude Desktop Configuration](#claude-desktop-configuration)
+- [MCP Bridge](#mcp-bridge---connect-to-other-mcp-servers)
+- [Available Tools](#available-tools)
+  - [Basic Tools](#basic-tools)
+  - [Multi-Agent Tools](#multi-agent-consensus--debate-tools)
+  - [MCP Bridge Tools](#mcp-bridge-tools)
+- [Usage Examples](#usage-examples)
+- [Provider-Specific Setup](#provider-specific-setup)
+- [Docker Support](#docker-support)
+- [Development](#development)
+- [Troubleshooting](#troubleshooting)
+- [Contributing](#contributing)
+
 ## Features
 
 - 🔌 **Universal OpenAI Compatibility**: Works with any OpenAI-compatible API endpoint
@@ -45,8 +65,15 @@ Any provider with an OpenAI-compatible API endpoint, including:
 
 ## Quick Start
 
-### For Claude Desktop Users
-👉 **Complete Claude Desktop setup instructions below in [Claude Desktop Configuration](#claude-desktop-configuration)**
+```bash
+# Install globally
+npm install -g mcp-rubber-duck
+
+# Or use npx directly in Claude Desktop config
+npx mcp-rubber-duck
+```
+
+**Using Claude Desktop?** Jump to [Claude Desktop Configuration](#claude-desktop-configuration).
 
 ## Installation
 
@@ -162,19 +189,16 @@ cp config/config.example.json config/config.json
 
 This is the most common setup method for using MCP Rubber Duck with Claude Desktop.
 
-### Step 1: Build the Project
+### Step 1: Install
 
-First, ensure the project is built:
+Choose one of these options:
 
+**Option A: NPM (Recommended)**
 ```bash
-# Clone the repository
-git clone https://github.com/nesquikm/mcp-rubber-duck.git
-cd mcp-rubber-duck
-
-# Install dependencies and build
-npm install
-npm run build
+npm install -g mcp-rubber-duck
 ```
+
+**Option B: From Source** (see [Installation from Source](#option-2-install-from-source))
 
 ### Step 2: Configure Claude Desktop
 
@@ -185,6 +209,24 @@ Edit your Claude Desktop config file:
 
 Add the MCP server configuration:
 
+**If installed via NPM:**
+```json
+{
+  "mcpServers": {
+    "rubber-duck": {
+      "command": "mcp-rubber-duck",
+      "env": {
+        "MCP_SERVER": "true",
+        "OPENAI_API_KEY": "your-openai-api-key-here",
+        "GEMINI_API_KEY": "your-gemini-api-key-here",
+        "DEFAULT_PROVIDER": "openai"
+      }
+    }
+  }
+}
+```
+
+**If installed from source:**
 ```json
 {
   "mcpServers": {
@@ -194,11 +236,8 @@ Add the MCP server configuration:
       "env": {
         "MCP_SERVER": "true",
         "OPENAI_API_KEY": "your-openai-api-key-here",
-        "OPENAI_DEFAULT_MODEL": "gpt-4o-mini",
-        "GEMINI_API_KEY": "your-gemini-api-key-here", 
-        "GEMINI_DEFAULT_MODEL": "gemini-2.5-flash",
-        "DEFAULT_PROVIDER": "openai",
-        "LOG_LEVEL": "info"
+        "GEMINI_API_KEY": "your-gemini-api-key-here",
+        "DEFAULT_PROVIDER": "openai"
       }
     }
   }
@@ -210,6 +249,8 @@ Add the MCP server configuration:
 - `your-gemini-api-key-here` → Your Gemini API key from [Google AI Studio](https://aistudio.google.com/apikey)
 
 **Note**: `MCP_SERVER: "true"` is required - this tells rubber-duck to run as an MCP server for any MCP client (not related to the MCP Bridge feature).
+
+**Tip**: See [Configuration](#configuration) for additional options like `LOG_LEVEL`, custom model defaults, and duck nicknames.
 
 ### Step 3: Restart Claude Desktop
 
@@ -369,7 +410,7 @@ Ask: "Can you find React hooks documentation from Context7 and return only the k
 Duck: *searches Context7 and returns focused, essential React hooks information*
 ```
 
-### 💡 Token Optimization Benefits
+### Token Optimization Benefits
 
 **Smart Token Management**: Ducks can retrieve comprehensive data from MCP servers but return only the essential information you need, saving tokens in your host LLM conversations:
 
@@ -396,9 +437,11 @@ When using `always` mode, the system remembers your approvals:
 
 This eliminates approval fatigue while maintaining security!
 
-### Available Tools (Enhanced with MCP)
+## Available Tools
 
-### 🦆 ask_duck
+### Basic Tools
+
+#### 🦆 ask_duck
 Ask a single question to a specific LLM provider. When MCP Bridge is enabled, ducks can automatically access tools from connected MCP servers.
 
 ```typescript
@@ -409,7 +452,7 @@ Ask a single question to a specific LLM provider. When MCP Bridge is enabled, du
 }
 ```
 
-### 💬 chat_with_duck
+#### 💬 chat_with_duck
 Have a conversation with context maintained across messages.
 
 ```typescript
@@ -420,7 +463,7 @@ Have a conversation with context maintained across messages.
 }
 ```
 
-### 🧹 clear_conversations
+#### 🧹 clear_conversations
 Clear all conversation history and start fresh. Useful when switching topics or when context becomes too large.
 
 ```typescript
@@ -429,7 +472,7 @@ Clear all conversation history and start fresh. Useful when switching topics or 
 }
 ```
 
-### 📋 list_ducks
+#### 📋 list_ducks
 List all configured providers and their health status.
 
 ```typescript
@@ -438,7 +481,7 @@ List all configured providers and their health status.
 }
 ```
 
-### 📊 list_models
+#### 📊 list_models
 List available models for LLM providers.
 
 ```typescript
@@ -448,7 +491,7 @@ List available models for LLM providers.
 }
 ```
 
-### 🔍 compare_ducks
+#### 🔍 compare_ducks
 Ask the same question to multiple providers simultaneously.
 
 ```typescript
@@ -458,7 +501,7 @@ Ask the same question to multiple providers simultaneously.
 }
 ```
 
-### 🏛️ duck_council
+#### 🏛️ duck_council
 Get responses from all configured ducks - like a panel discussion!
 
 ```typescript
@@ -467,11 +510,11 @@ Get responses from all configured ducks - like a panel discussion!
 }
 ```
 
-## Multi-Agent Consensus & Debate Tools
+### Multi-Agent Consensus & Debate Tools
 
 Research-backed tools for multi-agent coordination.
 
-### 🗳️ duck_vote
+#### 🗳️ duck_vote
 Have multiple ducks vote on options with reasoning and confidence scores.
 
 ```typescript
@@ -485,7 +528,7 @@ Have multiple ducks vote on options with reasoning and confidence scores.
 
 Returns vote tally, confidence scores, and consensus level (unanimous, majority, plurality, split, none).
 
-### ⚖️ duck_judge
+#### ⚖️ duck_judge
 Have one duck evaluate and rank other ducks' responses. Use after `duck_council`.
 
 ```typescript
@@ -497,7 +540,7 @@ Have one duck evaluate and rank other ducks' responses. Use after `duck_council`
 }
 ```
 
-### 🔄 duck_iterate
+#### 🔄 duck_iterate
 Iteratively refine a response between two ducks.
 
 ```typescript
@@ -513,7 +556,7 @@ Modes:
 - **refine**: Each duck improves the previous response
 - **critique-improve**: Alternates between critiquing and improving
 
-### 🎓 duck_debate
+#### 🎓 duck_debate
 Structured multi-round debate between ducks.
 
 ```typescript
@@ -530,6 +573,39 @@ Formats:
 - **oxford**: Structured pro/con arguments
 - **socratic**: Question-based philosophical exploration
 - **adversarial**: One defends, others attack weaknesses
+
+### MCP Bridge Tools
+
+Tools for managing MCP server connections and tool approvals.
+
+#### 🔗 mcp_status
+Get status of MCP Bridge, connected servers, and pending approvals.
+
+```typescript
+{
+  // No parameters required
+}
+```
+
+#### ✅ get_pending_approvals
+Get list of pending MCP tool approvals from ducks.
+
+```typescript
+{
+  "duck": "openai"  // Optional, filter by duck name
+}
+```
+
+#### 🛡️ approve_mcp_request
+Approve or deny a duck's MCP tool request.
+
+```typescript
+{
+  "approval_id": "abc123",       // Required
+  "decision": "approve",         // "approve" or "deny"
+  "reason": "Not needed"         // Optional, reason for denial
+}
+```
 
 ## Usage Examples
 
@@ -712,7 +788,7 @@ docker compose up -d
 
 ### Platform-Specific Deployment
 
-#### 🖥️ Desktop/Server (macOS, Linux, Windows)
+#### Desktop/Server (macOS, Linux, Windows)
 
 ```bash
 # Use desktop-optimized settings
@@ -722,7 +798,7 @@ docker compose up -d
 ./scripts/deploy.sh --platform desktop --profile with-ollama
 ```
 
-#### 🥧 Raspberry Pi
+#### Raspberry Pi
 
 ```bash
 # Use Pi-optimized settings (memory limits, etc.)
@@ -734,7 +810,7 @@ cp .env.pi.example .env
 docker compose up -d
 ```
 
-#### 🌐 Remote Deployment via SSH
+#### Remote Deployment via SSH
 
 ```bash
 # Deploy to remote Raspberry Pi
@@ -918,11 +994,11 @@ MIT License - see LICENSE file for details
 - Built on the Model Context Protocol (MCP)
 - Uses OpenAI SDK for universal compatibility
 
-## 📝 Changelog
+## Changelog
 
 See [CHANGELOG.md](./CHANGELOG.md) for a detailed history of changes and releases.
 
-## 📦 Registry & Directory
+## Registry & Directory
 
 MCP Rubber Duck is available through multiple channels:
 
