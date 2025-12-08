@@ -1,3 +1,10 @@
+## [1.4.2](https://github.com/nesquikm/mcp-rubber-duck/compare/v1.4.1...v1.4.2) (2025-12-08)
+
+
+### Bug Fixes
+
+* update MCP Registry badge URL ([c840e60](https://github.com/nesquikm/mcp-rubber-duck/commit/c840e6043dc1214796f146500f8188a913dfeefe))
+
 ## [1.4.1](https://github.com/nesquikm/mcp-rubber-duck/compare/v1.4.0...v1.4.1) (2025-12-08)
 
 
