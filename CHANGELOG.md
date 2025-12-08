@@ -1,3 +1,10 @@
+## [1.4.1](https://github.com/nesquikm/mcp-rubber-duck/compare/v1.4.0...v1.4.1) (2025-12-08)
+
+
+### Bug Fixes
+
+* **security:** update MCP SDK and address code scanning alerts ([08b3a40](https://github.com/nesquikm/mcp-rubber-duck/commit/08b3a40f9aaa053138003258812b0d4c8bbddfc3))
+
 # [1.4.0](https://github.com/nesquikm/mcp-rubber-duck/compare/v1.3.0...v1.4.0) (2025-11-30)
 
 
