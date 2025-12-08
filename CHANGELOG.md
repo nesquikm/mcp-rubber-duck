@@ -1,3 +1,10 @@
+# [1.5.0](https://github.com/nesquikm/mcp-rubber-duck/compare/v1.4.2...v1.5.0) (2025-12-08)
+
+
+### Features
+
+* add Claude Code agent definitions for project-specific tasks ([1843c1b](https://github.com/nesquikm/mcp-rubber-duck/commit/1843c1b1b970155d37cf79925b4fd674eade28bd))
+
 ## [1.4.2](https://github.com/nesquikm/mcp-rubber-duck/compare/v1.4.1...v1.4.2) (2025-12-08)
 
 
