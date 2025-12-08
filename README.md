@@ -4,7 +4,7 @@ An MCP (Model Context Protocol) server that acts as a bridge to query multiple O
 
 [![npm version](https://img.shields.io/npm/v/mcp-rubber-duck.svg)](https://www.npmjs.com/package/mcp-rubber-duck)
 [![Docker Image](https://img.shields.io/badge/docker-ghcr.io-blue)](https://github.com/nesquikm/mcp-rubber-duck/pkgs/container/mcp-rubber-duck)
-[![MCP Registry](https://img.shields.io/badge/MCP-Registry-green)](https://modelcontextprotocol.io/registry)
+[![MCP Registry](https://img.shields.io/badge/MCP-Registry-green)](https://registry.modelcontextprotocol.io)
 
 <p align="center">
   <img src="assets/mcp-rubber-duck.png" alt="MCP Rubber Duck - AI ducks helping debug code" width="600">
