@@ -1,5 +1,5 @@
 import OpenAI from 'openai';
-import { ChatOptions, ChatResponse, ProviderOptions, StreamChunk, ModelInfo, OpenAIChatParams, OpenAIChatResponse, OpenAIMessage } from './types.js';
+import { ChatOptions, ChatResponse, ProviderOptions, ModelInfo, OpenAIChatParams, OpenAIChatResponse, OpenAIMessage } from './types.js';
 import { ConversationMessage } from '../config/types.js';
 import { logger } from '../utils/logger.js';
 
@@ -71,35 +71,6 @@ export class DuckProvider {
   protected async createChatCompletion(baseParams: Partial<OpenAIChatParams>): Promise<OpenAIChatResponse> {
     const params = { ...baseParams } as OpenAIChatParams;
     return await this.client.chat.completions.create(params);
-  }
-
-  async *chatStream(options: ChatOptions): AsyncGenerator<StreamChunk> {
-    try {
-      const messages = this.prepareMessages(options.messages, options.systemPrompt);
-      const modelToUse = options.model || this.options.model;
-      
-      const streamParams = {
-        model: modelToUse,
-        messages: messages as OpenAIMessage[],
-        stream: true as const,
-        ...(this.supportsTemperature(modelToUse) && {
-          temperature: options.temperature ?? this.options.temperature ?? 0.7
-        })
-      };
-      
-      const stream = await this.client.chat.completions.create(streamParams);
-
-      for await (const chunk of stream) {
-        const content = chunk.choices[0]?.delta?.content || '';
-        const done = chunk.choices[0]?.finish_reason !== null;
-        
-        yield { content, done };
-      }
-    } catch (error: unknown) {
-      logger.error(`Provider ${this.name} stream error:`, error);
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      throw new Error(`Duck ${this.nickname} stream failed: ${errorMessage}`);
-    }
   }
 
   async healthCheck(): Promise<boolean> {

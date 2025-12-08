@@ -58,11 +58,6 @@ export interface ChatResponse {
   toolCalls?: ToolCall[];
 }
 
-export interface StreamChunk {
-  content: string;
-  done: boolean;
-}
-
 // OpenAI API parameter types
 export type OpenAIChatParams = ChatCompletionCreateParamsNonStreaming;
 export type OpenAIMessage = ChatCompletionMessageParam;

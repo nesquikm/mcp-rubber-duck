@@ -157,7 +157,7 @@ export class RubberDuckServer {
             if (this.mcpEnabled && this.enhancedProviderManager) {
               return await this.handleCompareDucksWithMCP(args || {});
             }
-            return await compareDucksTool(this.providerManager, this.cache, args || {});
+            return await compareDucksTool(this.providerManager, args || {});
 
           case 'duck_council':
             // Use enhanced provider manager if MCP is enabled

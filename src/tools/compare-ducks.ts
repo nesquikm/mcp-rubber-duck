@@ -4,7 +4,6 @@ import { logger } from '../utils/logger.js';
 
 export async function compareDucksTool(
   providerManager: ProviderManager,
-  _cache: unknown,
   args: Record<string, unknown>
 ) {
   const { prompt, providers, model } = args as {
