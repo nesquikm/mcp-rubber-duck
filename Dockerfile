@@ -20,7 +20,7 @@ RUN npm run build
 FROM node:20-alpine
 
 # Install dumb-init for proper signal handling
-RUN apk add --no-cache dumb-init
+RUN apk add --no-cache dumb-init=1.2.5-r3
 
 # Create app user
 RUN addgroup -g 1001 -S nodejs && \

@@ -1,0 +1,8 @@
+# BusyBox vulnerabilities in node:20-alpine base image
+# These require local access and are accepted risk for this container
+CVE-2025-30680
+CVE-2024-42237
+
+# brace-expansion ReDoS - bundled in npm, low severity (CVSS 3.1)
+# Cannot be fixed without upstream semantic-release update
+CVE-2025-5889

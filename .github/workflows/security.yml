@@ -28,6 +28,7 @@ jobs:
           scan-ref: '.'
           format: 'sarif'
           output: 'trivy-results.sarif'
+          trivyignores: '.trivyignore'
 
       - name: 📤 Upload Trivy scan results to GitHub Security
         uses: github/codeql-action/upload-sarif@v3
@@ -48,6 +49,7 @@ jobs:
           image-ref: 'security-scan-image'
           format: 'sarif'
           output: 'trivy-docker-results.sarif'
+          trivyignores: '.trivyignore'
 
       - name: 📤 Upload Docker scan results
         uses: github/codeql-action/upload-sarif@v3
