@@ -45,9 +45,8 @@ jobs:
       - name: 🔬 Type check
         run: npm run typecheck
 
-      # Enable when tests are working
-      # - name: 🧪 Test
-      #   run: npm test
+      - name: 🧪 Test
+        run: npm test
 
   security-scan:
     name: 🔍 Security Scan
