@@ -1,3 +1,10 @@
+## [1.5.1](https://github.com/nesquikm/mcp-rubber-duck/compare/v1.5.0...v1.5.1) (2026-01-02)
+
+
+### Bug Fixes
+
+* update qs to resolve CVE (GHSA-6rw7-vpxm-498p) ([3c15c66](https://github.com/nesquikm/mcp-rubber-duck/commit/3c15c66a3c81c741e38d9cc22d8df5e6537ba7d9))
+
 # [1.5.0](https://github.com/nesquikm/mcp-rubber-duck/compare/v1.4.2...v1.5.0) (2025-12-08)
 
 
