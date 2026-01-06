@@ -121,6 +121,16 @@ describe('ConsensusService', () => {
       expect(result.choice).toBe('');
     });
 
+    it('should handle malformed JSON that looks like JSON', () => {
+      // This matches the JSON regex but fails JSON.parse
+      const response = '{"choice": Option A, confidence: 80}'; // Invalid JSON - missing quotes
+
+      const result = service.parseVote(response, 'provider1', 'Duck 1', options);
+      // Should fallback and try to extract from text
+      expect(result.choice).toBe('Option A');
+      expect(result.confidence).toBe(50); // Default fallback confidence
+    });
+
     it('should parse string confidence values', () => {
       const response = JSON.stringify({
         choice: 'Option A',

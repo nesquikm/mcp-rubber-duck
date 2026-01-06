@@ -293,4 +293,97 @@ describe('duckJudgeTool', () => {
     expect(text).toContain('gemini');
     expect(text).toContain('Not evaluated');
   });
+
+  it('should throw error when no judge provider available', async () => {
+    // Mock getProviderNames to return empty array
+    const originalGetProviderNames = mockProviderManager.getProviderNames;
+    mockProviderManager.getProviderNames = jest.fn().mockReturnValue([]);
+
+    await expect(
+      duckJudgeTool(mockProviderManager, {
+        responses: mockResponses,
+      })
+    ).rejects.toThrow('No judge provider available');
+
+    // Restore original
+    mockProviderManager.getProviderNames = originalGetProviderNames;
+  });
+
+  it('should handle malformed JSON that throws parse error', async () => {
+    // JSON that looks valid but has syntax errors
+    mockCreate.mockResolvedValueOnce({
+      choices: [{
+        message: { content: '{"rankings": [{"provider": "openai", score: invalid}]}' },
+        finish_reason: 'stop',
+      }],
+      usage: { prompt_tokens: 100, completion_tokens: 50, total_tokens: 150 },
+      model: 'gpt-4',
+    });
+
+    const result = await duckJudgeTool(mockProviderManager, {
+      responses: mockResponses,
+    });
+
+    const text = result.content[0].text;
+    // Should use fallback evaluation
+    expect(text).toContain('Judge Evaluation');
+    expect(text).toContain('Unable to parse');
+  });
+
+  it('should match provider by nickname in rankings', async () => {
+    // Use nickname instead of provider name
+    const judgeResponse = JSON.stringify({
+      rankings: [
+        { provider: 'GPT-4', score: 85, justification: 'Good response' },
+        { provider: 'Gemini', score: 75, justification: 'Okay response' },
+      ],
+      summary: 'Matched by nickname.',
+    });
+
+    mockCreate.mockResolvedValueOnce({
+      choices: [{
+        message: { content: judgeResponse },
+        finish_reason: 'stop',
+      }],
+      usage: { prompt_tokens: 100, completion_tokens: 50, total_tokens: 150 },
+      model: 'gpt-4',
+    });
+
+    const result = await duckJudgeTool(mockProviderManager, {
+      responses: mockResponses,
+    });
+
+    const text = result.content[0].text;
+    expect(text).toContain('85/100');
+    expect(text).toContain('75/100');
+  });
+
+  it('should match provider by contained name in rankings', async () => {
+    // Use partial name that contains the provider name
+    const judgeResponse = JSON.stringify({
+      rankings: [
+        { provider: 'the openai model', score: 90, justification: 'Excellent' },
+        { provider: 'google gemini response', score: 80, justification: 'Good' },
+      ],
+      summary: 'Matched by contained name.',
+    });
+
+    mockCreate.mockResolvedValueOnce({
+      choices: [{
+        message: { content: judgeResponse },
+        finish_reason: 'stop',
+      }],
+      usage: { prompt_tokens: 100, completion_tokens: 50, total_tokens: 150 },
+      model: 'gpt-4',
+    });
+
+    const result = await duckJudgeTool(mockProviderManager, {
+      responses: mockResponses,
+    });
+
+    const text = result.content[0].text;
+    // Should successfully match the providers
+    expect(text).toContain('90/100');
+    expect(text).toContain('80/100');
+  });
 });

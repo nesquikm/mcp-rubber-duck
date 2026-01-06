@@ -305,4 +305,90 @@ describe('ConversationManager', () => {
       expect(conversation!.provider).toBe('groq');
     });
   });
+
+  describe('clearOldConversations', () => {
+    it('should not delete recent conversations', () => {
+      conversationManager.createConversation('test-1', 'openai');
+      conversationManager.createConversation('test-2', 'groq');
+
+      // Clear with default maxAge (24 hours)
+      conversationManager.clearOldConversations();
+
+      // Both conversations should still exist
+      expect(conversationManager.getConversation('test-1')).toBeDefined();
+      expect(conversationManager.getConversation('test-2')).toBeDefined();
+    });
+
+    it('should delete conversations older than maxAge', () => {
+      // Create conversations with mocked old dates
+      const oldDate = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000); // 2 days ago
+
+      conversationManager.createConversation('old-1', 'openai');
+      conversationManager.createConversation('recent-1', 'groq');
+
+      // Manually set the updatedAt to simulate old conversation
+      const oldConversation = conversationManager.getConversation('old-1')!;
+      oldConversation.updatedAt = oldDate;
+
+      // Clear with 24 hour maxAge
+      conversationManager.clearOldConversations(24 * 60 * 60 * 1000);
+
+      // Old conversation should be deleted
+      expect(conversationManager.getConversation('old-1')).toBeUndefined();
+      // Recent conversation should still exist
+      expect(conversationManager.getConversation('recent-1')).toBeDefined();
+    });
+
+    it('should delete multiple old conversations', () => {
+      const oldDate = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000);
+
+      conversationManager.createConversation('old-1', 'openai');
+      conversationManager.createConversation('old-2', 'groq');
+      conversationManager.createConversation('recent-1', 'gemini');
+
+      const old1 = conversationManager.getConversation('old-1')!;
+      const old2 = conversationManager.getConversation('old-2')!;
+      old1.updatedAt = oldDate;
+      old2.updatedAt = oldDate;
+
+      conversationManager.clearOldConversations();
+
+      expect(conversationManager.getConversation('old-1')).toBeUndefined();
+      expect(conversationManager.getConversation('old-2')).toBeUndefined();
+      expect(conversationManager.getConversation('recent-1')).toBeDefined();
+      expect(conversationManager.listConversations()).toHaveLength(1);
+    });
+
+    it('should handle empty conversation list', () => {
+      // Should not throw
+      expect(() => conversationManager.clearOldConversations()).not.toThrow();
+    });
+
+    it('should use custom maxAge parameter', () => {
+      conversationManager.createConversation('test-1', 'openai');
+
+      const conv = conversationManager.getConversation('test-1')!;
+      // Set updatedAt to 1 hour ago
+      conv.updatedAt = new Date(Date.now() - 60 * 60 * 1000);
+
+      // Clear with 30 minute maxAge (should delete)
+      conversationManager.clearOldConversations(30 * 60 * 1000);
+
+      expect(conversationManager.getConversation('test-1')).toBeUndefined();
+    });
+
+    it('should not delete conversations exactly at maxAge boundary', () => {
+      conversationManager.createConversation('test-1', 'openai');
+
+      const conv = conversationManager.getConversation('test-1')!;
+      // Set to exactly maxAge ago (should NOT be deleted as condition is >)
+      const maxAge = 60 * 60 * 1000;
+      conv.updatedAt = new Date(Date.now() - maxAge);
+
+      conversationManager.clearOldConversations(maxAge);
+
+      // Should still exist (edge case: equal time is not "older than")
+      expect(conversationManager.getConversation('test-1')).toBeDefined();
+    });
+  });
 });

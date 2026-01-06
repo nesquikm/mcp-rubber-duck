@@ -246,4 +246,34 @@ describe('duckIterateTool', () => {
     expect(mockCreate).toHaveBeenCalledTimes(1);
     expect(result.content[0].text).toContain('1 rounds completed');
   });
+
+  it('should truncate long responses in iteration history', async () => {
+    // Create a response longer than 500 characters
+    const longResponse = 'A'.repeat(600);
+
+    mockCreate
+      .mockResolvedValueOnce({
+        choices: [{ message: { content: longResponse }, finish_reason: 'stop' }],
+        usage: { prompt_tokens: 10, completion_tokens: 100, total_tokens: 110 },
+        model: 'gpt-4',
+      })
+      .mockResolvedValueOnce({
+        choices: [{ message: { content: 'Short refined response' }, finish_reason: 'stop' }],
+        usage: { prompt_tokens: 10, completion_tokens: 20, total_tokens: 30 },
+        model: 'gemini-pro',
+      });
+
+    const result = await duckIterateTool(mockProviderManager, {
+      prompt: 'Test',
+      providers: ['openai', 'gemini'],
+      mode: 'refine',
+      iterations: 2,
+    });
+
+    const text = result.content[0].text;
+    // Should contain truncated indicator for the long response in history
+    expect(text).toContain('[truncated]');
+    // Final response section should have the short refined response
+    expect(text).toContain('Short refined response');
+  });
 });

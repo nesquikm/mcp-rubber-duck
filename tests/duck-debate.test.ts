@@ -87,10 +87,37 @@ describe('duckDebateTool', () => {
     ).rejects.toThrow('Rounds must be between 1 and 10');
   });
 
-  it('should throw error when less than 2 providers', async () => {
+  it('should throw error when less than 2 providers specified', async () => {
     await expect(
       duckDebateTool(mockProviderManager, { prompt: 'Test', format: 'oxford', providers: ['openai'] })
     ).rejects.toThrow('At least 2 providers are required');
+  });
+
+  it('should throw error when only 1 provider available total', async () => {
+    // Create manager with only 1 provider
+    const singleProviderConfig = {
+      getConfig: jest.fn().mockReturnValue({
+        providers: {
+          openai: {
+            api_key: 'key1',
+            base_url: 'https://api.openai.com/v1',
+            default_model: 'gpt-4',
+            nickname: 'GPT-4',
+            models: ['gpt-4'],
+          },
+        },
+        default_provider: 'openai',
+        cache_ttl: 300,
+        enable_failover: false,
+        default_temperature: 0.7,
+      }),
+    } as any;
+
+    const singleProviderManager = new ProviderManager(singleProviderConfig);
+
+    await expect(
+      duckDebateTool(singleProviderManager, { prompt: 'Test', format: 'oxford' })
+    ).rejects.toThrow('At least 2 providers are required for a debate');
   });
 
   it('should throw error when provider does not exist', async () => {
@@ -282,5 +309,82 @@ describe('duckDebateTool', () => {
 
     const text = result.content[0].text;
     expect(text).toContain('3 rounds completed');
+  });
+
+  it('should perform multi-round socratic debate', async () => {
+    // Round 1: 2 participants
+    mockCreate
+      .mockResolvedValueOnce({
+        choices: [{ message: { content: 'Question round 1' }, finish_reason: 'stop' }],
+        usage: { prompt_tokens: 10, completion_tokens: 20, total_tokens: 30 },
+        model: 'gpt-4',
+      })
+      .mockResolvedValueOnce({
+        choices: [{ message: { content: 'Response round 1' }, finish_reason: 'stop' }],
+        usage: { prompt_tokens: 10, completion_tokens: 20, total_tokens: 30 },
+        model: 'gemini-pro',
+      })
+      // Round 2 - should use "Build on previous responses" prompt
+      .mockResolvedValueOnce({
+        choices: [{ message: { content: 'Question round 2' }, finish_reason: 'stop' }],
+        usage: { prompt_tokens: 10, completion_tokens: 20, total_tokens: 30 },
+        model: 'gpt-4',
+      })
+      .mockResolvedValueOnce({
+        choices: [{ message: { content: 'Response round 2' }, finish_reason: 'stop' }],
+        usage: { prompt_tokens: 10, completion_tokens: 20, total_tokens: 30 },
+        model: 'gemini-pro',
+      })
+      // Synthesis
+      .mockResolvedValueOnce({
+        choices: [{ message: { content: 'Socratic synthesis' }, finish_reason: 'stop' }],
+        usage: { prompt_tokens: 10, completion_tokens: 20, total_tokens: 30 },
+        model: 'gpt-4',
+      });
+
+    const result = await duckDebateTool(mockProviderManager, {
+      prompt: 'What is truth?',
+      format: 'socratic',
+      rounds: 2,
+    });
+
+    const text = result.content[0].text;
+    expect(text).toContain('Socratic Debate');
+    expect(text).toContain('ROUND 1');
+    expect(text).toContain('ROUND 2');
+    expect(text).toContain('2 rounds completed');
+  });
+
+  it('should truncate long arguments in display', async () => {
+    // Create arguments longer than 800 characters
+    const longArgument = 'A'.repeat(900);
+
+    mockCreate
+      .mockResolvedValueOnce({
+        choices: [{ message: { content: longArgument }, finish_reason: 'stop' }],
+        usage: { prompt_tokens: 10, completion_tokens: 100, total_tokens: 110 },
+        model: 'gpt-4',
+      })
+      .mockResolvedValueOnce({
+        choices: [{ message: { content: 'Short con argument' }, finish_reason: 'stop' }],
+        usage: { prompt_tokens: 10, completion_tokens: 20, total_tokens: 30 },
+        model: 'gemini-pro',
+      })
+      .mockResolvedValueOnce({
+        choices: [{ message: { content: 'Synthesis' }, finish_reason: 'stop' }],
+        usage: { prompt_tokens: 10, completion_tokens: 20, total_tokens: 30 },
+        model: 'gpt-4',
+      });
+
+    const result = await duckDebateTool(mockProviderManager, {
+      prompt: 'Test',
+      format: 'oxford',
+      rounds: 1,
+    });
+
+    const text = result.content[0].text;
+    expect(text).toContain('[truncated]');
+    // Should not contain the full 900 A's
+    expect(text).not.toContain('A'.repeat(900));
   });
 });

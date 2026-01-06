@@ -247,4 +247,50 @@ describe('duckVoteTool', () => {
 
     expect(result.content[0].text).toContain('Option A');
   });
+
+  it('should throw error when no voters available', async () => {
+    // Mock getProviderNames to return empty array
+    const originalGetProviderNames = mockProviderManager.getProviderNames;
+    mockProviderManager.getProviderNames = jest.fn().mockReturnValue([]);
+
+    await expect(
+      duckVoteTool(mockProviderManager, {
+        question: 'Test?',
+        options: ['Option A', 'Option B'],
+      })
+    ).rejects.toThrow('No voters available');
+
+    // Restore original
+    mockProviderManager.getProviderNames = originalGetProviderNames;
+  });
+
+  it('should handle case when no valid votes result in no winner', async () => {
+    // Both responses don't mention any valid option
+    mockCreate
+      .mockResolvedValueOnce({
+        choices: [{
+          message: { content: 'I cannot decide between these options.' },
+          finish_reason: 'stop',
+        }],
+        usage: { prompt_tokens: 10, completion_tokens: 20, total_tokens: 30 },
+        model: 'gpt-4',
+      })
+      .mockResolvedValueOnce({
+        choices: [{
+          message: { content: 'These options are not comparable.' },
+          finish_reason: 'stop',
+        }],
+        usage: { prompt_tokens: 10, completion_tokens: 20, total_tokens: 30 },
+        model: 'gemini-pro',
+      });
+
+    const result = await duckVoteTool(mockProviderManager, {
+      question: 'Test?',
+      options: ['Option A', 'Option B'],
+    });
+
+    const text = result.content[0].text;
+    expect(text).toContain('No valid votes');
+    expect(text).toContain('0/2 valid votes');
+  });
 });
