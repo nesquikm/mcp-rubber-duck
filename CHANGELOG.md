@@ -1,3 +1,10 @@
+## [1.5.2](https://github.com/nesquikm/mcp-rubber-duck/compare/v1.5.1...v1.5.2) (2026-01-08)
+
+
+### Bug Fixes
+
+* **ci:** trigger patch releases for dependency updates ([b1c92c4](https://github.com/nesquikm/mcp-rubber-duck/commit/b1c92c4f56e4a8e67c307c28284b9f03256dc72f))
+
 ## [1.5.1](https://github.com/nesquikm/mcp-rubber-duck/compare/v1.5.0...v1.5.1) (2026-01-02)
 
 
