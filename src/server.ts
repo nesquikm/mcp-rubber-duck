@@ -13,6 +13,8 @@ import { ConversationManager } from './services/conversation.js';
 import { ResponseCache } from './services/cache.js';
 import { HealthMonitor } from './services/health.js';
 import { MCPClientManager } from './services/mcp-client-manager.js';
+import { PricingService } from './services/pricing.js';
+import { UsageService } from './services/usage.js';
 import { DuckResponse } from './config/types.js';
 import { ApprovalService } from './services/approval.js';
 import { FunctionBridge } from './services/function-bridge.js';
@@ -37,9 +39,14 @@ import { getPendingApprovalsTool } from './tools/get-pending-approvals.js';
 import { approveMCPRequestTool } from './tools/approve-mcp-request.js';
 import { mcpStatusTool } from './tools/mcp-status.js';
 
+// Import usage stats tool
+import { getUsageStatsTool } from './tools/get-usage-stats.js';
+
 export class RubberDuckServer {
   private server: Server;
   private configManager: ConfigManager;
+  private pricingService: PricingService;
+  private usageService: UsageService;
   private providerManager: ProviderManager;
   private enhancedProviderManager?: EnhancedProviderManager;
   private conversationManager: ConversationManager;
@@ -67,9 +74,16 @@ export class RubberDuckServer {
 
     // Initialize managers
     this.configManager = new ConfigManager();
-    this.providerManager = new ProviderManager(this.configManager);
+    const config = this.configManager.getConfig();
+
+    // Initialize pricing and usage services
+    this.pricingService = new PricingService(config.pricing);
+    this.usageService = new UsageService(this.pricingService);
+
+    // Initialize provider manager with usage tracking
+    this.providerManager = new ProviderManager(this.configManager, this.usageService);
     this.conversationManager = new ConversationManager();
-    this.cache = new ResponseCache(this.configManager.getConfig().cache_ttl);
+    this.cache = new ResponseCache(config.cache_ttl);
     this.healthMonitor = new HealthMonitor(this.providerManager);
 
     // Initialize MCP bridge if enabled
@@ -105,10 +119,11 @@ export class RubberDuckServer {
         mcpConfig.trusted_tools_by_server || {}
       );
 
-      // Initialize enhanced provider manager
+      // Initialize enhanced provider manager with usage tracking
       this.enhancedProviderManager = new EnhancedProviderManager(
         this.configManager,
-        this.functionBridge
+        this.functionBridge,
+        this.usageService
       );
 
       this.mcpEnabled = true;
@@ -177,6 +192,10 @@ export class RubberDuckServer {
 
           case 'duck_debate':
             return await duckDebateTool(this.providerManager, args || {});
+
+          // Usage stats tool
+          case 'get_usage_stats':
+            return getUsageStatsTool(this.usageService, args || {});
 
           // MCP-specific tools
           case 'get_pending_approvals':
@@ -641,6 +660,22 @@ export class RubberDuckServer {
           required: ['prompt', 'format'],
         },
       },
+      {
+        name: 'get_usage_stats',
+        description:
+          'Get usage statistics for a time period. Shows token counts and costs (when pricing configured).',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            period: {
+              type: 'string',
+              enum: ['today', '7d', '30d', 'all'],
+              default: 'today',
+              description: 'Time period for stats',
+            },
+          },
+        },
+      },
     ];
 
     // Add MCP-specific tools if enabled
@@ -732,6 +767,9 @@ export class RubberDuckServer {
   }
 
   async stop() {
+    // Cleanup usage service (flush pending writes)
+    this.usageService.shutdown();
+
     // Cleanup MCP resources
     if (this.approvalService) {
       this.approvalService.shutdown();

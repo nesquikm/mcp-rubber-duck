@@ -2,6 +2,7 @@ import { EnhancedDuckProvider } from './duck-provider-enhanced.js';
 import { ProviderManager } from './manager.js';
 import { ConfigManager } from '../config/config.js';
 import { FunctionBridge } from '../services/function-bridge.js';
+import { UsageService } from '../services/usage.js';
 import { DuckResponse } from '../config/types.js';
 import { ChatOptions, MCPResult } from './types.js';
 import { logger } from '../utils/logger.js';
@@ -11,12 +12,12 @@ export class EnhancedProviderManager extends ProviderManager {
   private functionBridge?: FunctionBridge;
   private mcpEnabled: boolean = false;
 
-  constructor(configManager: ConfigManager, functionBridge?: FunctionBridge) {
-    super(configManager);
+  constructor(configManager: ConfigManager, functionBridge?: FunctionBridge, usageService?: UsageService) {
+    super(configManager, usageService);
     this.functionBridge = functionBridge;
-    this.mcpEnabled = !!functionBridge && 
+    this.mcpEnabled = !!functionBridge &&
       (configManager.getConfig().mcp_bridge?.enabled || false);
-    
+
     if (this.mcpEnabled) {
       this.initializeEnhancedProviders();
     }
@@ -91,12 +92,25 @@ export class EnhancedProviderManager extends ProviderManager {
 
     const provider = this.getEnhancedProvider(providerName);
     const startTime = Date.now();
+    const modelToUse = options?.model || provider.getInfo().model;
 
     try {
       const response = await provider.chat({
         messages: [{ role: 'user', content: prompt, timestamp: new Date() }],
         ...options,
       });
+
+      // Record usage
+      if (this.usageService && response.usage) {
+        this.usageService.recordUsage(
+          provider.name,
+          response.model,
+          response.usage.promptTokens,
+          response.usage.completionTokens,
+          false,
+          false
+        );
+      }
 
       return {
         provider: provider.name,
@@ -117,6 +131,11 @@ export class EnhancedProviderManager extends ProviderManager {
         mcpResults: response.mcpResults,
       };
     } catch (error: unknown) {
+      // Record error
+      if (this.usageService) {
+        this.usageService.recordUsage(provider.name, modelToUse, 0, 0, false, true);
+      }
+
       // Try failover if enabled
       if (this.configManager.getConfig().enable_failover && providerName === undefined) {
         const errorMessage = error instanceof Error ? error.message : String(error);
@@ -208,6 +227,7 @@ export class EnhancedProviderManager extends ProviderManager {
 
     const provider = this.getEnhancedProvider(providerName);
     const startTime = Date.now();
+    const modelToUse = options?.model || provider.getInfo().model;
 
     try {
       const response = await provider.retryWithApproval(
@@ -218,6 +238,18 @@ export class EnhancedProviderManager extends ProviderManager {
           ...options,
         }
       );
+
+      // Record usage
+      if (this.usageService && response.usage) {
+        this.usageService.recordUsage(
+          provider.name,
+          response.model,
+          response.usage.promptTokens,
+          response.usage.completionTokens,
+          false,
+          false
+        );
+      }
 
       return {
         provider: provider.name,
@@ -238,6 +270,11 @@ export class EnhancedProviderManager extends ProviderManager {
         mcpResults: response.mcpResults,
       };
     } catch (error: unknown) {
+      // Record error
+      if (this.usageService) {
+        this.usageService.recordUsage(provider.name, modelToUse, 0, 0, false, true);
+      }
+
       const errorMessage = error instanceof Error ? error.message : String(error);
       throw new Error(`Failed to retry with approval: ${errorMessage}`);
     }

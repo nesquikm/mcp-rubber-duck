@@ -2,6 +2,7 @@ import { DuckProvider } from './provider.js';
 import { ConfigManager } from '../config/config.js';
 import { ProviderHealth, DuckResponse } from '../config/types.js';
 import { ChatOptions, ModelInfo } from './types.js';
+import { UsageService } from '../services/usage.js';
 import { logger } from '../utils/logger.js';
 import { getRandomDuckMessage } from '../utils/ascii-art.js';
 
@@ -9,10 +10,12 @@ export class ProviderManager {
   private providers: Map<string, DuckProvider> = new Map();
   private healthStatus: Map<string, ProviderHealth> = new Map();
   protected configManager: ConfigManager;
+  protected usageService?: UsageService;
   private defaultProvider?: string;
 
-  constructor(configManager: ConfigManager) {
+  constructor(configManager: ConfigManager, usageService?: UsageService) {
     this.configManager = configManager;
+    this.usageService = usageService;
     this.initializeProviders();
   }
 
@@ -91,12 +94,25 @@ export class ProviderManager {
   ): Promise<DuckResponse> {
     const provider = this.getProvider(providerName);
     const startTime = Date.now();
+    const modelToUse = options?.model || provider.getInfo().model;
 
     try {
       const response = await provider.chat({
         messages: [{ role: 'user', content: prompt, timestamp: new Date() }],
         ...options,
       });
+
+      // Record usage
+      if (this.usageService && response.usage) {
+        this.usageService.recordUsage(
+          provider.name,
+          response.model,
+          response.usage.promptTokens,
+          response.usage.completionTokens,
+          false,
+          false
+        );
+      }
 
       return {
         provider: provider.name,
@@ -115,6 +131,11 @@ export class ProviderManager {
         cached: false,
       };
     } catch (error: unknown) {
+      // Record error
+      if (this.usageService) {
+        this.usageService.recordUsage(provider.name, modelToUse, 0, 0, false, true);
+      }
+
       // Try failover if enabled
       if (this.configManager.getConfig().enable_failover && providerName === undefined) {
         const errorMessage = error instanceof Error ? error.message : String(error);

@@ -33,6 +33,16 @@ export const MCPBridgeConfigSchema = z.object({
   mcp_servers: z.array(MCPServerConfigSchema).default([]),
 });
 
+export const ModelPricingSchema = z.object({
+  inputPricePerMillion: z.number().min(0),
+  outputPricePerMillion: z.number().min(0),
+});
+
+export const PricingConfigSchema = z.record(
+  z.string(), // provider name
+  z.record(z.string(), ModelPricingSchema) // model name -> pricing
+);
+
 export const ConfigSchema = z.object({
   providers: z.record(z.string(), ProviderConfigSchema),
   default_provider: z.string().optional(),
@@ -41,11 +51,14 @@ export const ConfigSchema = z.object({
   enable_failover: z.boolean().default(true),
   log_level: z.enum(['debug', 'info', 'warn', 'error']).default('info'),
   mcp_bridge: MCPBridgeConfigSchema.optional(),
+  pricing: PricingConfigSchema.optional(),
 });
 
 export type ProviderConfig = z.infer<typeof ProviderConfigSchema>;
 export type MCPServerConfig = z.infer<typeof MCPServerConfigSchema>;
 export type MCPBridgeConfig = z.infer<typeof MCPBridgeConfigSchema>;
+export type ModelPricing = z.infer<typeof ModelPricingSchema>;
+export type PricingConfig = z.infer<typeof PricingConfigSchema>;
 export type Config = z.infer<typeof ConfigSchema>;
 
 export interface ConversationMessage {
@@ -178,4 +191,42 @@ export interface DebateResult {
   synthesis: string;
   synthesizer: string;
   totalRounds: number;
+}
+
+// Usage Statistics Types
+export interface ModelUsageStats {
+  requests: number;
+  promptTokens: number;
+  completionTokens: number;
+  cacheHits: number;
+  errors: number;
+}
+
+export interface DailyUsage {
+  [provider: string]: {
+    [model: string]: ModelUsageStats;
+  };
+}
+
+export interface UsageData {
+  version: number;
+  daily: Record<string, DailyUsage>;
+}
+
+export type UsageTimePeriod = 'today' | '7d' | '30d' | 'all';
+
+export interface UsageStatsResult {
+  period: UsageTimePeriod;
+  startDate: string;
+  endDate: string;
+  usage: DailyUsage;
+  totals: {
+    requests: number;
+    promptTokens: number;
+    completionTokens: number;
+    cacheHits: number;
+    errors: number;
+    estimatedCostUSD?: number;
+  };
+  costByProvider?: Record<string, number>;
 }
