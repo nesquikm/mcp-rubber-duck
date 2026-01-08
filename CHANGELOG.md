@@ -1,3 +1,10 @@
+# [1.6.0](https://github.com/nesquikm/mcp-rubber-duck/compare/v1.5.2...v1.6.0) (2026-01-08)
+
+
+### Features
+
+* add usage tracking and cost estimation ([#11](https://github.com/nesquikm/mcp-rubber-duck/issues/11)) ([1f60118](https://github.com/nesquikm/mcp-rubber-duck/commit/1f60118fc00a028e91c9af87c1daa236a228cc5a))
+
 ## [1.5.2](https://github.com/nesquikm/mcp-rubber-duck/compare/v1.5.1...v1.5.2) (2026-01-08)
 
 
