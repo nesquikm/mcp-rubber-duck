@@ -1,3 +1,10 @@
+## [1.6.1](https://github.com/nesquikm/mcp-rubber-duck/compare/v1.6.0...v1.6.1) (2026-01-09)
+
+
+### Bug Fixes
+
+* **docs:** add missing get_usage_stats tool to README ([c507f07](https://github.com/nesquikm/mcp-rubber-duck/commit/c507f07092018ad48aa24f6e9115a0761d0d7d49))
+
 # [1.6.0](https://github.com/nesquikm/mcp-rubber-duck/compare/v1.5.2...v1.6.0) (2026-01-08)
 
 
