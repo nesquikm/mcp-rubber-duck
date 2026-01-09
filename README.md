@@ -43,6 +43,7 @@ An MCP (Model Context Protocol) server that acts as a bridge to query multiple O
 - 💾 **Response Caching**: Avoid duplicate API calls with intelligent caching
 - 🔁 **Automatic Failover**: Falls back to other providers if primary fails
 - 📊 **Health Monitoring**: Real-time health checks for all providers
+- 💰 **Usage Tracking**: Track requests, tokens, and estimated costs per provider
 - 🔗 **MCP Bridge**: Connect ducks to other MCP servers for extended functionality
 - 🛡️ **Granular Security**: Per-server approval controls with session-based approvals
 - 🎨 **Fun Duck Theme**: Rubber duck debugging with personality!
@@ -510,6 +511,19 @@ Get responses from all configured ducks - like a panel discussion!
 }
 ```
 
+#### 📊 get_usage_stats
+Get usage statistics and estimated costs for your duck queries.
+
+```typescript
+{
+  "period": "today"  // Optional: "today", "7d", "30d", or "all"
+}
+```
+
+Returns requests, tokens (prompt/completion), cache hits, errors, and estimated costs broken down by provider and model.
+
+Usage data is stored in `~/.mcp-rubber-duck/data/usage.json`.
+
 ### Multi-Agent Consensus & Debate Tools
 
 Research-backed tools for multi-agent coordination.
@@ -693,6 +707,15 @@ await duck_debate({
   format: "oxford",
   rounds: 3
 });
+```
+
+### Check Usage Stats
+```javascript
+// See today's usage
+await get_usage_stats({ period: "today" });
+
+// See last 7 days with cost breakdown
+await get_usage_stats({ period: "7d" });
 ```
 
 ## Provider-Specific Setup
