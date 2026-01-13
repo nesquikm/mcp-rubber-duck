@@ -412,6 +412,10 @@ export class RubberDuckServer {
           },
           required: ['prompt'],
         },
+        annotations: {
+          readOnlyHint: true,
+          openWorldHint: true,
+        },
       },
       {
         name: 'chat_with_duck',
@@ -438,6 +442,9 @@ export class RubberDuckServer {
           },
           required: ['conversation_id', 'message'],
         },
+        annotations: {
+          openWorldHint: true,
+        },
       },
       {
         name: 'clear_conversations',
@@ -445,6 +452,11 @@ export class RubberDuckServer {
         inputSchema: {
           type: 'object',
           properties: {},
+        },
+        annotations: {
+          destructiveHint: true,
+          idempotentHint: true,
+          openWorldHint: false,
         },
       },
       {
@@ -459,6 +471,10 @@ export class RubberDuckServer {
               default: false,
             },
           },
+        },
+        annotations: {
+          readOnlyHint: true,
+          openWorldHint: true,
         },
       },
       {
@@ -477,6 +493,10 @@ export class RubberDuckServer {
               default: false,
             },
           },
+        },
+        annotations: {
+          readOnlyHint: true,
+          openWorldHint: true,
         },
       },
       {
@@ -503,6 +523,10 @@ export class RubberDuckServer {
           },
           required: ['prompt'],
         },
+        annotations: {
+          readOnlyHint: true,
+          openWorldHint: true,
+        },
       },
       {
         name: 'duck_council',
@@ -520,6 +544,10 @@ export class RubberDuckServer {
             },
           },
           required: ['prompt'],
+        },
+        annotations: {
+          readOnlyHint: true,
+          openWorldHint: true,
         },
       },
       {
@@ -551,6 +579,10 @@ export class RubberDuckServer {
             },
           },
           required: ['question', 'options'],
+        },
+        annotations: {
+          readOnlyHint: true,
+          openWorldHint: true,
         },
       },
       {
@@ -590,6 +622,10 @@ export class RubberDuckServer {
           },
           required: ['responses'],
         },
+        annotations: {
+          readOnlyHint: true,
+          openWorldHint: true,
+        },
       },
       {
         name: 'duck_iterate',
@@ -622,6 +658,10 @@ export class RubberDuckServer {
             },
           },
           required: ['prompt', 'providers', 'mode'],
+        },
+        annotations: {
+          readOnlyHint: true,
+          openWorldHint: true,
         },
       },
       {
@@ -659,6 +699,10 @@ export class RubberDuckServer {
           },
           required: ['prompt', 'format'],
         },
+        annotations: {
+          readOnlyHint: true,
+          openWorldHint: true,
+        },
       },
       {
         name: 'get_usage_stats',
@@ -674,6 +718,10 @@ export class RubberDuckServer {
               description: 'Time period for stats',
             },
           },
+        },
+        annotations: {
+          readOnlyHint: true,
+          openWorldHint: false,
         },
       },
     ];
@@ -692,6 +740,10 @@ export class RubberDuckServer {
                 description: 'Filter by duck name (optional)',
               },
             },
+          },
+          annotations: {
+            readOnlyHint: true,
+            openWorldHint: false,
           },
         },
         {
@@ -716,6 +768,10 @@ export class RubberDuckServer {
             },
             required: ['approval_id', 'decision'],
           },
+          annotations: {
+            idempotentHint: true,
+            openWorldHint: false,
+          },
         },
         {
           name: 'mcp_status',
@@ -723,6 +779,10 @@ export class RubberDuckServer {
           inputSchema: {
             type: 'object',
             properties: {},
+          },
+          annotations: {
+            readOnlyHint: true,
+            openWorldHint: true,
           },
         }
       );
