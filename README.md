@@ -23,6 +23,7 @@ An MCP (Model Context Protocol) server that acts as a bridge to query multiple O
   - [Basic Tools](#basic-tools)
   - [Multi-Agent Tools](#multi-agent-consensus--debate-tools)
   - [MCP Bridge Tools](#mcp-bridge-tools)
+- [Available Prompts](#available-prompts)
 - [Usage Examples](#usage-examples)
 - [Provider-Specific Setup](#provider-specific-setup)
 - [Docker Support](#docker-support)
@@ -40,12 +41,14 @@ An MCP (Model Context Protocol) server that acts as a bridge to query multiple O
 - ⚖️ **LLM-as-Judge**: Have ducks evaluate and rank each other's responses
 - 🔄 **Iterative Refinement**: Two ducks collaboratively improve responses
 - 🎓 **Structured Debates**: Oxford, Socratic, and adversarial debate formats
+- 📝 **MCP Prompts**: 8 reusable prompt templates for multi-LLM workflows (via `/` commands)
 - 💾 **Response Caching**: Avoid duplicate API calls with intelligent caching
 - 🔁 **Automatic Failover**: Falls back to other providers if primary fails
 - 📊 **Health Monitoring**: Real-time health checks for all providers
 - 💰 **Usage Tracking**: Track requests, tokens, and estimated costs per provider
 - 🔗 **MCP Bridge**: Connect ducks to other MCP servers for extended functionality
 - 🛡️ **Granular Security**: Per-server approval controls with session-based approvals
+- 🏷️ **Tool Annotations**: MCP-compliant hints for tool behavior (read-only, destructive, etc.)
 - 🎨 **Fun Duck Theme**: Rubber duck debugging with personality!
 
 ## Supported Providers
@@ -621,6 +624,43 @@ Approve or deny a duck's MCP tool request.
 }
 ```
 
+## Available Prompts
+
+MCP Prompts are reusable templates that help you structure questions for multi-LLM analysis. Access them via `/` commands in Claude Desktop or other MCP clients.
+
+**Key Concept**: Unlike tools (which execute actions), prompts help you *frame your questions* to get better multi-perspective responses from multiple LLMs.
+
+| Prompt | Purpose | Required Arguments |
+|--------|---------|-------------------|
+| 📊 `perspectives` | Multi-angle analysis with assigned lenses | `problem`, `perspectives` |
+| 🔍 `assumptions` | Surface hidden assumptions in plans | `plan` |
+| 👁️ `blindspots` | Hunt for overlooked risks and gaps | `proposal` |
+| ⚖️ `tradeoffs` | Structured option comparison | `options`, `criteria` |
+| 🛡️ `red_team` | Security/risk analysis from multiple angles | `target` |
+| 🔄 `reframe` | Problem reframing at different levels | `problem` |
+| 🏗️ `architecture` | Design review across concerns | `design`, `workloads`, `priorities` |
+| 💡 `diverge_converge` | Divergent exploration then convergence | `challenge` |
+
+### Example: Using the `perspectives` Prompt
+
+In Claude Desktop, type `/perspectives` and fill in:
+- **problem**: "Review this authentication middleware for our API"
+- **perspectives**: "security, performance, maintainability, error handling"
+- **context**: (paste your code)
+
+The prompt generates a structured message that invites each LLM to adopt ONE lens and provide targeted analysis from that viewpoint.
+
+### Example: Using the `tradeoffs` Prompt
+
+```
+/tradeoffs
+- options: "PostgreSQL, MongoDB, Redis"
+- criteria: "scalability, query flexibility, operational complexity, cost"
+- context: "Real-time analytics dashboard with 10k concurrent users"
+```
+
+This structures your question to get systematic trade-off analysis rather than generic opinions.
+
 ## Usage Examples
 
 ### Basic Query
@@ -961,11 +1001,25 @@ mcp-rubber-duck/
 │   ├── config/             # Configuration management
 │   ├── providers/          # OpenAI client wrapper
 │   ├── tools/              # MCP tool implementations
+│   ├── prompts/            # MCP prompt templates
 │   ├── services/           # Health, cache, conversations
 │   └── utils/              # Logging, ASCII art
 ├── config/                 # Configuration examples
 └── tests/                  # Test suites
 ```
+
+### Tool Annotations
+
+All tools include MCP-compliant annotations that describe their behavioral characteristics:
+
+| Annotation | Meaning |
+|------------|---------|
+| `readOnlyHint` | Tool doesn't modify any state |
+| `destructiveHint` | Tool performs irreversible operations |
+| `idempotentHint` | Tool is safe to retry multiple times |
+| `openWorldHint` | Tool accesses external systems (APIs, network) |
+
+These help MCP clients make informed decisions about tool execution and user confirmations.
 
 ## Troubleshooting
 
