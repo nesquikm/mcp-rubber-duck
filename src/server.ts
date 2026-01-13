@@ -3,6 +3,8 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
+  ListPromptsRequestSchema,
+  GetPromptRequestSchema,
   Tool,
 } from '@modelcontextprotocol/sdk/types.js';
 
@@ -42,6 +44,9 @@ import { mcpStatusTool } from './tools/mcp-status.js';
 // Import usage stats tool
 import { getUsageStatsTool } from './tools/get-usage-stats.js';
 
+// Import prompts
+import { getPrompts, getPrompt } from './prompts/index.js';
+
 export class RubberDuckServer {
   private server: Server;
   private configManager: ConfigManager;
@@ -68,6 +73,7 @@ export class RubberDuckServer {
       {
         capabilities: {
           tools: {},
+          prompts: {},
         },
       }
     );
@@ -140,6 +146,23 @@ export class RubberDuckServer {
     // List available tools
     this.server.setRequestHandler(ListToolsRequestSchema, () => {
       return { tools: this.getTools() };
+    });
+
+    // List available prompts
+    this.server.setRequestHandler(ListPromptsRequestSchema, () => {
+      return { prompts: getPrompts() };
+    });
+
+    // Get specific prompt
+    this.server.setRequestHandler(GetPromptRequestSchema, (request) => {
+      const { name, arguments: args } = request.params;
+      try {
+        return getPrompt(name, args || {});
+      } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        logger.error(`Prompt error for ${name}:`, errorMessage);
+        throw error;
+      }
     });
 
     // Handle tool calls
