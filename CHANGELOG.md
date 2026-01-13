@@ -1,3 +1,10 @@
+# [1.7.0](https://github.com/nesquikm/mcp-rubber-duck/compare/v1.6.1...v1.7.0) (2026-01-13)
+
+
+### Features
+
+* add tool annotations for MCP spec compliance ([7d03f2d](https://github.com/nesquikm/mcp-rubber-duck/commit/7d03f2d3545bcaf455c3077bda420d0db7c0ce7a)), closes [#22](https://github.com/nesquikm/mcp-rubber-duck/issues/22)
+
 ## [1.6.1](https://github.com/nesquikm/mcp-rubber-duck/compare/v1.6.0...v1.6.1) (2026-01-09)
 
 
