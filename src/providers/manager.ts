@@ -3,6 +3,7 @@ import { ConfigManager } from '../config/config.js';
 import { ProviderHealth, DuckResponse } from '../config/types.js';
 import { ChatOptions, ModelInfo } from './types.js';
 import { UsageService } from '../services/usage.js';
+import { GuardrailsService } from '../guardrails/service.js';
 import { logger } from '../utils/logger.js';
 import { getRandomDuckMessage } from '../utils/ascii-art.js';
 
@@ -11,11 +12,13 @@ export class ProviderManager {
   private healthStatus: Map<string, ProviderHealth> = new Map();
   protected configManager: ConfigManager;
   protected usageService?: UsageService;
+  protected guardrailsService?: GuardrailsService;
   private defaultProvider?: string;
 
-  constructor(configManager: ConfigManager, usageService?: UsageService) {
+  constructor(configManager: ConfigManager, usageService?: UsageService, guardrailsService?: GuardrailsService) {
     this.configManager = configManager;
     this.usageService = usageService;
+    this.guardrailsService = guardrailsService;
     this.initializeProviders();
   }
 
@@ -34,7 +37,7 @@ export class ProviderManager {
           timeout: providerConfig.timeout,
           maxRetries: providerConfig.max_retries,
           systemPrompt: providerConfig.system_prompt,
-        });
+        }, this.guardrailsService);
 
         this.providers.set(name, provider);
         logger.info(`Initialized provider: ${name} (${providerConfig.nickname})`);
@@ -44,7 +47,7 @@ export class ProviderManager {
     }
 
     this.defaultProvider = config.default_provider;
-    
+
     if (this.providers.size === 0) {
       throw new Error('No providers could be initialized');
     }
