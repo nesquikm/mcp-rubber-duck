@@ -1,3 +1,10 @@
+# [1.8.0](https://github.com/nesquikm/mcp-rubber-duck/compare/v1.7.0...v1.8.0) (2026-01-14)
+
+
+### Features
+
+* add MCP prompts capability with 8 multi-LLM focused templates ([e62bfc1](https://github.com/nesquikm/mcp-rubber-duck/commit/e62bfc10dc3302ef8ea254684fb2bcaec1ac7fdd)), closes [#23](https://github.com/nesquikm/mcp-rubber-duck/issues/23)
+
 # [1.7.0](https://github.com/nesquikm/mcp-rubber-duck/compare/v1.6.1...v1.7.0) (2026-01-13)
 
 
