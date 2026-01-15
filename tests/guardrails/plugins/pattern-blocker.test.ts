@@ -211,6 +211,83 @@ describe('PatternBlockerPlugin', () => {
     });
   });
 
+  describe('phase handling', () => {
+    it('should skip phases not in its list (post_response)', async () => {
+      await plugin.initialize({
+        enabled: true,
+        blocked_patterns: ['secret'],
+        action_on_match: 'block',
+      });
+
+      // post_response is not in pattern_blocker's phases
+      const context = createGuardrailContext({
+        response: 'This is a secret response',
+      });
+      const result = await plugin.execute('post_response', context);
+
+      // Should allow since phase is not handled
+      expect(result.action).toBe('allow');
+    });
+
+    it('should skip post_tool_output phase', async () => {
+      await plugin.initialize({
+        enabled: true,
+        blocked_patterns: ['secret'],
+        action_on_match: 'block',
+      });
+
+      const context = createGuardrailContext({
+        toolResult: { data: 'secret data' },
+      });
+      const result = await plugin.execute('post_tool_output', context);
+
+      expect(result.action).toBe('allow');
+    });
+  });
+
+  describe('redact mode with messages', () => {
+    it('should update last message when redacting in pre_request phase', async () => {
+      await plugin.initialize({
+        enabled: true,
+        blocked_patterns: ['secret'],
+        action_on_match: 'redact',
+      });
+
+      const context = createGuardrailContext({
+        prompt: 'Tell me the secret code',
+        messages: [
+          { role: 'user', content: 'Tell me the secret code', timestamp: new Date() },
+        ],
+      });
+      const result = await plugin.execute('pre_request', context);
+
+      expect(result.action).toBe('modify');
+      expect(context.prompt).toContain('[REDACTED]');
+      // Last message should also be updated
+      expect(context.messages[0].content).toContain('[REDACTED]');
+      expect(context.messages[0].content).not.toContain('secret');
+    });
+
+    it('should redact in tool args during pre_tool_input phase', async () => {
+      await plugin.initialize({
+        enabled: true,
+        blocked_patterns: ['password'],
+        action_on_match: 'redact',
+      });
+
+      const context = createGuardrailContext({
+        toolName: 'login',
+        toolArgs: { user: 'admin', pass: 'password123' },
+      });
+      const result = await plugin.execute('pre_tool_input', context);
+
+      expect(result.action).toBe('modify');
+      // toolArgs should be updated (as string since JSON parse might fail)
+      const toolArgsStr = JSON.stringify(context.toolArgs);
+      expect(toolArgsStr).toContain('[REDACTED]');
+    });
+  });
+
   describe('violations', () => {
     it('should add violation with pattern details', async () => {
       await plugin.initialize({

@@ -7,7 +7,7 @@ import { TokenLimiterConfig } from '../../config/types.js';
  */
 export class TokenLimiterPlugin extends BaseGuardrailPlugin {
   name = 'token_limiter';
-  phases: GuardrailPhase[] = ['pre_request'];
+  phases: GuardrailPhase[] = ['pre_request', 'post_response'];
 
   private maxInputTokens: number = 8192;
   private maxOutputTokens: number | undefined;
@@ -24,10 +24,18 @@ export class TokenLimiterPlugin extends BaseGuardrailPlugin {
   }
 
   execute(phase: GuardrailPhase, context: GuardrailContext): Promise<GuardrailResult> {
-    if (phase !== 'pre_request') {
-      return Promise.resolve(this.allow(context));
+    if (phase === 'pre_request') {
+      return this.checkInputTokens(context, phase);
+    } else if (phase === 'post_response') {
+      return this.checkOutputTokens(context, phase);
     }
+    return Promise.resolve(this.allow(context));
+  }
 
+  private checkInputTokens(
+    context: GuardrailContext,
+    phase: GuardrailPhase
+  ): Promise<GuardrailResult> {
     // Estimate token count from prompt
     const prompt = context.prompt || '';
     const estimatedTokens = this.estimateTokenCount(prompt);
@@ -48,10 +56,9 @@ export class TokenLimiterPlugin extends BaseGuardrailPlugin {
         `Token limit exceeded: estimated ${totalTokens} tokens (limit: ${this.maxInputTokens})`,
         { estimatedTokens: totalTokens, limit: this.maxInputTokens }
       );
-      return Promise.resolve(this.block(
-        context,
-        `Token limit exceeded: ~${totalTokens}/${this.maxInputTokens} tokens`
-      ));
+      return Promise.resolve(
+        this.block(context, `Token limit exceeded: ~${totalTokens}/${this.maxInputTokens} tokens`)
+      );
     }
 
     // Warn if approaching limit
@@ -63,7 +70,61 @@ export class TokenLimiterPlugin extends BaseGuardrailPlugin {
         'max_input_tokens_warning',
         'warning',
         `Approaching token limit: estimated ${totalTokens}/${this.maxInputTokens} tokens (${Math.round((totalTokens / this.maxInputTokens) * 100)}%)`,
-        { estimatedTokens: totalTokens, limit: this.maxInputTokens, percentage: Math.round((totalTokens / this.maxInputTokens) * 100) }
+        {
+          estimatedTokens: totalTokens,
+          limit: this.maxInputTokens,
+          percentage: Math.round((totalTokens / this.maxInputTokens) * 100),
+        }
+      );
+    }
+
+    return Promise.resolve(this.allow(context));
+  }
+
+  private checkOutputTokens(
+    context: GuardrailContext,
+    phase: GuardrailPhase
+  ): Promise<GuardrailResult> {
+    // Skip if no output limit configured
+    if (!this.maxOutputTokens) {
+      return Promise.resolve(this.allow(context));
+    }
+
+    const response = context.response || '';
+    const estimatedTokens = this.estimateTokenCount(response);
+
+    // Check if over limit
+    if (estimatedTokens > this.maxOutputTokens) {
+      this.addViolation(
+        context,
+        phase,
+        'max_output_tokens',
+        'error',
+        `Output token limit exceeded: estimated ${estimatedTokens} tokens (limit: ${this.maxOutputTokens})`,
+        { estimatedTokens, limit: this.maxOutputTokens }
+      );
+      return Promise.resolve(
+        this.block(
+          context,
+          `Output token limit exceeded: ~${estimatedTokens}/${this.maxOutputTokens} tokens`
+        )
+      );
+    }
+
+    // Warn if approaching limit
+    const warnThreshold = this.maxOutputTokens * (this.warnAtPercentage / 100);
+    if (estimatedTokens >= warnThreshold) {
+      this.addViolation(
+        context,
+        phase,
+        'max_output_tokens_warning',
+        'warning',
+        `Approaching output token limit: estimated ${estimatedTokens}/${this.maxOutputTokens} tokens (${Math.round((estimatedTokens / this.maxOutputTokens) * 100)}%)`,
+        {
+          estimatedTokens,
+          limit: this.maxOutputTokens,
+          percentage: Math.round((estimatedTokens / this.maxOutputTokens) * 100),
+        }
       );
     }
 

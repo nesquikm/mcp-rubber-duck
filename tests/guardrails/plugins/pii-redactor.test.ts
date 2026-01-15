@@ -219,6 +219,29 @@ describe('PIIDetector', () => {
       expect(detections[0].type).toBe('api_key');
       expect(detections[0].value.startsWith('gsk_')).toBe(true);
     });
+
+    it('should detect generic API keys with lower confidence', () => {
+      const detector = new PIIDetector({
+        detectEmails: false,
+        detectPhones: false,
+        detectSSN: false,
+        detectAPIKeys: true,
+        detectCreditCards: false,
+        detectIPAddresses: false,
+        customPatterns: [],
+        allowlist: [],
+        allowlistDomains: [],
+      });
+
+      // Generic API key pattern (api_key + 16+ chars, not sk- or gsk_)
+      const text = 'Generic: api_key_abc123def456ghi7';
+      const detections = detector.detect(text);
+
+      expect(detections).toHaveLength(1);
+      expect(detections[0].type).toBe('api_key');
+      // Should have lower confidence (0.7) for generic keys
+      expect(detections[0].confidence).toBe(0.7);
+    });
   });
 
   describe('credit card detection', () => {
@@ -411,6 +434,29 @@ describe('PIIDetector', () => {
       expect(detections).toHaveLength(1);
       expect(detections[0].type).toBe('custom');
       expect(detections[0].value).toBe('EMP-123456');
+    });
+
+    it('should not detect custom patterns that are in allowlist', () => {
+      const detector = new PIIDetector({
+        detectEmails: false,
+        detectPhones: false,
+        detectSSN: false,
+        detectAPIKeys: false,
+        detectCreditCards: false,
+        detectIPAddresses: false,
+        customPatterns: [
+          { name: 'employee_id', pattern: 'EMP-[0-9]{6}', placeholder: 'EMPLOYEE' },
+        ],
+        allowlist: ['EMP-123456'], // This employee ID is allowlisted
+        allowlistDomains: [],
+      });
+
+      const text = 'Employee ID: EMP-123456 and EMP-789012';
+      const detections = detector.detect(text);
+
+      // Only EMP-789012 should be detected (EMP-123456 is allowlisted)
+      expect(detections).toHaveLength(1);
+      expect(detections[0].value).toBe('EMP-789012');
     });
 
     it('should skip invalid regex patterns', () => {
@@ -833,6 +879,126 @@ describe('PIIRedactorPlugin', () => {
       const result = await plugin.execute('pre_cache', context);
 
       expect(result.action).toBe('allow');
+    });
+
+    it('should handle JSON parse error gracefully when redacting toolArgs', async () => {
+      await plugin.initialize({
+        enabled: true,
+        detect_emails: true,
+      });
+
+      // Create context with toolArgs that become invalid JSON after redaction
+      // When the email is replaced with placeholder, the JSON structure might break
+      const context = createGuardrailContext({
+        toolName: 'send_email',
+        toolArgs: { to: 'user@example.com' },
+      });
+
+      const result = await plugin.execute('pre_tool_input', context);
+
+      // Should still modify and store result appropriately
+      expect(result.action).toBe('modify');
+      expect(context.toolArgs).toBeDefined();
+    });
+
+    it('should handle empty response when restoring', async () => {
+      await plugin.initialize({
+        enabled: true,
+        restore_on_response: true,
+      });
+
+      const context = createGuardrailContext({
+        response: '',
+      });
+      context.metadata.set('pii_mappings', new Map([['[EMAIL_1]', 'test@test.com']]));
+
+      const result = await plugin.execute('post_response', context);
+
+      // Empty response should just allow
+      expect(result.action).toBe('allow');
+    });
+
+    it('should handle no placeholders found during restore', async () => {
+      await plugin.initialize({
+        enabled: true,
+        restore_on_response: true,
+      });
+
+      const context = createGuardrailContext({
+        response: 'The user has been notified.',
+      });
+      // Mappings exist but placeholders are not in the response
+      context.metadata.set('pii_mappings', new Map([['[EMAIL_1]', 'test@test.com']]));
+
+      const result = await plugin.execute('post_response', context);
+
+      // No changes to make, should allow
+      expect(result.action).toBe('allow');
+      expect(context.response).toBe('The user has been notified.');
+    });
+
+    it('should expose getPseudonymizer for testing', async () => {
+      await plugin.initialize({ enabled: true });
+
+      const pseudonymizer = plugin.getPseudonymizer();
+      expect(pseudonymizer).toBeDefined();
+      expect(typeof pseudonymizer.pseudonymize).toBe('function');
+      expect(typeof pseudonymizer.restore).toBe('function');
+    });
+
+    it('should expose getDetector for testing', async () => {
+      await plugin.initialize({ enabled: true });
+
+      const detector = plugin.getDetector();
+      expect(detector).toBeDefined();
+      expect(typeof detector.detect).toBe('function');
+    });
+  });
+
+  describe('edge cases', () => {
+    it('should handle tool args that become invalid JSON after redaction', async () => {
+      await plugin.initialize({
+        enabled: true,
+        detect_emails: true,
+      });
+
+      // Create a context where toolArgs will have PII redacted in a way that
+      // could produce invalid JSON if not handled properly
+      const context = createGuardrailContext({
+        toolName: 'test_tool',
+        toolArgs: {
+          email: 'test@example.com',
+          nested: { value: 'data' },
+        },
+      });
+
+      const result = await plugin.execute('pre_tool_input', context);
+
+      expect(result.action).toBe('modify');
+      expect(context.toolArgs).toBeDefined();
+      // The redacted args should be valid (either parsed JSON or fallback)
+      expect(typeof context.toolArgs).toBe('object');
+    });
+
+    it('should return default confidence for unknown PII types', () => {
+      const detector = new PIIDetector({
+        detectEmails: false,
+        detectPhones: false,
+        detectSSN: false,
+        detectAPIKeys: false,
+        detectCreditCards: false,
+        detectIPAddresses: false,
+        customPatterns: [
+          { name: 'custom_unknown_type', pattern: '\\bTEST\\d+\\b', placeholder: '[CUSTOM]' },
+        ],
+        allowlist: [],
+        allowlistDomains: [],
+      });
+
+      const detections = detector.detect('Found TEST123 here');
+      expect(detections.length).toBe(1);
+      // Custom patterns get default confidence
+      expect(detections[0].confidence).toBeGreaterThanOrEqual(0.7);
     });
   });
 });

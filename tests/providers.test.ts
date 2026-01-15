@@ -858,3 +858,742 @@ describe('DuckProvider Error Handling', () => {
     expect(callArgs.messages[0].content).toBe('You are a helpful assistant');
   });
 });
+
+describe('DuckProvider with Guardrails', () => {
+  let mockGuardrailsService: {
+    isEnabled: jest.Mock;
+    createContext: jest.Mock;
+    execute: jest.Mock;
+  };
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+
+    // Setup mock OpenAI response
+    mockCreate.mockResolvedValue({
+      choices: [{
+        message: { content: 'Mocked response' },
+        finish_reason: 'stop',
+      }],
+      usage: {
+        prompt_tokens: 10,
+        completion_tokens: 20,
+        total_tokens: 30,
+      },
+      model: 'test-model',
+    });
+
+    // Create mock guardrails service
+    mockGuardrailsService = {
+      isEnabled: jest.fn().mockReturnValue(true),
+      createContext: jest.fn().mockImplementation((params) => ({
+        requestId: 'test-request-id',
+        provider: params.provider,
+        model: params.model,
+        messages: params.messages || [],
+        prompt: params.prompt,
+        violations: [],
+        modifications: [],
+        metadata: new Map(),
+      })),
+      execute: jest.fn().mockResolvedValue({ action: 'allow', context: {} }),
+    };
+  });
+
+  it('should execute pre_request guardrails before chat', async () => {
+    const provider = new DuckProvider(
+      'test',
+      'Test Duck',
+      { apiKey: 'test-key', baseURL: 'https://api.test.com/v1', model: 'test-model' },
+      mockGuardrailsService as unknown as import('../src/guardrails/service').GuardrailsService
+    );
+    provider['client'].chat.completions.create = mockCreate;
+
+    await provider.chat({
+      messages: [{ role: 'user', content: 'Hello', timestamp: new Date() }],
+    });
+
+    expect(mockGuardrailsService.isEnabled).toHaveBeenCalled();
+    expect(mockGuardrailsService.createContext).toHaveBeenCalledWith(
+      expect.objectContaining({
+        provider: 'test',
+        model: 'test-model',
+        prompt: 'Hello',
+      })
+    );
+    expect(mockGuardrailsService.execute).toHaveBeenCalledWith('pre_request', expect.any(Object));
+  });
+
+  it('should execute post_response guardrails after chat', async () => {
+    const provider = new DuckProvider(
+      'test',
+      'Test Duck',
+      { apiKey: 'test-key', baseURL: 'https://api.test.com/v1', model: 'test-model' },
+      mockGuardrailsService as unknown as import('../src/guardrails/service').GuardrailsService
+    );
+    provider['client'].chat.completions.create = mockCreate;
+
+    await provider.chat({
+      messages: [{ role: 'user', content: 'Hello', timestamp: new Date() }],
+    });
+
+    // Should be called twice: pre_request and post_response
+    expect(mockGuardrailsService.execute).toHaveBeenCalledTimes(2);
+    expect(mockGuardrailsService.execute).toHaveBeenNthCalledWith(1, 'pre_request', expect.any(Object));
+    expect(mockGuardrailsService.execute).toHaveBeenNthCalledWith(2, 'post_response', expect.any(Object));
+  });
+
+  it('should block request when pre_request guardrails return block', async () => {
+    mockGuardrailsService.execute.mockResolvedValueOnce({
+      action: 'block',
+      blockedBy: 'rate_limiter',
+      blockReason: 'Too many requests',
+      context: {},
+    });
+
+    const provider = new DuckProvider(
+      'test',
+      'Test Duck',
+      { apiKey: 'test-key', baseURL: 'https://api.test.com/v1', model: 'test-model' },
+      mockGuardrailsService as unknown as import('../src/guardrails/service').GuardrailsService
+    );
+    provider['client'].chat.completions.create = mockCreate;
+
+    await expect(
+      provider.chat({
+        messages: [{ role: 'user', content: 'Hello', timestamp: new Date() }],
+      })
+    ).rejects.toThrow("Request blocked by guardrail 'rate_limiter': Too many requests");
+
+    // Should NOT call the LLM when blocked
+    expect(mockCreate).not.toHaveBeenCalled();
+  });
+
+  it('should block response when post_response guardrails return block', async () => {
+    // Pre-request allows, post-response blocks
+    mockGuardrailsService.execute
+      .mockResolvedValueOnce({ action: 'allow', context: {} })
+      .mockResolvedValueOnce({
+        action: 'block',
+        blockedBy: 'content_filter',
+        blockReason: 'Inappropriate content detected',
+        context: {},
+      });
+
+    const provider = new DuckProvider(
+      'test',
+      'Test Duck',
+      { apiKey: 'test-key', baseURL: 'https://api.test.com/v1', model: 'test-model' },
+      mockGuardrailsService as unknown as import('../src/guardrails/service').GuardrailsService
+    );
+    provider['client'].chat.completions.create = mockCreate;
+
+    await expect(
+      provider.chat({
+        messages: [{ role: 'user', content: 'Hello', timestamp: new Date() }],
+      })
+    ).rejects.toThrow("Request blocked by guardrail 'content_filter': Inappropriate content detected");
+
+    // LLM was called but response was blocked
+    expect(mockCreate).toHaveBeenCalled();
+  });
+
+  it('should modify messages when pre_request guardrails return modify', async () => {
+    const modifiedMessages = [
+      { role: 'user' as const, content: 'Hello [EMAIL_1]', timestamp: new Date() },
+    ];
+
+    mockGuardrailsService.execute.mockImplementation((phase) => {
+      if (phase === 'pre_request') {
+        return Promise.resolve({
+          action: 'modify',
+          context: { messages: modifiedMessages },
+        });
+      }
+      return Promise.resolve({ action: 'allow', context: {} });
+    });
+
+    mockGuardrailsService.createContext.mockReturnValue({
+      requestId: 'test-id',
+      provider: 'test',
+      model: 'test-model',
+      messages: modifiedMessages,
+      prompt: 'Hello [EMAIL_1]',
+      violations: [],
+      modifications: [],
+      metadata: new Map(),
+    });
+
+    const provider = new DuckProvider(
+      'test',
+      'Test Duck',
+      { apiKey: 'test-key', baseURL: 'https://api.test.com/v1', model: 'test-model' },
+      mockGuardrailsService as unknown as import('../src/guardrails/service').GuardrailsService
+    );
+    provider['client'].chat.completions.create = mockCreate;
+
+    await provider.chat({
+      messages: [{ role: 'user', content: 'Hello test@example.com', timestamp: new Date() }],
+    });
+
+    // The LLM should receive the modified (redacted) message
+    const callArgs = mockCreate.mock.calls[0][0];
+    expect(callArgs.messages[0].content).toBe('Hello [EMAIL_1]');
+  });
+
+  it('should modify response when post_response guardrails return modify', async () => {
+    // Create a shared context object that gets modified by execute
+    const sharedContext = {
+      requestId: 'test-id',
+      provider: 'test',
+      model: 'test-model',
+      messages: [] as Array<{ role: string; content: string; timestamp: Date }>,
+      prompt: 'Hello',
+      response: '',
+      violations: [],
+      modifications: [],
+      metadata: new Map(),
+    };
+
+    mockGuardrailsService.createContext.mockReturnValue(sharedContext);
+
+    mockGuardrailsService.execute.mockImplementation((phase) => {
+      if (phase === 'post_response') {
+        // Modify the response in the shared context
+        sharedContext.response = 'Modified response with restored PII';
+        return Promise.resolve({
+          action: 'modify',
+          context: sharedContext,
+        });
+      }
+      return Promise.resolve({ action: 'allow', context: sharedContext });
+    });
+
+    const provider = new DuckProvider(
+      'test',
+      'Test Duck',
+      { apiKey: 'test-key', baseURL: 'https://api.test.com/v1', model: 'test-model' },
+      mockGuardrailsService as unknown as import('../src/guardrails/service').GuardrailsService
+    );
+    provider['client'].chat.completions.create = mockCreate;
+
+    const response = await provider.chat({
+      messages: [{ role: 'user', content: 'Hello', timestamp: new Date() }],
+    });
+
+    expect(response.content).toBe('Modified response with restored PII');
+  });
+
+  it('should skip guardrails when service is disabled', async () => {
+    mockGuardrailsService.isEnabled.mockReturnValue(false);
+
+    const provider = new DuckProvider(
+      'test',
+      'Test Duck',
+      { apiKey: 'test-key', baseURL: 'https://api.test.com/v1', model: 'test-model' },
+      mockGuardrailsService as unknown as import('../src/guardrails/service').GuardrailsService
+    );
+    provider['client'].chat.completions.create = mockCreate;
+
+    const response = await provider.chat({
+      messages: [{ role: 'user', content: 'Hello', timestamp: new Date() }],
+    });
+
+    expect(response.content).toBe('Mocked response');
+    expect(mockGuardrailsService.createContext).not.toHaveBeenCalled();
+    expect(mockGuardrailsService.execute).not.toHaveBeenCalled();
+  });
+
+  it('should work without guardrails service (undefined)', async () => {
+    const provider = new DuckProvider(
+      'test',
+      'Test Duck',
+      { apiKey: 'test-key', baseURL: 'https://api.test.com/v1', model: 'test-model' }
+      // No guardrails service passed
+    );
+    provider['client'].chat.completions.create = mockCreate;
+
+    const response = await provider.chat({
+      messages: [{ role: 'user', content: 'Hello', timestamp: new Date() }],
+    });
+
+    expect(response.content).toBe('Mocked response');
+  });
+
+  it('should re-throw GuardrailBlockError without wrapping', async () => {
+    mockGuardrailsService.execute.mockRejectedValueOnce(
+      new (await import('../src/guardrails/errors')).GuardrailBlockError('test_plugin', 'Test block reason')
+    );
+
+    const provider = new DuckProvider(
+      'test',
+      'Test Duck',
+      { apiKey: 'test-key', baseURL: 'https://api.test.com/v1', model: 'test-model' },
+      mockGuardrailsService as unknown as import('../src/guardrails/service').GuardrailsService
+    );
+    provider['client'].chat.completions.create = mockCreate;
+
+    await expect(
+      provider.chat({
+        messages: [{ role: 'user', content: 'Hello', timestamp: new Date() }],
+      })
+    ).rejects.toThrow("Request blocked by guardrail 'test_plugin': Test block reason");
+  });
+});
+
+describe('EnhancedDuckProvider with Guardrails', () => {
+  let mockGuardrailsService: {
+    isEnabled: jest.Mock;
+    createContext: jest.Mock;
+    execute: jest.Mock;
+  };
+
+  let mockFunctionBridge: {
+    getFunctionDefinitions: jest.Mock;
+    handleFunctionCall: jest.Mock;
+    getStats: jest.Mock;
+  };
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+
+    mockGuardrailsService = {
+      isEnabled: jest.fn().mockReturnValue(true),
+      createContext: jest.fn().mockImplementation((params) => ({
+        requestId: 'test-request-id',
+        provider: params.provider,
+        model: params.model,
+        messages: params.messages || [],
+        prompt: params.prompt,
+        response: '',
+        violations: [],
+        modifications: [],
+        metadata: new Map(),
+      })),
+      execute: jest.fn().mockResolvedValue({ action: 'allow', context: {} }),
+    };
+
+    mockFunctionBridge = {
+      getFunctionDefinitions: jest.fn().mockResolvedValue([]),
+      handleFunctionCall: jest.fn(),
+      getStats: jest.fn().mockReturnValue({ totalFunctions: 0, serverCount: 0, trustedToolCount: 0, connectedServers: [] }),
+    };
+
+    // Setup mock response for regular chat
+    mockCreate.mockResolvedValue({
+      choices: [{
+        message: { content: 'Mocked response' },
+        finish_reason: 'stop',
+      }],
+      usage: {
+        prompt_tokens: 10,
+        completion_tokens: 20,
+        total_tokens: 30,
+      },
+      model: 'test-model',
+    });
+  });
+
+  it('should execute pre_request guardrails before making request', async () => {
+    const { EnhancedDuckProvider } = await import('../src/providers/duck-provider-enhanced');
+
+    const provider = new EnhancedDuckProvider(
+      'test',
+      'Test Duck',
+      { apiKey: 'test-key', baseURL: 'https://api.test.com/v1', model: 'test-model' },
+      mockFunctionBridge as unknown as import('../src/services/function-bridge').FunctionBridge,
+      false, // mcpEnabled
+      mockGuardrailsService as unknown as import('../src/guardrails/service').GuardrailsService
+    );
+    provider['client'].chat.completions.create = mockCreate;
+
+    await provider.chat({
+      messages: [{ role: 'user', content: 'Hello', timestamp: new Date() }],
+    });
+
+    expect(mockGuardrailsService.isEnabled).toHaveBeenCalled();
+    expect(mockGuardrailsService.createContext).toHaveBeenCalledWith(
+      expect.objectContaining({
+        provider: 'test',
+        model: 'test-model',
+      })
+    );
+    expect(mockGuardrailsService.execute).toHaveBeenCalledWith('pre_request', expect.any(Object));
+  });
+
+  it('should execute post_response guardrails after receiving response', async () => {
+    const { EnhancedDuckProvider } = await import('../src/providers/duck-provider-enhanced');
+
+    const provider = new EnhancedDuckProvider(
+      'test',
+      'Test Duck',
+      { apiKey: 'test-key', baseURL: 'https://api.test.com/v1', model: 'test-model' },
+      mockFunctionBridge as unknown as import('../src/services/function-bridge').FunctionBridge,
+      false,
+      mockGuardrailsService as unknown as import('../src/guardrails/service').GuardrailsService
+    );
+    provider['client'].chat.completions.create = mockCreate;
+
+    await provider.chat({
+      messages: [{ role: 'user', content: 'Hello', timestamp: new Date() }],
+    });
+
+    // Should be called twice: pre_request and post_response
+    expect(mockGuardrailsService.execute).toHaveBeenCalledTimes(2);
+    expect(mockGuardrailsService.execute).toHaveBeenNthCalledWith(1, 'pre_request', expect.any(Object));
+    expect(mockGuardrailsService.execute).toHaveBeenNthCalledWith(2, 'post_response', expect.any(Object));
+  });
+
+  it('should block request when pre_request guardrails return block', async () => {
+    const { EnhancedDuckProvider } = await import('../src/providers/duck-provider-enhanced');
+
+    mockGuardrailsService.execute.mockResolvedValueOnce({
+      action: 'block',
+      blockedBy: 'pattern_blocker',
+      blockReason: 'Blocked pattern detected',
+      context: {},
+    });
+
+    const provider = new EnhancedDuckProvider(
+      'test',
+      'Test Duck',
+      { apiKey: 'test-key', baseURL: 'https://api.test.com/v1', model: 'test-model' },
+      mockFunctionBridge as unknown as import('../src/services/function-bridge').FunctionBridge,
+      false,
+      mockGuardrailsService as unknown as import('../src/guardrails/service').GuardrailsService
+    );
+    provider['client'].chat.completions.create = mockCreate;
+
+    await expect(
+      provider.chat({
+        messages: [{ role: 'user', content: 'Hello', timestamp: new Date() }],
+      })
+    ).rejects.toThrow("Request blocked by guardrail 'pattern_blocker': Blocked pattern detected");
+
+    // API should NOT have been called
+    expect(mockCreate).not.toHaveBeenCalled();
+  });
+
+  it('should block response when post_response guardrails return block', async () => {
+    const { EnhancedDuckProvider } = await import('../src/providers/duck-provider-enhanced');
+
+    // Pre-request allows, post-response blocks
+    mockGuardrailsService.execute
+      .mockResolvedValueOnce({ action: 'allow', context: {} })
+      .mockResolvedValueOnce({
+        action: 'block',
+        blockedBy: 'pii_redactor',
+        blockReason: 'PII detected in response',
+        context: {},
+      });
+
+    const provider = new EnhancedDuckProvider(
+      'test',
+      'Test Duck',
+      { apiKey: 'test-key', baseURL: 'https://api.test.com/v1', model: 'test-model' },
+      mockFunctionBridge as unknown as import('../src/services/function-bridge').FunctionBridge,
+      false,
+      mockGuardrailsService as unknown as import('../src/guardrails/service').GuardrailsService
+    );
+    provider['client'].chat.completions.create = mockCreate;
+
+    await expect(
+      provider.chat({
+        messages: [{ role: 'user', content: 'Hello', timestamp: new Date() }],
+      })
+    ).rejects.toThrow("Request blocked by guardrail 'pii_redactor': PII detected in response");
+  });
+
+  it('should modify messages when pre_request guardrails return modify', async () => {
+    const { EnhancedDuckProvider } = await import('../src/providers/duck-provider-enhanced');
+
+    const modifiedMessages = [
+      { role: 'user' as const, content: '[REDACTED]', timestamp: new Date() }
+    ];
+
+    const sharedContext = {
+      requestId: 'test-id',
+      provider: 'test',
+      model: 'test-model',
+      messages: modifiedMessages,
+      prompt: 'Hello',
+      response: '',
+      violations: [],
+      modifications: [],
+      metadata: new Map(),
+    };
+
+    mockGuardrailsService.createContext.mockReturnValue(sharedContext);
+    mockGuardrailsService.execute.mockImplementation((phase) => {
+      if (phase === 'pre_request') {
+        return Promise.resolve({ action: 'modify', context: sharedContext });
+      }
+      return Promise.resolve({ action: 'allow', context: sharedContext });
+    });
+
+    const provider = new EnhancedDuckProvider(
+      'test',
+      'Test Duck',
+      { apiKey: 'test-key', baseURL: 'https://api.test.com/v1', model: 'test-model' },
+      mockFunctionBridge as unknown as import('../src/services/function-bridge').FunctionBridge,
+      false,
+      mockGuardrailsService as unknown as import('../src/guardrails/service').GuardrailsService
+    );
+    provider['client'].chat.completions.create = mockCreate;
+
+    await provider.chat({
+      messages: [{ role: 'user', content: 'sensitive data', timestamp: new Date() }],
+    });
+
+    // The API should receive the modified messages
+    const callArgs = mockCreate.mock.calls[0][0] as { messages: Array<{ content: string }> };
+    expect(callArgs.messages[0].content).toBe('[REDACTED]');
+  });
+
+  it('should modify response when post_response guardrails return modify', async () => {
+    const { EnhancedDuckProvider } = await import('../src/providers/duck-provider-enhanced');
+
+    const sharedContext = {
+      requestId: 'test-id',
+      provider: 'test',
+      model: 'test-model',
+      messages: [],
+      prompt: 'Hello',
+      response: '',
+      violations: [],
+      modifications: [],
+      metadata: new Map(),
+    };
+
+    mockGuardrailsService.createContext.mockReturnValue(sharedContext);
+    mockGuardrailsService.execute.mockImplementation((phase) => {
+      if (phase === 'post_response') {
+        sharedContext.response = '[REDACTED RESPONSE]';
+        return Promise.resolve({ action: 'modify', context: sharedContext });
+      }
+      return Promise.resolve({ action: 'allow', context: sharedContext });
+    });
+
+    const provider = new EnhancedDuckProvider(
+      'test',
+      'Test Duck',
+      { apiKey: 'test-key', baseURL: 'https://api.test.com/v1', model: 'test-model' },
+      mockFunctionBridge as unknown as import('../src/services/function-bridge').FunctionBridge,
+      false,
+      mockGuardrailsService as unknown as import('../src/guardrails/service').GuardrailsService
+    );
+    provider['client'].chat.completions.create = mockCreate;
+
+    const result = await provider.chat({
+      messages: [{ role: 'user', content: 'Hello', timestamp: new Date() }],
+    });
+
+    expect(result.content).toBe('[REDACTED RESPONSE]');
+  });
+
+  it('should skip guardrails when service is disabled', async () => {
+    const { EnhancedDuckProvider } = await import('../src/providers/duck-provider-enhanced');
+
+    mockGuardrailsService.isEnabled.mockReturnValue(false);
+
+    const provider = new EnhancedDuckProvider(
+      'test',
+      'Test Duck',
+      { apiKey: 'test-key', baseURL: 'https://api.test.com/v1', model: 'test-model' },
+      mockFunctionBridge as unknown as import('../src/services/function-bridge').FunctionBridge,
+      false,
+      mockGuardrailsService as unknown as import('../src/guardrails/service').GuardrailsService
+    );
+    provider['client'].chat.completions.create = mockCreate;
+
+    await provider.chat({
+      messages: [{ role: 'user', content: 'Hello', timestamp: new Date() }],
+    });
+
+    expect(mockGuardrailsService.createContext).not.toHaveBeenCalled();
+    expect(mockGuardrailsService.execute).not.toHaveBeenCalled();
+  });
+
+  it('should work without guardrails service (undefined)', async () => {
+    const { EnhancedDuckProvider } = await import('../src/providers/duck-provider-enhanced');
+
+    const provider = new EnhancedDuckProvider(
+      'test',
+      'Test Duck',
+      { apiKey: 'test-key', baseURL: 'https://api.test.com/v1', model: 'test-model' },
+      mockFunctionBridge as unknown as import('../src/services/function-bridge').FunctionBridge,
+      false
+      // No guardrails service
+    );
+    provider['client'].chat.completions.create = mockCreate;
+
+    const result = await provider.chat({
+      messages: [{ role: 'user', content: 'Hello', timestamp: new Date() }],
+    });
+
+    expect(result.content).toBe('Mocked response');
+  });
+
+  it('should re-throw GuardrailBlockError without wrapping', async () => {
+    const { EnhancedDuckProvider } = await import('../src/providers/duck-provider-enhanced');
+    const { GuardrailBlockError } = await import('../src/guardrails/errors');
+
+    mockGuardrailsService.execute.mockRejectedValueOnce(
+      new GuardrailBlockError('custom_plugin', 'Custom block reason')
+    );
+
+    const provider = new EnhancedDuckProvider(
+      'test',
+      'Test Duck',
+      { apiKey: 'test-key', baseURL: 'https://api.test.com/v1', model: 'test-model' },
+      mockFunctionBridge as unknown as import('../src/services/function-bridge').FunctionBridge,
+      false,
+      mockGuardrailsService as unknown as import('../src/guardrails/service').GuardrailsService
+    );
+    provider['client'].chat.completions.create = mockCreate;
+
+    await expect(
+      provider.chat({
+        messages: [{ role: 'user', content: 'Hello', timestamp: new Date() }],
+      })
+    ).rejects.toThrow("Request blocked by guardrail 'custom_plugin': Custom block reason");
+  });
+
+  it('should apply guardrails with tool calls - blocking post_response after tool execution', async () => {
+    const { EnhancedDuckProvider } = await import('../src/providers/duck-provider-enhanced');
+
+    // First call returns tool_calls, second returns final response
+    mockCreate
+      .mockResolvedValueOnce({
+        choices: [{
+          message: {
+            content: null,
+            tool_calls: [{
+              id: 'call_123',
+              type: 'function',
+              function: {
+                name: 'mcp__test__tool',
+                arguments: JSON.stringify({ arg: 'value' }),
+              },
+            }],
+          },
+          finish_reason: 'tool_calls',
+        }],
+        usage: { prompt_tokens: 10, completion_tokens: 5, total_tokens: 15 },
+        model: 'test-model',
+      })
+      .mockResolvedValueOnce({
+        choices: [{
+          message: { content: 'Final response with sensitive data' },
+          finish_reason: 'stop',
+        }],
+        usage: { prompt_tokens: 20, completion_tokens: 30, total_tokens: 50 },
+        model: 'test-model',
+      });
+
+    mockFunctionBridge.handleFunctionCall.mockResolvedValue({
+      success: true,
+      data: { result: 'tool result' },
+    });
+
+    // Pre-request allows, post-response blocks
+    mockGuardrailsService.execute
+      .mockResolvedValueOnce({ action: 'allow', context: {} }) // pre_request
+      .mockResolvedValueOnce({
+        action: 'block',
+        blockedBy: 'pii_redactor',
+        blockReason: 'Sensitive data in final response',
+        context: {},
+      }); // post_response
+
+    const provider = new EnhancedDuckProvider(
+      'test',
+      'Test Duck',
+      { apiKey: 'test-key', baseURL: 'https://api.test.com/v1', model: 'test-model' },
+      mockFunctionBridge as unknown as import('../src/services/function-bridge').FunctionBridge,
+      true, // mcpEnabled
+      mockGuardrailsService as unknown as import('../src/guardrails/service').GuardrailsService
+    );
+    provider['client'].chat.completions.create = mockCreate;
+
+    await expect(
+      provider.chat({
+        messages: [{ role: 'user', content: 'Run the tool', timestamp: new Date() }],
+      })
+    ).rejects.toThrow("Request blocked by guardrail 'pii_redactor': Sensitive data in final response");
+  });
+
+  it('should modify tool result when post_response guardrails return modify after tool calls', async () => {
+    const { EnhancedDuckProvider } = await import('../src/providers/duck-provider-enhanced');
+
+    mockCreate
+      .mockResolvedValueOnce({
+        choices: [{
+          message: {
+            content: null,
+            tool_calls: [{
+              id: 'call_123',
+              type: 'function',
+              function: {
+                name: 'mcp__test__tool',
+                arguments: JSON.stringify({ arg: 'value' }),
+              },
+            }],
+          },
+          finish_reason: 'tool_calls',
+        }],
+        usage: { prompt_tokens: 10, completion_tokens: 5, total_tokens: 15 },
+        model: 'test-model',
+      })
+      .mockResolvedValueOnce({
+        choices: [{
+          message: { content: 'Final response with SSN: 123-45-6789' },
+          finish_reason: 'stop',
+        }],
+        usage: { prompt_tokens: 20, completion_tokens: 30, total_tokens: 50 },
+        model: 'test-model',
+      });
+
+    mockFunctionBridge.handleFunctionCall.mockResolvedValue({
+      success: true,
+      data: { result: 'tool result' },
+    });
+
+    const sharedContext = {
+      requestId: 'test-id',
+      provider: 'test',
+      model: 'test-model',
+      messages: [],
+      prompt: 'Run the tool',
+      response: '',
+      violations: [],
+      modifications: [],
+      metadata: new Map(),
+    };
+
+    mockGuardrailsService.createContext.mockReturnValue(sharedContext);
+    mockGuardrailsService.execute.mockImplementation((phase) => {
+      if (phase === 'post_response') {
+        sharedContext.response = 'Final response with SSN: [REDACTED]';
+        return Promise.resolve({ action: 'modify', context: sharedContext });
+      }
+      return Promise.resolve({ action: 'allow', context: sharedContext });
+    });
+
+    const provider = new EnhancedDuckProvider(
+      'test',
+      'Test Duck',
+      { apiKey: 'test-key', baseURL: 'https://api.test.com/v1', model: 'test-model' },
+      mockFunctionBridge as unknown as import('../src/services/function-bridge').FunctionBridge,
+      true,
+      mockGuardrailsService as unknown as import('../src/guardrails/service').GuardrailsService
+    );
+    provider['client'].chat.completions.create = mockCreate;
+
+    const result = await provider.chat({
+      messages: [{ role: 'user', content: 'Run the tool', timestamp: new Date() }],
+    });
+
+    expect(result.content).toBe('Final response with SSN: [REDACTED]');
+  });
+});

@@ -124,6 +124,7 @@ export class GuardrailsService {
     // Track logged items to avoid duplicates
     let lastViolationCount = 0;
     let lastModificationCount = 0;
+    let wasModified = false;
 
     for (const plugin of relevantPlugins) {
       try {
@@ -158,6 +159,11 @@ export class GuardrailsService {
           return result;
         }
 
+        // Track if any plugin modified the context
+        if (result.action === 'modify') {
+          wasModified = true;
+        }
+
         // Update context for next plugin
         context = result.context;
       } catch (error) {
@@ -176,7 +182,7 @@ export class GuardrailsService {
       }
     }
 
-    return { action: 'allow', context };
+    return { action: wasModified ? 'modify' : 'allow', context };
   }
 
   /**

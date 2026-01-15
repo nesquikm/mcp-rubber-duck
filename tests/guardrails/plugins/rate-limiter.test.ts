@@ -158,6 +158,54 @@ describe('RateLimiterPlugin', () => {
     });
   });
 
+  describe('rate limiting - per hour', () => {
+    it('should block requests when hourly limit exceeded', async () => {
+      await plugin.initialize({
+        enabled: true,
+        requests_per_minute: 1000, // High minute limit
+        requests_per_hour: 5, // Low hour limit
+        burst_allowance: 0,
+      });
+
+      const context = createGuardrailContext({ provider: 'openai' });
+
+      // Make 5 requests - all should be allowed
+      for (let i = 0; i < 5; i++) {
+        const result = await plugin.execute('pre_request', context);
+        expect(result.action).toBe('allow');
+      }
+
+      // 6th request should be blocked due to hourly limit
+      const result = await plugin.execute('pre_request', context);
+      expect(result.action).toBe('block');
+      expect(result.blockReason).toContain('per hour');
+    });
+
+    it('should add violation for hourly limit exceeded', async () => {
+      await plugin.initialize({
+        enabled: true,
+        requests_per_minute: 1000,
+        requests_per_hour: 3,
+        burst_allowance: 0,
+      });
+
+      const context = createGuardrailContext({ provider: 'openai' });
+
+      // Make 3 requests
+      for (let i = 0; i < 3; i++) {
+        await plugin.execute('pre_request', context);
+      }
+
+      // 4th request - should be blocked with hourly violation
+      const result = await plugin.execute('pre_request', context);
+
+      expect(result.action).toBe('block');
+      const hourlyViolation = context.violations.find((v) => v.rule === 'requests_per_hour');
+      expect(hourlyViolation).toBeDefined();
+      expect(hourlyViolation?.severity).toBe('error');
+    });
+  });
+
   describe('violations', () => {
     it('should add violation when rate limit exceeded', async () => {
       await plugin.initialize({
@@ -221,6 +269,18 @@ describe('RateLimiterPlugin', () => {
 
       // Only 1 request counted (pre_request)
       expect(plugin.getRequestCounts().lastMinute).toBe(1);
+    });
+  });
+
+  describe('shutdown', () => {
+    it('should disable plugin on shutdown', async () => {
+      await plugin.initialize({ enabled: true, requests_per_minute: 10 });
+
+      expect(plugin.enabled).toBe(true);
+
+      await plugin.shutdown();
+
+      expect(plugin.enabled).toBe(false);
     });
   });
 

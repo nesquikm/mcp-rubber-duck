@@ -136,18 +136,81 @@ describe('TokenLimiterPlugin', () => {
   });
 
   describe('phase handling', () => {
-    it('should only process pre_request phase', async () => {
+    it('should process pre_request and post_response phases', async () => {
+      await plugin.initialize({ enabled: true });
+
+      expect(plugin.phases).toContain('pre_request');
+      expect(plugin.phases).toContain('post_response');
+    });
+
+    it('should allow other phases', async () => {
       await plugin.initialize({ enabled: true });
 
       const context = createGuardrailContext({ prompt: 'test' });
 
-      // pre_request should be processed
-      const preResult = await plugin.execute('pre_request', context);
-      expect(preResult.action).toBe('allow');
+      // pre_tool_input should pass through
+      const result = await plugin.execute('pre_tool_input', context);
+      expect(result.action).toBe('allow');
+    });
+  });
 
-      // post_response should be skipped
-      const postResult = await plugin.execute('post_response', context);
-      expect(postResult.action).toBe('allow');
+  describe('output token limiting', () => {
+    it('should allow responses under the limit', async () => {
+      await plugin.initialize({
+        enabled: true,
+        max_output_tokens: 1000,
+      });
+
+      const context = createGuardrailContext({ prompt: 'test' });
+      context.response = 'Short response';
+      const result = await plugin.execute('post_response', context);
+
+      expect(result.action).toBe('allow');
+    });
+
+    it('should block responses over the limit', async () => {
+      await plugin.initialize({
+        enabled: true,
+        max_output_tokens: 10, // Very small limit
+      });
+
+      const context = createGuardrailContext({ prompt: 'test' });
+      context.response = 'This is a longer response that will definitely exceed our tiny token limit for output';
+      const result = await plugin.execute('post_response', context);
+
+      expect(result.action).toBe('block');
+      expect(result.blockedBy).toBe('token_limiter');
+      expect(result.blockReason).toContain('Output token limit exceeded');
+    });
+
+    it('should skip output check if no max_output_tokens configured', async () => {
+      await plugin.initialize({
+        enabled: true,
+        // No max_output_tokens
+      });
+
+      const context = createGuardrailContext({ prompt: 'test' });
+      context.response = 'A'.repeat(10000); // Very long response
+      const result = await plugin.execute('post_response', context);
+
+      expect(result.action).toBe('allow');
+    });
+
+    it('should add warning when response approaches output limit', async () => {
+      await plugin.initialize({
+        enabled: true,
+        max_output_tokens: 100,
+        warn_at_percentage: 50, // Warn at 50%
+      });
+
+      // Create response that's ~60-80% of limit
+      const context = createGuardrailContext({ prompt: 'test' });
+      context.response = 'A'.repeat(300); // ~75 tokens
+      await plugin.execute('post_response', context);
+
+      const warnings = context.violations.filter((v) => v.severity === 'warning');
+      expect(warnings.length).toBeGreaterThan(0);
+      expect(warnings[0].rule).toBe('max_output_tokens_warning');
     });
   });
 });
