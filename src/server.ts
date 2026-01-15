@@ -20,6 +20,7 @@ import { UsageService } from './services/usage.js';
 import { DuckResponse } from './config/types.js';
 import { ApprovalService } from './services/approval.js';
 import { FunctionBridge } from './services/function-bridge.js';
+import { GuardrailsService } from './guardrails/service.js';
 import { logger } from './utils/logger.js';
 import { duckArt, getRandomDuckMessage } from './utils/ascii-art.js';
 
@@ -52,6 +53,7 @@ export class RubberDuckServer {
   private configManager: ConfigManager;
   private pricingService: PricingService;
   private usageService: UsageService;
+  private guardrailsService?: GuardrailsService;
   private providerManager: ProviderManager;
   private enhancedProviderManager?: EnhancedProviderManager;
   private conversationManager: ConversationManager;
@@ -86,8 +88,13 @@ export class RubberDuckServer {
     this.pricingService = new PricingService(config.pricing);
     this.usageService = new UsageService(this.pricingService);
 
-    // Initialize provider manager with usage tracking
-    this.providerManager = new ProviderManager(this.configManager, this.usageService);
+    // Initialize guardrails service if configured
+    if (config.guardrails?.enabled) {
+      this.guardrailsService = new GuardrailsService(config.guardrails);
+    }
+
+    // Initialize provider manager with usage tracking and guardrails
+    this.providerManager = new ProviderManager(this.configManager, this.usageService, this.guardrailsService);
     this.conversationManager = new ConversationManager();
     this.cache = new ResponseCache(config.cache_ttl);
     this.healthMonitor = new HealthMonitor(this.providerManager);
@@ -116,20 +123,22 @@ export class RubberDuckServer {
       // Initialize approval service
       this.approvalService = new ApprovalService(mcpConfig.approval_timeout);
 
-      // Initialize function bridge
+      // Initialize function bridge with guardrails
       this.functionBridge = new FunctionBridge(
         this.mcpClientManager,
         this.approvalService,
         mcpConfig.trusted_tools,
         mcpConfig.approval_mode,
-        mcpConfig.trusted_tools_by_server || {}
+        mcpConfig.trusted_tools_by_server || {},
+        this.guardrailsService
       );
 
-      // Initialize enhanced provider manager with usage tracking
+      // Initialize enhanced provider manager with usage tracking and guardrails
       this.enhancedProviderManager = new EnhancedProviderManager(
         this.configManager,
         this.functionBridge,
-        this.usageService
+        this.usageService,
+        this.guardrailsService
       );
 
       this.mcpEnabled = true;
@@ -824,6 +833,18 @@ export class RubberDuckServer {
       console.log('\n' + getRandomDuckMessage('startup'));
     }
 
+    // Initialize guardrails service if configured
+    if (this.guardrailsService) {
+      try {
+        await this.guardrailsService.initialize();
+        logger.info('Guardrails service initialized successfully');
+      } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        logger.error('Failed to initialize guardrails:', errorMessage);
+        logger.warn('Guardrails functionality may not be available');
+      }
+    }
+
     // Initialize MCP connections if enabled
     if (this.mcpEnabled && this.mcpClientManager) {
       try {
@@ -852,6 +873,11 @@ export class RubberDuckServer {
   async stop() {
     // Cleanup usage service (flush pending writes)
     this.usageService.shutdown();
+
+    // Cleanup guardrails service
+    if (this.guardrailsService) {
+      await this.guardrailsService.shutdown();
+    }
 
     // Cleanup MCP resources
     if (this.approvalService) {

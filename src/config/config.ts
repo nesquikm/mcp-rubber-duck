@@ -1,7 +1,14 @@
 import { readFileSync, existsSync } from 'fs';
 import { join } from 'path';
 import * as dotenv from 'dotenv';
-import { Config, ConfigSchema, ProviderConfig, MCPBridgeConfig, MCPServerConfig } from './types.js';
+import {
+  Config,
+  ConfigSchema,
+  ProviderConfig,
+  MCPBridgeConfig,
+  MCPServerConfig,
+  GuardrailsConfig,
+} from './types.js';
 import { logger } from '../utils/logger.js';
 
 dotenv.config();
@@ -97,6 +104,9 @@ export class ConfigManager {
 
     // Apply MCP bridge configuration from environment
     merged.mcp_bridge = this.getMCPBridgeConfig(merged.mcp_bridge as Partial<MCPBridgeConfig>);
+
+    // Apply guardrails configuration from environment
+    merged.guardrails = this.getGuardrailsConfig(merged.guardrails as Partial<GuardrailsConfig>);
 
     return merged;
   }
@@ -330,6 +340,182 @@ export class ConfigManager {
     });
 
     return servers;
+  }
+
+  private getGuardrailsConfig(
+    existingConfig: Partial<GuardrailsConfig> = {}
+  ): Partial<GuardrailsConfig> | undefined {
+    // Don't override if guardrails is explicitly disabled
+    if (existingConfig?.enabled === false) {
+      return existingConfig;
+    }
+
+    const guardrailsConfig: Partial<GuardrailsConfig> = { ...existingConfig };
+
+    // Enable guardrails if environment variable is set
+    if (process.env.GUARDRAILS_ENABLED !== undefined) {
+      guardrailsConfig.enabled = process.env.GUARDRAILS_ENABLED === 'true';
+    }
+
+    // Global guardrails settings
+    if (process.env.GUARDRAILS_LOG_VIOLATIONS !== undefined) {
+      guardrailsConfig.log_violations = process.env.GUARDRAILS_LOG_VIOLATIONS === 'true';
+    }
+    if (process.env.GUARDRAILS_LOG_MODIFICATIONS !== undefined) {
+      guardrailsConfig.log_modifications = process.env.GUARDRAILS_LOG_MODIFICATIONS === 'true';
+    }
+    if (process.env.GUARDRAILS_FAIL_OPEN !== undefined) {
+      guardrailsConfig.fail_open = process.env.GUARDRAILS_FAIL_OPEN === 'true';
+    }
+
+    // Initialize plugins object if any plugin env vars are set
+    const plugins = this.getGuardrailsPluginsFromEnv(guardrailsConfig.plugins || {});
+    if (Object.keys(plugins).length > 0) {
+      guardrailsConfig.plugins = plugins;
+      // Auto-enable guardrails if any plugin is enabled
+      if (!guardrailsConfig.enabled) {
+        const anyEnabled = Object.values(plugins).some(
+          (p) => p && typeof p === 'object' && 'enabled' in p && (p as { enabled?: boolean }).enabled === true
+        );
+        if (anyEnabled) {
+          guardrailsConfig.enabled = true;
+        }
+      }
+    }
+
+    return guardrailsConfig.enabled ? guardrailsConfig : undefined;
+  }
+
+  private getGuardrailsPluginsFromEnv(
+    existingPlugins: Record<string, unknown>
+  ): Record<string, unknown> {
+    const plugins: Record<string, unknown> = { ...existingPlugins };
+
+    // Rate Limiter
+    if (
+      process.env.GUARDRAILS_RATE_LIMITER_ENABLED !== undefined ||
+      existingPlugins.rate_limiter
+    ) {
+      plugins.rate_limiter = {
+        ...(existingPlugins.rate_limiter as object),
+        ...(process.env.GUARDRAILS_RATE_LIMITER_ENABLED !== undefined && {
+          enabled: process.env.GUARDRAILS_RATE_LIMITER_ENABLED === 'true',
+        }),
+        ...(process.env.GUARDRAILS_RATE_LIMITER_REQUESTS_PER_MINUTE && {
+          requests_per_minute: parseInt(process.env.GUARDRAILS_RATE_LIMITER_REQUESTS_PER_MINUTE),
+        }),
+        ...(process.env.GUARDRAILS_RATE_LIMITER_REQUESTS_PER_HOUR && {
+          requests_per_hour: parseInt(process.env.GUARDRAILS_RATE_LIMITER_REQUESTS_PER_HOUR),
+        }),
+        ...(process.env.GUARDRAILS_RATE_LIMITER_PER_PROVIDER !== undefined && {
+          per_provider: process.env.GUARDRAILS_RATE_LIMITER_PER_PROVIDER === 'true',
+        }),
+        ...(process.env.GUARDRAILS_RATE_LIMITER_BURST_ALLOWANCE && {
+          burst_allowance: parseInt(process.env.GUARDRAILS_RATE_LIMITER_BURST_ALLOWANCE),
+        }),
+      };
+    }
+
+    // Token Limiter
+    if (
+      process.env.GUARDRAILS_TOKEN_LIMITER_ENABLED !== undefined ||
+      existingPlugins.token_limiter
+    ) {
+      plugins.token_limiter = {
+        ...(existingPlugins.token_limiter as object),
+        ...(process.env.GUARDRAILS_TOKEN_LIMITER_ENABLED !== undefined && {
+          enabled: process.env.GUARDRAILS_TOKEN_LIMITER_ENABLED === 'true',
+        }),
+        ...(process.env.GUARDRAILS_TOKEN_LIMITER_MAX_INPUT_TOKENS && {
+          max_input_tokens: parseInt(process.env.GUARDRAILS_TOKEN_LIMITER_MAX_INPUT_TOKENS),
+        }),
+        ...(process.env.GUARDRAILS_TOKEN_LIMITER_MAX_OUTPUT_TOKENS && {
+          max_output_tokens: parseInt(process.env.GUARDRAILS_TOKEN_LIMITER_MAX_OUTPUT_TOKENS),
+        }),
+        ...(process.env.GUARDRAILS_TOKEN_LIMITER_WARN_AT_PERCENTAGE && {
+          warn_at_percentage: parseInt(process.env.GUARDRAILS_TOKEN_LIMITER_WARN_AT_PERCENTAGE),
+        }),
+      };
+    }
+
+    // Pattern Blocker
+    if (
+      process.env.GUARDRAILS_PATTERN_BLOCKER_ENABLED !== undefined ||
+      existingPlugins.pattern_blocker
+    ) {
+      plugins.pattern_blocker = {
+        ...(existingPlugins.pattern_blocker as object),
+        ...(process.env.GUARDRAILS_PATTERN_BLOCKER_ENABLED !== undefined && {
+          enabled: process.env.GUARDRAILS_PATTERN_BLOCKER_ENABLED === 'true',
+        }),
+        ...(process.env.GUARDRAILS_PATTERN_BLOCKER_PATTERNS && {
+          blocked_patterns: process.env.GUARDRAILS_PATTERN_BLOCKER_PATTERNS.split(',').map((p) =>
+            p.trim()
+          ),
+        }),
+        ...(process.env.GUARDRAILS_PATTERN_BLOCKER_PATTERNS_REGEX && {
+          blocked_patterns_regex: process.env.GUARDRAILS_PATTERN_BLOCKER_PATTERNS_REGEX.split(
+            ','
+          ).map((p) => p.trim()),
+        }),
+        ...(process.env.GUARDRAILS_PATTERN_BLOCKER_CASE_SENSITIVE !== undefined && {
+          case_sensitive: process.env.GUARDRAILS_PATTERN_BLOCKER_CASE_SENSITIVE === 'true',
+        }),
+        ...(process.env.GUARDRAILS_PATTERN_BLOCKER_ACTION && {
+          action_on_match: process.env.GUARDRAILS_PATTERN_BLOCKER_ACTION as
+            | 'block'
+            | 'warn'
+            | 'redact',
+        }),
+      };
+    }
+
+    // PII Redactor
+    if (
+      process.env.GUARDRAILS_PII_REDACTOR_ENABLED !== undefined ||
+      existingPlugins.pii_redactor
+    ) {
+      plugins.pii_redactor = {
+        ...(existingPlugins.pii_redactor as object),
+        ...(process.env.GUARDRAILS_PII_REDACTOR_ENABLED !== undefined && {
+          enabled: process.env.GUARDRAILS_PII_REDACTOR_ENABLED === 'true',
+        }),
+        ...(process.env.GUARDRAILS_PII_REDACTOR_DETECT_EMAILS !== undefined && {
+          detect_emails: process.env.GUARDRAILS_PII_REDACTOR_DETECT_EMAILS === 'true',
+        }),
+        ...(process.env.GUARDRAILS_PII_REDACTOR_DETECT_PHONES !== undefined && {
+          detect_phones: process.env.GUARDRAILS_PII_REDACTOR_DETECT_PHONES === 'true',
+        }),
+        ...(process.env.GUARDRAILS_PII_REDACTOR_DETECT_SSN !== undefined && {
+          detect_ssn: process.env.GUARDRAILS_PII_REDACTOR_DETECT_SSN === 'true',
+        }),
+        ...(process.env.GUARDRAILS_PII_REDACTOR_DETECT_API_KEYS !== undefined && {
+          detect_api_keys: process.env.GUARDRAILS_PII_REDACTOR_DETECT_API_KEYS === 'true',
+        }),
+        ...(process.env.GUARDRAILS_PII_REDACTOR_DETECT_CREDIT_CARDS !== undefined && {
+          detect_credit_cards: process.env.GUARDRAILS_PII_REDACTOR_DETECT_CREDIT_CARDS === 'true',
+        }),
+        ...(process.env.GUARDRAILS_PII_REDACTOR_DETECT_IP_ADDRESSES !== undefined && {
+          detect_ip_addresses: process.env.GUARDRAILS_PII_REDACTOR_DETECT_IP_ADDRESSES === 'true',
+        }),
+        ...(process.env.GUARDRAILS_PII_REDACTOR_ALLOWLIST && {
+          allowlist: process.env.GUARDRAILS_PII_REDACTOR_ALLOWLIST.split(',').map((a) => a.trim()),
+        }),
+        ...(process.env.GUARDRAILS_PII_REDACTOR_ALLOWLIST_DOMAINS && {
+          allowlist_domains: process.env.GUARDRAILS_PII_REDACTOR_ALLOWLIST_DOMAINS.split(',').map(
+            (d) => d.trim()
+          ),
+        }),
+        ...(process.env.GUARDRAILS_PII_REDACTOR_RESTORE_ON_RESPONSE !== undefined && {
+          restore_on_response: process.env.GUARDRAILS_PII_REDACTOR_RESTORE_ON_RESPONSE === 'true',
+        }),
+        ...(process.env.GUARDRAILS_PII_REDACTOR_LOG_DETECTIONS !== undefined && {
+          log_detections: process.env.GUARDRAILS_PII_REDACTOR_LOG_DETECTIONS === 'true',
+        }),
+      };
+    }
+
+    return plugins;
   }
 
   getConfig(): Config {

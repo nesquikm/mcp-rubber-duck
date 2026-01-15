@@ -2,18 +2,22 @@ import OpenAI from 'openai';
 import { ChatOptions, ChatResponse, ProviderOptions, ModelInfo, OpenAIChatParams, OpenAIChatResponse, OpenAIMessage } from './types.js';
 import { ConversationMessage } from '../config/types.js';
 import { logger } from '../utils/logger.js';
+import { GuardrailsService } from '../guardrails/service.js';
+import { GuardrailBlockError } from '../guardrails/errors.js';
 
 export class DuckProvider {
   protected client: OpenAI;
   protected options: ProviderOptions;
+  protected guardrailsService?: GuardrailsService;
   public name: string;
   public nickname: string;
 
-  constructor(name: string, nickname: string, options: ProviderOptions) {
+  constructor(name: string, nickname: string, options: ProviderOptions, guardrailsService?: GuardrailsService) {
     this.name = name;
     this.nickname = nickname;
     this.options = options;
-    
+    this.guardrailsService = guardrailsService;
+
     this.client = new OpenAI({
       apiKey: options.apiKey || 'not-needed',
       baseURL: options.baseURL,
@@ -34,9 +38,35 @@ export class DuckProvider {
 
   async chat(options: ChatOptions): Promise<ChatResponse> {
     try {
-      const messages = this.prepareMessages(options.messages, options.systemPrompt);
       const modelToUse = options.model || this.options.model;
-      
+
+      // Create guardrail context if service is enabled
+      const guardrailContext = this.guardrailsService?.isEnabled()
+        ? this.guardrailsService.createContext({
+            provider: this.name,
+            model: modelToUse,
+            messages: options.messages,
+            prompt: options.messages[options.messages.length - 1]?.content,
+          })
+        : undefined;
+
+      // Execute pre_request guardrails
+      if (guardrailContext && this.guardrailsService?.isEnabled()) {
+        const preResult = await this.guardrailsService.execute('pre_request', guardrailContext);
+        if (preResult.action === 'block') {
+          throw new GuardrailBlockError(
+            preResult.blockedBy || 'unknown',
+            preResult.blockReason || 'Request blocked by guardrails'
+          );
+        }
+        // Update messages if modified by guardrails (e.g., PII redaction)
+        if (preResult.action === 'modify' && guardrailContext.messages.length > 0) {
+          options = { ...options, messages: guardrailContext.messages };
+        }
+      }
+
+      const messages = this.prepareMessages(options.messages, options.systemPrompt);
+
       const baseParams: Partial<OpenAIChatParams> = {
         model: modelToUse,
         messages: messages as OpenAIMessage[],
@@ -50,9 +80,26 @@ export class DuckProvider {
 
       const response = await this.createChatCompletion(baseParams);
       const choice = response.choices[0];
-      
+      let content = choice.message?.content || '';
+
+      // Execute post_response guardrails
+      if (guardrailContext && this.guardrailsService?.isEnabled()) {
+        guardrailContext.response = content;
+        const postResult = await this.guardrailsService.execute('post_response', guardrailContext);
+        if (postResult.action === 'block') {
+          throw new GuardrailBlockError(
+            postResult.blockedBy || 'unknown',
+            postResult.blockReason || 'Response blocked by guardrails'
+          );
+        }
+        // Use potentially modified response (e.g., PII restoration)
+        if (postResult.action === 'modify' && guardrailContext.response) {
+          content = guardrailContext.response;
+        }
+      }
+
       return {
-        content: choice.message?.content || '',
+        content,
         usage: response.usage ? {
           promptTokens: response.usage.prompt_tokens,
           completionTokens: response.usage.completion_tokens,
@@ -62,6 +109,10 @@ export class DuckProvider {
         finishReason: choice.finish_reason || undefined,
       };
     } catch (error: unknown) {
+      // Re-throw GuardrailBlockError as-is
+      if (error instanceof GuardrailBlockError) {
+        throw error;
+      }
       logger.error(`Provider ${this.name} chat error:`, error);
       const errorMessage = error instanceof Error ? error.message : String(error);
       throw new Error(`Duck ${this.nickname} couldn't respond: ${errorMessage}`);

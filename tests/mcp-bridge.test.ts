@@ -2,6 +2,8 @@ import { jest } from '@jest/globals';
 import { ApprovalService } from '../src/services/approval';
 import { FunctionBridge } from '../src/services/function-bridge';
 import { MCPClientManager } from '../src/services/mcp-client-manager';
+import { GuardrailsService } from '../src/guardrails/service';
+import { GuardrailBlockError } from '../src/guardrails/errors';
 
 describe('MCP Bridge', () => {
   let approvalService: ApprovalService;
@@ -286,6 +288,252 @@ describe('MCP Bridge', () => {
       expect(functions[0].name).toBe('mcp__filesystem__read_file');
       expect(functions[1].name).toBe('mcp__web__fetch_url');
       expect(functions[0].description).toBe('[filesystem] Read a file');
+    });
+  });
+
+  describe('FunctionBridge with Guardrails', () => {
+    let guardedFunctionBridge: FunctionBridge;
+    let mockGuardrailsService: {
+      isEnabled: jest.Mock;
+      createContext: jest.Mock;
+      execute: jest.Mock;
+    };
+
+    beforeEach(() => {
+      // Create mock guardrails service
+      mockGuardrailsService = {
+        isEnabled: jest.fn().mockReturnValue(true),
+        createContext: jest.fn().mockImplementation((params) => ({
+          requestId: 'test-request-id',
+          toolName: params.toolName,
+          toolArgs: params.toolArgs,
+          violations: [],
+          modifications: [],
+          metadata: new Map(),
+        })),
+        execute: jest.fn().mockResolvedValue({ action: 'allow', context: {} }),
+      };
+
+      guardedFunctionBridge = new FunctionBridge(
+        mcpManager,
+        approvalService,
+        [],
+        'never', // Never require approval for tests
+        {},
+        mockGuardrailsService as unknown as GuardrailsService
+      );
+    });
+
+    it('should execute pre_tool_input guardrails before tool execution', async () => {
+      // Mock the MCP manager to simulate a connected server
+      jest.spyOn(mcpManager, 'callTool').mockResolvedValue({ result: 'test result' });
+
+      await guardedFunctionBridge.handleFunctionCall(
+        'TestDuck',
+        'mcp__test_server__test_tool',
+        { _mcp_server: 'test_server', _mcp_tool: 'test_tool', arg1: 'value1' }
+      );
+
+      expect(mockGuardrailsService.isEnabled).toHaveBeenCalled();
+      expect(mockGuardrailsService.createContext).toHaveBeenCalledWith(
+        expect.objectContaining({
+          toolName: 'test_server:test_tool',
+        })
+      );
+      expect(mockGuardrailsService.execute).toHaveBeenCalledWith('pre_tool_input', expect.any(Object));
+    });
+
+    it('should execute post_tool_output guardrails after tool execution', async () => {
+      jest.spyOn(mcpManager, 'callTool').mockResolvedValue({ result: 'test result' });
+
+      await guardedFunctionBridge.handleFunctionCall(
+        'TestDuck',
+        'mcp__test_server__test_tool',
+        { _mcp_server: 'test_server', _mcp_tool: 'test_tool' }
+      );
+
+      // Should be called twice: pre_tool_input and post_tool_output
+      expect(mockGuardrailsService.execute).toHaveBeenCalledTimes(2);
+      expect(mockGuardrailsService.execute).toHaveBeenNthCalledWith(1, 'pre_tool_input', expect.any(Object));
+      expect(mockGuardrailsService.execute).toHaveBeenNthCalledWith(2, 'post_tool_output', expect.any(Object));
+    });
+
+    it('should block tool input when pre_tool_input guardrails return block', async () => {
+      mockGuardrailsService.execute.mockResolvedValueOnce({
+        action: 'block',
+        blockedBy: 'pattern_blocker',
+        blockReason: 'Sensitive data detected in tool arguments',
+        context: {},
+      });
+
+      const callToolSpy = jest.spyOn(mcpManager, 'callTool');
+
+      await expect(
+        guardedFunctionBridge.handleFunctionCall(
+          'TestDuck',
+          'mcp__test_server__test_tool',
+          { _mcp_server: 'test_server', _mcp_tool: 'test_tool', secret: 'password123' }
+        )
+      ).rejects.toThrow("Request blocked by guardrail 'pattern_blocker': Sensitive data detected in tool arguments");
+
+      // Should NOT call the MCP tool when blocked
+      expect(callToolSpy).not.toHaveBeenCalled();
+    });
+
+    it('should block tool output when post_tool_output guardrails return block', async () => {
+      jest.spyOn(mcpManager, 'callTool').mockResolvedValue({ sensitiveData: 'should_be_blocked' });
+
+      // Pre-tool allows, post-tool blocks
+      mockGuardrailsService.execute
+        .mockResolvedValueOnce({ action: 'allow', context: {} })
+        .mockResolvedValueOnce({
+          action: 'block',
+          blockedBy: 'pii_redactor',
+          blockReason: 'Sensitive data in tool output',
+          context: {},
+        });
+
+      await expect(
+        guardedFunctionBridge.handleFunctionCall(
+          'TestDuck',
+          'mcp__test_server__test_tool',
+          { _mcp_server: 'test_server', _mcp_tool: 'test_tool' }
+        )
+      ).rejects.toThrow("Request blocked by guardrail 'pii_redactor': Sensitive data in tool output");
+    });
+
+    it('should modify tool args when pre_tool_input guardrails return modify', async () => {
+      const modifiedArgs = { arg1: '[REDACTED]', _mcp_server: 'test_server', _mcp_tool: 'test_tool' };
+
+      mockGuardrailsService.execute.mockImplementation((phase) => {
+        if (phase === 'pre_tool_input') {
+          return Promise.resolve({
+            action: 'modify',
+            context: { toolArgs: modifiedArgs },
+          });
+        }
+        return Promise.resolve({ action: 'allow', context: {} });
+      });
+
+      mockGuardrailsService.createContext.mockReturnValue({
+        requestId: 'test-id',
+        toolName: 'test_server:test_tool',
+        toolArgs: modifiedArgs,
+        violations: [],
+        modifications: [],
+        metadata: new Map(),
+      });
+
+      const callToolSpy = jest.spyOn(mcpManager, 'callTool').mockResolvedValue({ result: 'ok' });
+
+      await guardedFunctionBridge.handleFunctionCall(
+        'TestDuck',
+        'mcp__test_server__test_tool',
+        { _mcp_server: 'test_server', _mcp_tool: 'test_tool', arg1: 'sensitive_value' }
+      );
+
+      // The MCP tool should receive the modified args
+      expect(callToolSpy).toHaveBeenCalledWith(
+        'test_server',
+        'test_tool',
+        expect.objectContaining({ arg1: '[REDACTED]' })
+      );
+    });
+
+    it('should modify tool result when post_tool_output guardrails return modify', async () => {
+      const sharedContext: {
+        requestId: string;
+        toolName: string;
+        toolArgs: Record<string, unknown>;
+        toolResult: unknown;
+        violations: unknown[];
+        modifications: unknown[];
+        metadata: Map<string, unknown>;
+      } = {
+        requestId: 'test-id',
+        toolName: 'test_server:test_tool',
+        toolArgs: {},
+        toolResult: undefined,
+        violations: [],
+        modifications: [],
+        metadata: new Map(),
+      };
+
+      mockGuardrailsService.createContext.mockReturnValue(sharedContext);
+
+      mockGuardrailsService.execute.mockImplementation((phase) => {
+        if (phase === 'post_tool_output') {
+          sharedContext.toolResult = { redacted: '[SENSITIVE DATA REMOVED]' };
+          return Promise.resolve({
+            action: 'modify',
+            context: sharedContext,
+          });
+        }
+        return Promise.resolve({ action: 'allow', context: sharedContext });
+      });
+
+      jest.spyOn(mcpManager, 'callTool').mockResolvedValue({
+        sensitiveField: 'actual_password_here'
+      });
+
+      const result = await guardedFunctionBridge.handleFunctionCall(
+        'TestDuck',
+        'mcp__test_server__test_tool',
+        { _mcp_server: 'test_server', _mcp_tool: 'test_tool' }
+      );
+
+      expect(result.success).toBe(true);
+      expect(result.data).toEqual({ redacted: '[SENSITIVE DATA REMOVED]' });
+    });
+
+    it('should skip guardrails when service is disabled', async () => {
+      mockGuardrailsService.isEnabled.mockReturnValue(false);
+
+      jest.spyOn(mcpManager, 'callTool').mockResolvedValue({ result: 'test' });
+
+      const result = await guardedFunctionBridge.handleFunctionCall(
+        'TestDuck',
+        'mcp__test_server__test_tool',
+        { _mcp_server: 'test_server', _mcp_tool: 'test_tool' }
+      );
+
+      expect(result.success).toBe(true);
+      expect(mockGuardrailsService.createContext).not.toHaveBeenCalled();
+      expect(mockGuardrailsService.execute).not.toHaveBeenCalled();
+    });
+
+    it('should work without guardrails service (undefined)', async () => {
+      const bridgeWithoutGuardrails = new FunctionBridge(
+        mcpManager,
+        approvalService,
+        [],
+        'never'
+        // No guardrails service
+      );
+
+      jest.spyOn(mcpManager, 'callTool').mockResolvedValue({ result: 'test' });
+
+      const result = await bridgeWithoutGuardrails.handleFunctionCall(
+        'TestDuck',
+        'mcp__test_server__test_tool',
+        { _mcp_server: 'test_server', _mcp_tool: 'test_tool' }
+      );
+
+      expect(result.success).toBe(true);
+    });
+
+    it('should re-throw GuardrailBlockError without wrapping', async () => {
+      mockGuardrailsService.execute.mockRejectedValueOnce(
+        new GuardrailBlockError('custom_plugin', 'Custom block reason')
+      );
+
+      await expect(
+        guardedFunctionBridge.handleFunctionCall(
+          'TestDuck',
+          'mcp__test_server__test_tool',
+          { _mcp_server: 'test_server', _mcp_tool: 'test_tool' }
+        )
+      ).rejects.toThrow("Request blocked by guardrail 'custom_plugin': Custom block reason");
     });
   });
 });

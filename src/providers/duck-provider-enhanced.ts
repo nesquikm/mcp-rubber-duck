@@ -4,6 +4,8 @@ import { FunctionBridge } from '../services/function-bridge.js';
 import { ConversationMessage } from '../config/types.js';
 import { logger } from '../utils/logger.js';
 import { SafeLogger } from '../utils/safe-logger.js';
+import { GuardrailsService } from '../guardrails/service.js';
+import { GuardrailBlockError } from '../guardrails/errors.js';
 
 export interface EnhancedChatResponse extends ChatResponse {
   pendingApprovals?: {
@@ -22,15 +24,43 @@ export class EnhancedDuckProvider extends DuckProvider {
     nickname: string,
     options: ProviderOptions,
     functionBridge: FunctionBridge,
-    mcpEnabled: boolean = true
+    mcpEnabled: boolean = true,
+    guardrailsService?: GuardrailsService
   ) {
-    super(name, nickname, options);
+    super(name, nickname, options, guardrailsService);
     this.functionBridge = functionBridge;
     this.mcpEnabled = mcpEnabled;
   }
 
   async chat(options: ChatOptions): Promise<EnhancedChatResponse> {
     try {
+      const modelToUse = options.model || this.options.model;
+
+      // Create guardrail context if service is enabled
+      const guardrailContext = this.guardrailsService?.isEnabled()
+        ? this.guardrailsService.createContext({
+            provider: this.name,
+            model: modelToUse,
+            messages: options.messages,
+            prompt: options.messages[options.messages.length - 1]?.content,
+          })
+        : undefined;
+
+      // Execute pre_request guardrails
+      if (guardrailContext && this.guardrailsService?.isEnabled()) {
+        const preResult = await this.guardrailsService.execute('pre_request', guardrailContext);
+        if (preResult.action === 'block') {
+          throw new GuardrailBlockError(
+            preResult.blockedBy || 'unknown',
+            preResult.blockReason || 'Request blocked by guardrails'
+          );
+        }
+        // Update messages if modified by guardrails (e.g., PII redaction)
+        if (preResult.action === 'modify' && guardrailContext.messages.length > 0) {
+          options = { ...options, messages: guardrailContext.messages };
+        }
+      }
+
       // If MCP is enabled, add function definitions
       if (this.mcpEnabled) {
         const functions = await this.functionBridge.getFunctionDefinitions();
@@ -43,7 +73,6 @@ export class EnhancedDuckProvider extends DuckProvider {
 
       // Prepare messages for function calling
       const messages = this.prepareMessages(options.messages, options.systemPrompt);
-      const modelToUse = options.model || this.options.model;
 
       const baseParams: Partial<OpenAIChatParams> = {
         model: modelToUse,
@@ -75,17 +104,52 @@ export class EnhancedDuckProvider extends DuckProvider {
 
       // Check if the model wants to call functions
       if (choice.message?.tool_calls && choice.message.tool_calls.length > 0) {
-        return await this.handleToolCalls(
+        const toolResult = await this.handleToolCalls(
           choice.message.tool_calls,
           messages as OpenAIMessage[],
           baseParams,
-          modelToUse
+          modelToUse,
+          guardrailContext
         );
+
+        // Execute post_response guardrails on final result
+        if (guardrailContext && this.guardrailsService?.isEnabled()) {
+          guardrailContext.response = toolResult.content;
+          const postResult = await this.guardrailsService.execute('post_response', guardrailContext);
+          if (postResult.action === 'block') {
+            throw new GuardrailBlockError(
+              postResult.blockedBy || 'unknown',
+              postResult.blockReason || 'Response blocked by guardrails'
+            );
+          }
+          if (postResult.action === 'modify' && guardrailContext.response) {
+            toolResult.content = guardrailContext.response;
+          }
+        }
+
+        return toolResult;
+      }
+
+      let content = choice.message?.content || '';
+
+      // Execute post_response guardrails
+      if (guardrailContext && this.guardrailsService?.isEnabled()) {
+        guardrailContext.response = content;
+        const postResult = await this.guardrailsService.execute('post_response', guardrailContext);
+        if (postResult.action === 'block') {
+          throw new GuardrailBlockError(
+            postResult.blockedBy || 'unknown',
+            postResult.blockReason || 'Response blocked by guardrails'
+          );
+        }
+        if (postResult.action === 'modify' && guardrailContext.response) {
+          content = guardrailContext.response;
+        }
       }
 
       // No tool calls, return regular response
       return {
-        content: choice.message?.content || '',
+        content,
         usage: response.usage ? {
           promptTokens: response.usage.prompt_tokens,
           completionTokens: response.usage.completion_tokens,
@@ -96,6 +160,10 @@ export class EnhancedDuckProvider extends DuckProvider {
       };
 
     } catch (error: unknown) {
+      // Re-throw GuardrailBlockError as-is
+      if (error instanceof GuardrailBlockError) {
+        throw error;
+      }
       logger.error(`Enhanced provider ${this.name} chat error:`, error);
       const errorMessage = error instanceof Error ? error.message : String(error);
       throw new Error(`Duck ${this.nickname} couldn't respond: ${errorMessage}`);
@@ -106,7 +174,8 @@ export class EnhancedDuckProvider extends DuckProvider {
     toolCalls: OpenAIToolCall[],
     messages: OpenAIMessage[],
     baseParams: Partial<OpenAIChatParams>,
-    modelToUse: string
+    modelToUse: string,
+    _guardrailContext?: import('../guardrails/types.js').GuardrailContext
   ): Promise<EnhancedChatResponse> {
     const pendingApprovals: { id: string; message: string }[] = [];
     const toolMessages: OpenAIMessage[] = [];

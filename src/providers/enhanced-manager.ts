@@ -3,6 +3,7 @@ import { ProviderManager } from './manager.js';
 import { ConfigManager } from '../config/config.js';
 import { FunctionBridge } from '../services/function-bridge.js';
 import { UsageService } from '../services/usage.js';
+import { GuardrailsService } from '../guardrails/service.js';
 import { DuckResponse } from '../config/types.js';
 import { ChatOptions, MCPResult } from './types.js';
 import { logger } from '../utils/logger.js';
@@ -12,8 +13,8 @@ export class EnhancedProviderManager extends ProviderManager {
   private functionBridge?: FunctionBridge;
   private mcpEnabled: boolean = false;
 
-  constructor(configManager: ConfigManager, functionBridge?: FunctionBridge, usageService?: UsageService) {
-    super(configManager, usageService);
+  constructor(configManager: ConfigManager, functionBridge?: FunctionBridge, usageService?: UsageService, guardrailsService?: GuardrailsService) {
+    super(configManager, usageService, guardrailsService);
     this.functionBridge = functionBridge;
     this.mcpEnabled = !!functionBridge &&
       (configManager.getConfig().mcp_bridge?.enabled || false);
@@ -49,7 +50,8 @@ export class EnhancedProviderManager extends ProviderManager {
             systemPrompt: providerConfig.system_prompt,
           },
           this.functionBridge,
-          this.mcpEnabled
+          this.mcpEnabled,
+          this.guardrailsService
         );
 
         this.enhancedProviders.set(name, enhancedProvider);

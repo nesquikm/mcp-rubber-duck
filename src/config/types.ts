@@ -43,6 +43,72 @@ export const PricingConfigSchema = z.record(
   z.record(z.string(), ModelPricingSchema) // model name -> pricing
 );
 
+// Guardrails Plugin Configs
+export const RateLimiterConfigSchema = z.object({
+  enabled: z.boolean().default(false),
+  priority: z.number().min(0).max(1000).default(10),
+  requests_per_minute: z.number().min(1).default(60),
+  requests_per_hour: z.number().min(1).default(1000),
+  per_provider: z.boolean().default(false),
+  burst_allowance: z.number().min(0).default(5),
+});
+
+export const TokenLimiterConfigSchema = z.object({
+  enabled: z.boolean().default(false),
+  priority: z.number().min(0).max(1000).default(20),
+  max_input_tokens: z.number().min(1).default(8192),
+  max_output_tokens: z.number().min(1).optional(),
+  warn_at_percentage: z.number().min(0).max(100).default(80),
+});
+
+export const PatternBlockerConfigSchema = z.object({
+  enabled: z.boolean().default(false),
+  priority: z.number().min(0).max(1000).default(30),
+  blocked_patterns: z.array(z.string()).default([]),
+  blocked_patterns_regex: z.array(z.string()).default([]),
+  case_sensitive: z.boolean().default(false),
+  action_on_match: z.enum(['block', 'warn', 'redact']).default('block'),
+});
+
+export const PIIRedactorConfigSchema = z.object({
+  enabled: z.boolean().default(false),
+  priority: z.number().min(0).max(1000).default(25),
+  detect_emails: z.boolean().default(true),
+  detect_phones: z.boolean().default(true),
+  detect_ssn: z.boolean().default(true),
+  detect_api_keys: z.boolean().default(true),
+  detect_credit_cards: z.boolean().default(true),
+  detect_ip_addresses: z.boolean().default(false),
+  custom_patterns: z
+    .array(
+      z.object({
+        name: z.string(),
+        pattern: z.string(),
+        placeholder: z.string(),
+      })
+    )
+    .default([]),
+  allowlist: z.array(z.string()).default([]),
+  allowlist_domains: z.array(z.string()).default([]),
+  restore_on_response: z.boolean().default(false),
+  log_detections: z.boolean().default(true),
+});
+
+export const GuardrailsPluginsConfigSchema = z.object({
+  rate_limiter: RateLimiterConfigSchema.optional(),
+  token_limiter: TokenLimiterConfigSchema.optional(),
+  pattern_blocker: PatternBlockerConfigSchema.optional(),
+  pii_redactor: PIIRedactorConfigSchema.optional(),
+});
+
+export const GuardrailsConfigSchema = z.object({
+  enabled: z.boolean().default(false),
+  log_violations: z.boolean().default(true),
+  log_modifications: z.boolean().default(false),
+  fail_open: z.boolean().default(false), // If true, allow on plugin errors
+  plugins: GuardrailsPluginsConfigSchema.optional(),
+});
+
 export const ConfigSchema = z.object({
   providers: z.record(z.string(), ProviderConfigSchema),
   default_provider: z.string().optional(),
@@ -52,6 +118,7 @@ export const ConfigSchema = z.object({
   log_level: z.enum(['debug', 'info', 'warn', 'error']).default('info'),
   mcp_bridge: MCPBridgeConfigSchema.optional(),
   pricing: PricingConfigSchema.optional(),
+  guardrails: GuardrailsConfigSchema.optional(),
 });
 
 export type ProviderConfig = z.infer<typeof ProviderConfigSchema>;
@@ -59,6 +126,12 @@ export type MCPServerConfig = z.infer<typeof MCPServerConfigSchema>;
 export type MCPBridgeConfig = z.infer<typeof MCPBridgeConfigSchema>;
 export type ModelPricing = z.infer<typeof ModelPricingSchema>;
 export type PricingConfig = z.infer<typeof PricingConfigSchema>;
+export type RateLimiterConfig = z.infer<typeof RateLimiterConfigSchema>;
+export type TokenLimiterConfig = z.infer<typeof TokenLimiterConfigSchema>;
+export type PatternBlockerConfig = z.infer<typeof PatternBlockerConfigSchema>;
+export type PIIRedactorConfig = z.infer<typeof PIIRedactorConfigSchema>;
+export type GuardrailsPluginsConfig = z.infer<typeof GuardrailsPluginsConfigSchema>;
+export type GuardrailsConfig = z.infer<typeof GuardrailsConfigSchema>;
 export type Config = z.infer<typeof ConfigSchema>;
 
 export interface ConversationMessage {

@@ -2,6 +2,9 @@ import { MCPClientManager, MCPTool } from './mcp-client-manager.js';
 import { ApprovalService } from './approval.js';
 import { logger } from '../utils/logger.js';
 import Ajv, { ValidateFunction } from 'ajv';
+import { GuardrailsService } from '../guardrails/service.js';
+import { GuardrailContext } from '../guardrails/types.js';
+import { GuardrailBlockError } from '../guardrails/errors.js';
 
 export interface FunctionDefinition {
   name: string;
@@ -26,13 +29,15 @@ export class FunctionBridge {
   private ajv: unknown;
   private toolSchemas: Map<string, Record<string, unknown>> = new Map();
   private approvalMode: 'always' | 'trusted' | 'never';
+  private guardrailsService?: GuardrailsService;
 
   constructor(
     mcpManager: MCPClientManager,
     approvalService: ApprovalService,
     trustedTools: string[] = [],
     approvalMode: 'always' | 'trusted' | 'never' = 'always',
-    trustedToolsByServer: Record<string, string[]> = {}
+    trustedToolsByServer: Record<string, string[]> = {},
+    guardrailsService?: GuardrailsService
   ) {
     this.mcpManager = mcpManager;
     this.approvalService = approvalService;
@@ -40,7 +45,8 @@ export class FunctionBridge {
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call
     this.ajv = new (Ajv as unknown as new (options: unknown) => unknown)({ allErrors: true, removeAdditional: 'all' });
     this.approvalMode = approvalMode;
-    
+    this.guardrailsService = guardrailsService;
+
     // Initialize per-server trusted tools
     Object.entries(trustedToolsByServer).forEach(([serverName, tools]) => {
       this.trustedToolsByServer.set(serverName, new Set(tools));
@@ -236,9 +242,50 @@ export class FunctionBridge {
         }
       }
 
+      // Create guardrail context if service is enabled
+      let guardrailContext: GuardrailContext | undefined;
+      if (this.guardrailsService?.isEnabled()) {
+        guardrailContext = this.guardrailsService.createContext({
+          toolName: `${mcpServer}:${mcpTool}`,
+          toolArgs: cleanArgs,
+        });
+
+        // Execute pre_tool_input guardrails
+        const preResult = await this.guardrailsService.execute('pre_tool_input', guardrailContext);
+        if (preResult.action === 'block') {
+          throw new GuardrailBlockError(
+            preResult.blockedBy || 'unknown',
+            preResult.blockReason || 'Tool input blocked by guardrails'
+          );
+        }
+        // Use potentially modified args (e.g., PII redaction)
+        if (preResult.action === 'modify' && guardrailContext.toolArgs) {
+          Object.assign(cleanArgs, guardrailContext.toolArgs);
+        }
+      }
+
       // Execute the MCP tool
       logger.info(`Executing MCP tool ${mcpServer}:${mcpTool} for ${duckName}`);
       const result = await this.mcpManager.callTool(mcpServer, mcpTool, cleanArgs);
+
+      // Execute post_tool_output guardrails
+      if (guardrailContext && this.guardrailsService?.isEnabled()) {
+        guardrailContext.toolResult = result;
+        const postResult = await this.guardrailsService.execute('post_tool_output', guardrailContext);
+        if (postResult.action === 'block') {
+          throw new GuardrailBlockError(
+            postResult.blockedBy || 'unknown',
+            postResult.blockReason || 'Tool output blocked by guardrails'
+          );
+        }
+        // Return potentially modified result
+        if (postResult.action === 'modify') {
+          return {
+            success: true,
+            data: guardrailContext.toolResult,
+          };
+        }
+      }
 
       return {
         success: true,
@@ -246,6 +293,10 @@ export class FunctionBridge {
       };
 
     } catch (error: unknown) {
+      // Re-throw GuardrailBlockError as-is
+      if (error instanceof GuardrailBlockError) {
+        throw error;
+      }
       const errorMessage = error instanceof Error ? error.message : String(error);
       logger.error(`Function call failed for ${functionName}:`, errorMessage);
       return {
