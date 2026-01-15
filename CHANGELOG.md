@@ -1,3 +1,11 @@
+# [1.9.0](https://github.com/nesquikm/mcp-rubber-duck/compare/v1.8.0...v1.9.0) (2026-01-15)
+
+
+### Features
+
+* add pluggable guardrails system for LLM request/response interception ([8e86d5b](https://github.com/nesquikm/mcp-rubber-duck/commit/8e86d5b8853cc95e6c5efe9e75af7d0ce2bb1ac0))
+* implement max_output_tokens, fix modify action, add tests and docs ([27457d7](https://github.com/nesquikm/mcp-rubber-duck/commit/27457d79ab68377921996e0c0336cf7e84e0ea8b))
+
 # [1.8.0](https://github.com/nesquikm/mcp-rubber-duck/compare/v1.7.0...v1.8.0) (2026-01-14)
 
 
