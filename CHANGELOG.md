@@ -1,3 +1,10 @@
+## [1.9.2](https://github.com/nesquikm/mcp-rubber-duck/compare/v1.9.1...v1.9.2) (2026-01-19)
+
+
+### Bug Fixes
+
+* configure registry-url for npm OIDC auth ([0798f7c](https://github.com/nesquikm/mcp-rubber-duck/commit/0798f7c94a0a69470d6cae9f27ca984ee2975ac8))
+
 ## [1.9.1](https://github.com/nesquikm/mcp-rubber-duck/compare/v1.9.0...v1.9.1) (2026-01-19)
 
 
