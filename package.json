@@ -37,6 +37,10 @@
   "bugs": {
     "url": "https://github.com/nesquikm/mcp-rubber-duck/issues"
   },
+  "publishConfig": {
+    "provenance": true,
+    "access": "public"
+  },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.24.0",
     "ajv": "^8.17.1",
