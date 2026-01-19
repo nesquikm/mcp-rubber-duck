@@ -1,3 +1,10 @@
+## [1.9.3](https://github.com/nesquikm/mcp-rubber-duck/compare/v1.9.2...v1.9.3) (2026-01-19)
+
+
+### Bug Fixes
+
+* upgrade npm to latest for OIDC trusted publishing ([a6ca82c](https://github.com/nesquikm/mcp-rubber-duck/commit/a6ca82cddd15bbd56a9e7eaabb513d7cb5b13d8c))
+
 ## [1.9.2](https://github.com/nesquikm/mcp-rubber-duck/compare/v1.9.1...v1.9.2) (2026-01-19)
 
 
