@@ -210,6 +210,10 @@ jobs:
             echo "No new release"
           fi
 
+      - name: 📤 Publish to npm with provenance
+        if: steps.check-release.outputs.released == 'true'
+        run: npm publish --provenance --access public
+
       - name: 📊 Release Summary
         if: success()
         run: |
