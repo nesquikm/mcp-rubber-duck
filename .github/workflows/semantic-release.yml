@@ -66,7 +66,7 @@ jobs:
           output: 'trivy-results.sarif'
 
       - name: 📤 Upload Trivy scan results to GitHub Security
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         if: always()
         with:
           sarif_file: 'trivy-results.sarif'
@@ -84,7 +84,7 @@ jobs:
           output: 'trivy-docker-results.sarif'
 
       - name: 📤 Upload Docker scan results
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         if: always()
         with:
           sarif_file: 'trivy-docker-results.sarif'
@@ -135,7 +135,7 @@ jobs:
           no-fail: true
 
       - name: 📤 Upload Dockerfile lint results
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         if: always()
         with:
           sarif_file: hadolint-results.sarif
