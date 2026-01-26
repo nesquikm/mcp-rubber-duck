@@ -1,3 +1,10 @@
+## [1.9.4](https://github.com/nesquikm/mcp-rubber-duck/compare/v1.9.3...v1.9.4) (2026-01-26)
+
+
+### Bug Fixes
+
+* override lodash to 4.17.23 to address CVE-2025-13465 ([8cb5a3a](https://github.com/nesquikm/mcp-rubber-duck/commit/8cb5a3a0b3a644b2ed368537412cda32b8a333f2))
+
 ## [1.9.3](https://github.com/nesquikm/mcp-rubber-duck/compare/v1.9.2...v1.9.3) (2026-01-19)
 
 
