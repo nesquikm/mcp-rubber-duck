@@ -1,12 +1,7 @@
-import { Server } from '@modelcontextprotocol/sdk/server/index.js';
+import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
-import {
-  CallToolRequestSchema,
-  ListToolsRequestSchema,
-  ListPromptsRequestSchema,
-  GetPromptRequestSchema,
-  Tool,
-} from '@modelcontextprotocol/sdk/types.js';
+import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
+import { z } from 'zod';
 
 import { ConfigManager } from './config/config.js';
 import { ProviderManager } from './providers/manager.js';
@@ -46,10 +41,10 @@ import { mcpStatusTool } from './tools/mcp-status.js';
 import { getUsageStatsTool } from './tools/get-usage-stats.js';
 
 // Import prompts
-import { getPrompts, getPrompt } from './prompts/index.js';
+import { PROMPTS } from './prompts/index.js';
 
 export class RubberDuckServer {
-  private server: Server;
+  private server: McpServer;
   private configManager: ConfigManager;
   private pricingService: PricingService;
   private usageService: UsageService;
@@ -67,17 +62,12 @@ export class RubberDuckServer {
   private mcpEnabled: boolean = false;
 
   constructor() {
-    this.server = new Server(
+    this.server = new McpServer(
       {
         name: 'mcp-rubber-duck',
         version: '1.0.0',
       },
-      {
-        capabilities: {
-          tools: {},
-          prompts: {},
-        },
-      }
+      {}
     );
 
     // Initialize managers
@@ -102,7 +92,13 @@ export class RubberDuckServer {
     // Initialize MCP bridge if enabled
     this.initializeMCPBridge();
 
-    this.setupHandlers();
+    this.registerTools();
+    this.registerPrompts();
+
+    // Handle errors
+    this.server.server.onerror = (error) => {
+      logger.error('Server error:', error);
+    };
   }
 
   private initializeMCPBridge(): void {
@@ -151,130 +147,438 @@ export class RubberDuckServer {
     }
   }
 
-  private setupHandlers() {
-    // List available tools
-    this.server.setRequestHandler(ListToolsRequestSchema, () => {
-      return { tools: this.getTools() };
-    });
+  // Tool functions return `{ type: 'text' }` where TS infers `string`, not the literal `"text"`.
+  // This helper narrows the type to satisfy McpServer's CallToolResult expectation.
+  private toolResult(result: { content: { type: string; text: string }[]; isError?: boolean }): CallToolResult {
+    return result as CallToolResult;
+  }
 
-    // List available prompts
-    this.server.setRequestHandler(ListPromptsRequestSchema, () => {
-      return { prompts: getPrompts() };
-    });
+  private toolErrorResult(error: unknown): CallToolResult {
+    logger.error('Tool execution error:', error);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    return {
+      content: [
+        {
+          type: 'text' as const,
+          text: `${getRandomDuckMessage('error')}\n\nError: ${errorMessage}`,
+        },
+      ],
+      isError: true,
+    };
+  }
 
-    // Get specific prompt
-    this.server.setRequestHandler(GetPromptRequestSchema, (request) => {
-      const { name, arguments: args } = request.params;
-      try {
-        return getPrompt(name, args || {});
-      } catch (error: unknown) {
-        const errorMessage = error instanceof Error ? error.message : String(error);
-        logger.error(`Prompt error for ${name}:`, errorMessage);
-        throw error;
+  private registerTools() {
+    // ask_duck
+    this.server.registerTool(
+      'ask_duck',
+      {
+        description: this.mcpEnabled
+          ? 'Ask a question to a specific LLM provider (duck) with MCP tool access'
+          : 'Ask a question to a specific LLM provider (duck)',
+        inputSchema: {
+          prompt: z.string().describe('The question or prompt to send to the duck'),
+          provider: z.string().optional().describe('The provider name (optional, uses default if not specified)'),
+          model: z.string().optional().describe('Specific model to use (optional, uses provider default if not specified)'),
+          temperature: z.number().min(0).max(2).optional().describe('Temperature for response generation (0-2)'),
+        },
+        annotations: {
+          readOnlyHint: true,
+          openWorldHint: true,
+        },
+      },
+      async (args) => {
+        try {
+          if (this.mcpEnabled && this.enhancedProviderManager) {
+            return this.toolResult(await this.handleAskDuckWithMCP(args as Record<string, unknown>));
+          }
+          return this.toolResult(await askDuckTool(this.providerManager, this.cache, args as Record<string, unknown>));
+        } catch (error) {
+          return this.toolErrorResult(error);
+        }
       }
-    });
+    );
 
-    // Handle tool calls
-    this.server.setRequestHandler(CallToolRequestSchema, async (request) => {
-      const { name, arguments: args } = request.params;
+    // chat_with_duck
+    this.server.registerTool(
+      'chat_with_duck',
+      {
+        description: 'Have a conversation with a duck, maintaining context across messages',
+        inputSchema: {
+          conversation_id: z.string().describe('Conversation ID (creates new if not exists)'),
+          message: z.string().describe('Your message to the duck'),
+          provider: z.string().optional().describe('Provider to use (can switch mid-conversation)'),
+          model: z.string().optional().describe('Specific model to use (optional)'),
+        },
+        annotations: {
+          openWorldHint: true,
+        },
+      },
+      async (args) => {
+        try {
+          return this.toolResult(await chatDuckTool(this.providerManager, this.conversationManager, args as Record<string, unknown>));
+        } catch (error) {
+          return this.toolErrorResult(error);
+        }
+      }
+    );
 
-      try {
-        switch (name) {
-          case 'ask_duck':
-            // Use enhanced provider manager if MCP is enabled
-            if (this.mcpEnabled && this.enhancedProviderManager) {
-              return await this.handleAskDuckWithMCP(args || {});
-            }
-            return await askDuckTool(this.providerManager, this.cache, args || {});
+    // clear_conversations
+    this.server.registerTool(
+      'clear_conversations',
+      {
+        description: 'Clear all conversation history and start fresh',
+        annotations: {
+          destructiveHint: true,
+          idempotentHint: true,
+          openWorldHint: false,
+        },
+      },
+      () => {
+        try {
+          return this.toolResult(clearConversationsTool(this.conversationManager, {}));
+        } catch (error) {
+          return this.toolErrorResult(error);
+        }
+      }
+    );
 
-          case 'chat_with_duck':
-            return await chatDuckTool(this.providerManager, this.conversationManager, args || {});
+    // list_ducks
+    this.server.registerTool(
+      'list_ducks',
+      {
+        description: 'List all available LLM providers (ducks) and their status',
+        inputSchema: {
+          check_health: z.boolean().default(false).describe('Perform health check on all providers'),
+        },
+        annotations: {
+          readOnlyHint: true,
+          openWorldHint: true,
+        },
+      },
+      async (args) => {
+        try {
+          return this.toolResult(await listDucksTool(this.providerManager, this.healthMonitor, args as Record<string, unknown>));
+        } catch (error) {
+          return this.toolErrorResult(error);
+        }
+      }
+    );
 
-          case 'clear_conversations':
-            return clearConversationsTool(this.conversationManager, args || {});
+    // list_models
+    this.server.registerTool(
+      'list_models',
+      {
+        description: 'List available models for LLM providers',
+        inputSchema: {
+          provider: z.string().optional().describe('Provider name (optional, lists all if not specified)'),
+          fetch_latest: z.boolean().default(false).describe('Fetch latest models from API vs using cached/configured'),
+        },
+        annotations: {
+          readOnlyHint: true,
+          openWorldHint: true,
+        },
+      },
+      async (args) => {
+        try {
+          return this.toolResult(await listModelsTool(this.providerManager, args as Record<string, unknown>));
+        } catch (error) {
+          return this.toolErrorResult(error);
+        }
+      }
+    );
 
-          case 'list_ducks':
-            return await listDucksTool(this.providerManager, this.healthMonitor, args || {});
+    // compare_ducks
+    this.server.registerTool(
+      'compare_ducks',
+      {
+        description: 'Ask the same question to multiple ducks simultaneously',
+        inputSchema: {
+          prompt: z.string().describe('The question to ask all ducks'),
+          providers: z.array(z.string()).optional().describe('List of provider names to query (optional, uses all if not specified)'),
+          model: z.string().optional().describe('Specific model to use for all providers (optional)'),
+        },
+        annotations: {
+          readOnlyHint: true,
+          openWorldHint: true,
+        },
+      },
+      async (args) => {
+        try {
+          if (this.mcpEnabled && this.enhancedProviderManager) {
+            return this.toolResult(await this.handleCompareDucksWithMCP(args as Record<string, unknown>));
+          }
+          return this.toolResult(await compareDucksTool(this.providerManager, args as Record<string, unknown>));
+        } catch (error) {
+          return this.toolErrorResult(error);
+        }
+      }
+    );
 
-          case 'list_models':
-            return await listModelsTool(this.providerManager, args || {});
+    // duck_council
+    this.server.registerTool(
+      'duck_council',
+      {
+        description: 'Get responses from all configured ducks (like a panel discussion)',
+        inputSchema: {
+          prompt: z.string().describe('The question for the duck council'),
+          model: z.string().optional().describe('Specific model to use for all ducks (optional)'),
+        },
+        annotations: {
+          readOnlyHint: true,
+          openWorldHint: true,
+        },
+      },
+      async (args) => {
+        try {
+          if (this.mcpEnabled && this.enhancedProviderManager) {
+            return this.toolResult(await this.handleDuckCouncilWithMCP(args as Record<string, unknown>));
+          }
+          return this.toolResult(await duckCouncilTool(this.providerManager, args as Record<string, unknown>));
+        } catch (error) {
+          return this.toolErrorResult(error);
+        }
+      }
+    );
 
-          case 'compare_ducks':
-            // Use enhanced provider manager if MCP is enabled
-            if (this.mcpEnabled && this.enhancedProviderManager) {
-              return await this.handleCompareDucksWithMCP(args || {});
-            }
-            return await compareDucksTool(this.providerManager, args || {});
+    // duck_vote
+    this.server.registerTool(
+      'duck_vote',
+      {
+        description: 'Have multiple ducks vote on options with reasoning. Returns vote tally, confidence scores, and consensus level.',
+        inputSchema: {
+          question: z.string().describe('The question to vote on (e.g., "Best approach for error handling?")'),
+          options: z.array(z.string()).min(2).max(10).describe('The options to vote on (2-10 options)'),
+          voters: z.array(z.string()).optional().describe('List of provider names to vote (optional, uses all if not specified)'),
+          require_reasoning: z.boolean().default(true).describe('Require ducks to explain their vote (default: true)'),
+        },
+        annotations: {
+          readOnlyHint: true,
+          openWorldHint: true,
+        },
+      },
+      async (args) => {
+        try {
+          return this.toolResult(await duckVoteTool(this.providerManager, args as Record<string, unknown>));
+        } catch (error) {
+          return this.toolErrorResult(error);
+        }
+      }
+    );
 
-          case 'duck_council':
-            // Use enhanced provider manager if MCP is enabled
-            if (this.mcpEnabled && this.enhancedProviderManager) {
-              return await this.handleDuckCouncilWithMCP(args || {});
-            }
-            return await duckCouncilTool(this.providerManager, args || {});
+    // duck_judge
+    this.server.registerTool(
+      'duck_judge',
+      {
+        description: 'Have one duck evaluate and rank other ducks\' responses. Use after duck_council to get a comparative evaluation.',
+        inputSchema: {
+          responses: z.array(z.object({
+            provider: z.string(),
+            nickname: z.string(),
+            model: z.string().optional(),
+            content: z.string(),
+          })).min(2).describe('Array of duck responses to evaluate (from duck_council output)'),
+          judge: z.string().optional().describe('Provider name of the judge duck (optional, uses first available)'),
+          criteria: z.array(z.string()).optional().describe('Evaluation criteria (default: ["accuracy", "completeness", "clarity"])'),
+          persona: z.string().optional().describe('Judge persona (e.g., "senior engineer", "security expert")'),
+        },
+        annotations: {
+          readOnlyHint: true,
+          openWorldHint: true,
+        },
+      },
+      async (args) => {
+        try {
+          return this.toolResult(await duckJudgeTool(this.providerManager, args as Record<string, unknown>));
+        } catch (error) {
+          return this.toolErrorResult(error);
+        }
+      }
+    );
 
-          case 'duck_vote':
-            return await duckVoteTool(this.providerManager, args || {});
+    // duck_iterate
+    this.server.registerTool(
+      'duck_iterate',
+      {
+        description: 'Iteratively refine a response between two ducks. One generates, the other critiques/improves, alternating for multiple rounds.',
+        inputSchema: {
+          prompt: z.string().describe('The initial prompt/task to iterate on'),
+          iterations: z.number().min(1).max(10).default(3).describe('Number of iteration rounds (default: 3, max: 10)'),
+          providers: z.array(z.string()).min(2).max(2).describe('Exactly 2 provider names for the ping-pong iteration'),
+          mode: z.enum(['refine', 'critique-improve']).describe('refine: each duck improves the previous response. critique-improve: alternates between critiquing and improving.'),
+        },
+        annotations: {
+          readOnlyHint: true,
+          openWorldHint: true,
+        },
+      },
+      async (args) => {
+        try {
+          return this.toolResult(await duckIterateTool(this.providerManager, args as Record<string, unknown>));
+        } catch (error) {
+          return this.toolErrorResult(error);
+        }
+      }
+    );
 
-          case 'duck_judge':
-            return await duckJudgeTool(this.providerManager, args || {});
+    // duck_debate
+    this.server.registerTool(
+      'duck_debate',
+      {
+        description: 'Structured multi-round debate between ducks. Supports oxford (pro/con), socratic (questioning), and adversarial (attack/defend) formats.',
+        inputSchema: {
+          prompt: z.string().describe('The debate topic or proposition'),
+          rounds: z.number().min(1).max(10).default(3).describe('Number of debate rounds (default: 3)'),
+          providers: z.array(z.string()).min(2).optional().describe('Provider names to participate (min 2, uses all if not specified)'),
+          format: z.enum(['oxford', 'socratic', 'adversarial']).describe('Debate format: oxford (pro/con), socratic (questioning), adversarial (attack/defend)'),
+          synthesizer: z.string().optional().describe('Provider to synthesize the debate (optional, uses first provider)'),
+        },
+        annotations: {
+          readOnlyHint: true,
+          openWorldHint: true,
+        },
+      },
+      async (args) => {
+        try {
+          return this.toolResult(await duckDebateTool(this.providerManager, args as Record<string, unknown>));
+        } catch (error) {
+          return this.toolErrorResult(error);
+        }
+      }
+    );
 
-          case 'duck_iterate':
-            return await duckIterateTool(this.providerManager, args || {});
+    // get_usage_stats
+    this.server.registerTool(
+      'get_usage_stats',
+      {
+        description: 'Get usage statistics for a time period. Shows token counts and costs (when pricing configured).',
+        inputSchema: {
+          period: z.enum(['today', '7d', '30d', 'all']).default('today').describe('Time period for stats'),
+        },
+        annotations: {
+          readOnlyHint: true,
+          openWorldHint: false,
+        },
+      },
+      (args) => {
+        try {
+          return this.toolResult(getUsageStatsTool(this.usageService, args as Record<string, unknown>));
+        } catch (error) {
+          return this.toolErrorResult(error);
+        }
+      }
+    );
 
-          case 'duck_debate':
-            return await duckDebateTool(this.providerManager, args || {});
-
-          // Usage stats tool
-          case 'get_usage_stats':
-            return getUsageStatsTool(this.usageService, args || {});
-
-          // MCP-specific tools
-          case 'get_pending_approvals':
+    // Conditionally register MCP tools
+    if (this.mcpEnabled) {
+      // get_pending_approvals
+      this.server.registerTool(
+        'get_pending_approvals',
+        {
+          description: 'Get list of pending MCP tool approvals from ducks',
+          inputSchema: {
+            duck: z.string().optional().describe('Filter by duck name (optional)'),
+          },
+          annotations: {
+            readOnlyHint: true,
+            openWorldHint: false,
+          },
+        },
+        (args) => {
+          try {
             if (!this.approvalService) {
               throw new Error('MCP bridge not enabled');
             }
-            return getPendingApprovalsTool(this.approvalService, args || {});
+            return this.toolResult(getPendingApprovalsTool(this.approvalService, args as Record<string, unknown>));
+          } catch (error) {
+            return this.toolErrorResult(error);
+          }
+        }
+      );
 
-          case 'approve_mcp_request':
+      // approve_mcp_request
+      this.server.registerTool(
+        'approve_mcp_request',
+        {
+          description: "Approve or deny a duck's MCP tool request",
+          inputSchema: {
+            approval_id: z.string().describe('The approval request ID'),
+            decision: z.enum(['approve', 'deny']).describe('Whether to approve or deny the request'),
+            reason: z.string().optional().describe('Reason for denial (optional)'),
+          },
+          annotations: {
+            idempotentHint: true,
+            openWorldHint: false,
+          },
+        },
+        (args) => {
+          try {
             if (!this.approvalService) {
               throw new Error('MCP bridge not enabled');
             }
-            return approveMCPRequestTool(this.approvalService, args || {});
+            return this.toolResult(approveMCPRequestTool(this.approvalService, args as Record<string, unknown>));
+          } catch (error) {
+            return this.toolErrorResult(error);
+          }
+        }
+      );
 
-          case 'mcp_status':
+      // mcp_status
+      this.server.registerTool(
+        'mcp_status',
+        {
+          description: 'Get status of MCP bridge, servers, and pending approvals',
+          annotations: {
+            readOnlyHint: true,
+            openWorldHint: true,
+          },
+        },
+        async () => {
+          try {
             if (!this.mcpClientManager || !this.approvalService || !this.functionBridge) {
               throw new Error('MCP bridge not enabled');
             }
-            return await mcpStatusTool(
+            return this.toolResult(await mcpStatusTool(
               this.mcpClientManager,
               this.approvalService,
               this.functionBridge,
-              args || {}
-            );
-
-          default:
-            throw new Error(`Unknown tool: ${name}`);
+              {}
+            ));
+          } catch (error) {
+            return this.toolErrorResult(error);
+          }
         }
-      } catch (error: unknown) {
-        logger.error(`Tool execution error for ${name}:`, error);
-        const errorMessage = error instanceof Error ? error.message : String(error);
-        return {
-          content: [
-            {
-              type: 'text',
-              text: `${getRandomDuckMessage('error')}\n\nError: ${errorMessage}`,
-            },
-          ],
-          isError: true,
-        };
-      }
-    });
+      );
+    }
+  }
 
-    // Handle errors
-    this.server.onerror = (error) => {
-      logger.error('Server error:', error);
-    };
+  private registerPrompts() {
+    for (const [name, prompt] of Object.entries(PROMPTS)) {
+      // Convert prompt.arguments array to Zod schema
+      const argsSchema: Record<string, z.ZodType> = {};
+      for (const arg of prompt.arguments || []) {
+        argsSchema[arg.name] = arg.required
+          ? z.string().describe(arg.description || '')
+          : z.string().optional().describe(arg.description || '');
+      }
+
+      this.server.registerPrompt(
+        name,
+        {
+          description: prompt.description,
+          argsSchema,
+        },
+        (args) => {
+          try {
+            const messages = prompt.buildMessages((args || {}) as Record<string, string>);
+            return { messages };
+          } catch (error: unknown) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            logger.error(`Prompt error for ${name}:`, errorMessage);
+            throw error;
+          }
+        }
+      );
+    }
   }
 
   // MCP-enhanced tool handlers
@@ -311,7 +615,7 @@ export class RubberDuckServer {
     return {
       content: [
         {
-          type: 'text',
+          type: 'text' as const,
           text: formattedResponse,
         },
       ],
@@ -340,7 +644,7 @@ export class RubberDuckServer {
     return {
       content: [
         {
-          type: 'text',
+          type: 'text' as const,
           text: formattedResponse,
         },
       ],
@@ -364,7 +668,7 @@ export class RubberDuckServer {
     return {
       content: [
         {
-          type: 'text',
+          type: 'text' as const,
           text: `${header}\n\n${formattedResponse}`,
         },
       ],
@@ -410,417 +714,6 @@ export class RubberDuckServer {
     }
 
     return formatted;
-  }
-
-  private getTools(): Tool[] {
-    const baseTools: Tool[] = [
-      {
-        name: 'ask_duck',
-        description: this.mcpEnabled
-          ? 'Ask a question to a specific LLM provider (duck) with MCP tool access'
-          : 'Ask a question to a specific LLM provider (duck)',
-        inputSchema: {
-          type: 'object',
-          properties: {
-            prompt: {
-              type: 'string',
-              description: 'The question or prompt to send to the duck',
-            },
-            provider: {
-              type: 'string',
-              description: 'The provider name (optional, uses default if not specified)',
-            },
-            model: {
-              type: 'string',
-              description:
-                'Specific model to use (optional, uses provider default if not specified)',
-            },
-            temperature: {
-              type: 'number',
-              description: 'Temperature for response generation (0-2)',
-              minimum: 0,
-              maximum: 2,
-            },
-          },
-          required: ['prompt'],
-        },
-        annotations: {
-          readOnlyHint: true,
-          openWorldHint: true,
-        },
-      },
-      {
-        name: 'chat_with_duck',
-        description: 'Have a conversation with a duck, maintaining context across messages',
-        inputSchema: {
-          type: 'object',
-          properties: {
-            conversation_id: {
-              type: 'string',
-              description: 'Conversation ID (creates new if not exists)',
-            },
-            message: {
-              type: 'string',
-              description: 'Your message to the duck',
-            },
-            provider: {
-              type: 'string',
-              description: 'Provider to use (can switch mid-conversation)',
-            },
-            model: {
-              type: 'string',
-              description: 'Specific model to use (optional)',
-            },
-          },
-          required: ['conversation_id', 'message'],
-        },
-        annotations: {
-          openWorldHint: true,
-        },
-      },
-      {
-        name: 'clear_conversations',
-        description: 'Clear all conversation history and start fresh',
-        inputSchema: {
-          type: 'object',
-          properties: {},
-        },
-        annotations: {
-          destructiveHint: true,
-          idempotentHint: true,
-          openWorldHint: false,
-        },
-      },
-      {
-        name: 'list_ducks',
-        description: 'List all available LLM providers (ducks) and their status',
-        inputSchema: {
-          type: 'object',
-          properties: {
-            check_health: {
-              type: 'boolean',
-              description: 'Perform health check on all providers',
-              default: false,
-            },
-          },
-        },
-        annotations: {
-          readOnlyHint: true,
-          openWorldHint: true,
-        },
-      },
-      {
-        name: 'list_models',
-        description: 'List available models for LLM providers',
-        inputSchema: {
-          type: 'object',
-          properties: {
-            provider: {
-              type: 'string',
-              description: 'Provider name (optional, lists all if not specified)',
-            },
-            fetch_latest: {
-              type: 'boolean',
-              description: 'Fetch latest models from API vs using cached/configured',
-              default: false,
-            },
-          },
-        },
-        annotations: {
-          readOnlyHint: true,
-          openWorldHint: true,
-        },
-      },
-      {
-        name: 'compare_ducks',
-        description: 'Ask the same question to multiple ducks simultaneously',
-        inputSchema: {
-          type: 'object',
-          properties: {
-            prompt: {
-              type: 'string',
-              description: 'The question to ask all ducks',
-            },
-            providers: {
-              type: 'array',
-              items: {
-                type: 'string',
-              },
-              description: 'List of provider names to query (optional, uses all if not specified)',
-            },
-            model: {
-              type: 'string',
-              description: 'Specific model to use for all providers (optional)',
-            },
-          },
-          required: ['prompt'],
-        },
-        annotations: {
-          readOnlyHint: true,
-          openWorldHint: true,
-        },
-      },
-      {
-        name: 'duck_council',
-        description: 'Get responses from all configured ducks (like a panel discussion)',
-        inputSchema: {
-          type: 'object',
-          properties: {
-            prompt: {
-              type: 'string',
-              description: 'The question for the duck council',
-            },
-            model: {
-              type: 'string',
-              description: 'Specific model to use for all ducks (optional)',
-            },
-          },
-          required: ['prompt'],
-        },
-        annotations: {
-          readOnlyHint: true,
-          openWorldHint: true,
-        },
-      },
-      {
-        name: 'duck_vote',
-        description: 'Have multiple ducks vote on options with reasoning. Returns vote tally, confidence scores, and consensus level.',
-        inputSchema: {
-          type: 'object',
-          properties: {
-            question: {
-              type: 'string',
-              description: 'The question to vote on (e.g., "Best approach for error handling?")',
-            },
-            options: {
-              type: 'array',
-              items: { type: 'string' },
-              minItems: 2,
-              maxItems: 10,
-              description: 'The options to vote on (2-10 options)',
-            },
-            voters: {
-              type: 'array',
-              items: { type: 'string' },
-              description: 'List of provider names to vote (optional, uses all if not specified)',
-            },
-            require_reasoning: {
-              type: 'boolean',
-              default: true,
-              description: 'Require ducks to explain their vote (default: true)',
-            },
-          },
-          required: ['question', 'options'],
-        },
-        annotations: {
-          readOnlyHint: true,
-          openWorldHint: true,
-        },
-      },
-      {
-        name: 'duck_judge',
-        description: 'Have one duck evaluate and rank other ducks\' responses. Use after duck_council to get a comparative evaluation.',
-        inputSchema: {
-          type: 'object',
-          properties: {
-            responses: {
-              type: 'array',
-              items: {
-                type: 'object',
-                properties: {
-                  provider: { type: 'string' },
-                  nickname: { type: 'string' },
-                  model: { type: 'string' },
-                  content: { type: 'string' },
-                },
-                required: ['provider', 'nickname', 'content'],
-              },
-              minItems: 2,
-              description: 'Array of duck responses to evaluate (from duck_council output)',
-            },
-            judge: {
-              type: 'string',
-              description: 'Provider name of the judge duck (optional, uses first available)',
-            },
-            criteria: {
-              type: 'array',
-              items: { type: 'string' },
-              description: 'Evaluation criteria (default: ["accuracy", "completeness", "clarity"])',
-            },
-            persona: {
-              type: 'string',
-              description: 'Judge persona (e.g., "senior engineer", "security expert")',
-            },
-          },
-          required: ['responses'],
-        },
-        annotations: {
-          readOnlyHint: true,
-          openWorldHint: true,
-        },
-      },
-      {
-        name: 'duck_iterate',
-        description: 'Iteratively refine a response between two ducks. One generates, the other critiques/improves, alternating for multiple rounds.',
-        inputSchema: {
-          type: 'object',
-          properties: {
-            prompt: {
-              type: 'string',
-              description: 'The initial prompt/task to iterate on',
-            },
-            iterations: {
-              type: 'number',
-              minimum: 1,
-              maximum: 10,
-              default: 3,
-              description: 'Number of iteration rounds (default: 3, max: 10)',
-            },
-            providers: {
-              type: 'array',
-              items: { type: 'string' },
-              minItems: 2,
-              maxItems: 2,
-              description: 'Exactly 2 provider names for the ping-pong iteration',
-            },
-            mode: {
-              type: 'string',
-              enum: ['refine', 'critique-improve'],
-              description: 'refine: each duck improves the previous response. critique-improve: alternates between critiquing and improving.',
-            },
-          },
-          required: ['prompt', 'providers', 'mode'],
-        },
-        annotations: {
-          readOnlyHint: true,
-          openWorldHint: true,
-        },
-      },
-      {
-        name: 'duck_debate',
-        description: 'Structured multi-round debate between ducks. Supports oxford (pro/con), socratic (questioning), and adversarial (attack/defend) formats.',
-        inputSchema: {
-          type: 'object',
-          properties: {
-            prompt: {
-              type: 'string',
-              description: 'The debate topic or proposition',
-            },
-            rounds: {
-              type: 'number',
-              minimum: 1,
-              maximum: 10,
-              default: 3,
-              description: 'Number of debate rounds (default: 3)',
-            },
-            providers: {
-              type: 'array',
-              items: { type: 'string' },
-              minItems: 2,
-              description: 'Provider names to participate (min 2, uses all if not specified)',
-            },
-            format: {
-              type: 'string',
-              enum: ['oxford', 'socratic', 'adversarial'],
-              description: 'Debate format: oxford (pro/con), socratic (questioning), adversarial (attack/defend)',
-            },
-            synthesizer: {
-              type: 'string',
-              description: 'Provider to synthesize the debate (optional, uses first provider)',
-            },
-          },
-          required: ['prompt', 'format'],
-        },
-        annotations: {
-          readOnlyHint: true,
-          openWorldHint: true,
-        },
-      },
-      {
-        name: 'get_usage_stats',
-        description:
-          'Get usage statistics for a time period. Shows token counts and costs (when pricing configured).',
-        inputSchema: {
-          type: 'object',
-          properties: {
-            period: {
-              type: 'string',
-              enum: ['today', '7d', '30d', 'all'],
-              default: 'today',
-              description: 'Time period for stats',
-            },
-          },
-        },
-        annotations: {
-          readOnlyHint: true,
-          openWorldHint: false,
-        },
-      },
-    ];
-
-    // Add MCP-specific tools if enabled
-    if (this.mcpEnabled) {
-      baseTools.push(
-        {
-          name: 'get_pending_approvals',
-          description: 'Get list of pending MCP tool approvals from ducks',
-          inputSchema: {
-            type: 'object',
-            properties: {
-              duck: {
-                type: 'string',
-                description: 'Filter by duck name (optional)',
-              },
-            },
-          },
-          annotations: {
-            readOnlyHint: true,
-            openWorldHint: false,
-          },
-        },
-        {
-          name: 'approve_mcp_request',
-          description: "Approve or deny a duck's MCP tool request",
-          inputSchema: {
-            type: 'object',
-            properties: {
-              approval_id: {
-                type: 'string',
-                description: 'The approval request ID',
-              },
-              decision: {
-                type: 'string',
-                enum: ['approve', 'deny'],
-                description: 'Whether to approve or deny the request',
-              },
-              reason: {
-                type: 'string',
-                description: 'Reason for denial (optional)',
-              },
-            },
-            required: ['approval_id', 'decision'],
-          },
-          annotations: {
-            idempotentHint: true,
-            openWorldHint: false,
-          },
-        },
-        {
-          name: 'mcp_status',
-          description: 'Get status of MCP bridge, servers, and pending approvals',
-          inputSchema: {
-            type: 'object',
-            properties: {},
-          },
-          annotations: {
-            readOnlyHint: true,
-            openWorldHint: true,
-          },
-        }
-      );
-    }
-
-    return baseTools;
   }
 
   async start() {

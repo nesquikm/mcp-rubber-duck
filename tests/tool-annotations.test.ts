@@ -1,8 +1,10 @@
-import { describe, it, expect, jest, beforeEach } from '@jest/globals';
+import { describe, it, expect, jest, beforeEach, afterEach } from '@jest/globals';
 import { Tool } from '@modelcontextprotocol/sdk/types.js';
+import { Client } from '@modelcontextprotocol/sdk/client/index.js';
+import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 
 // We need to test the tool annotations from RubberDuckServer
-// Since getTools() is a private method, we'll test through the server's tool listing
+// Using the proper MCP protocol to list tools via Client + InMemoryTransport
 
 // Mock dependencies before importing the server
 jest.mock('../src/utils/logger');
@@ -29,17 +31,32 @@ import { RubberDuckServer } from '../src/server.js';
  */
 describe('Tool Annotations', () => {
   let server: RubberDuckServer;
+  let client: Client;
   let tools: Tool[];
 
-  beforeEach(() => {
+  beforeEach(async () => {
     // Set up minimal environment for server initialization
     process.env.OPENAI_API_KEY = 'test-key';
 
     server = new RubberDuckServer();
 
-    // Access private getTools method via reflection for testing
+    // Create in-memory client-server pair
+    const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+
+    // Connect server (access underlying McpServer)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    tools = (server as any).getTools();
+    await (server as any).server.connect(serverTransport);
+
+    client = new Client({ name: 'test-client', version: '1.0.0' });
+    await client.connect(clientTransport);
+
+    // List tools via proper MCP protocol
+    const result = await client.listTools();
+    tools = result.tools;
+  });
+
+  afterEach(async () => {
+    await client.close();
   });
 
   // Helper to find a tool by name
@@ -355,8 +372,11 @@ describe('Tool Annotations', () => {
   });
 
   describe('Base tools count', () => {
-    it('should have 12 base tools', () => {
-      // Base tools (without MCP-specific tools which are conditionally added)
+    it('should have exactly 12 base tools', () => {
+      expect(tools).toHaveLength(12);
+    });
+
+    it('should have all expected base tool names', () => {
       const baseToolNames = [
         'ask_duck',
         'chat_with_duck',
@@ -377,13 +397,159 @@ describe('Tool Annotations', () => {
       }
     });
   });
+
+  describe('Tool input schemas (Zod migration correctness)', () => {
+    /**
+     * These tests verify that the JSON Schema → Zod conversion
+     * preserved required fields, property names, and types correctly.
+     */
+
+    it('ask_duck should have prompt as required and provider/model/temperature as optional', () => {
+      const tool = findTool('ask_duck');
+      expect(tool?.inputSchema.required).toContain('prompt');
+      expect(tool?.inputSchema.required).not.toContain('provider');
+      expect(tool?.inputSchema.required).not.toContain('model');
+      expect(tool?.inputSchema.required).not.toContain('temperature');
+      expect(tool?.inputSchema.properties).toHaveProperty('prompt');
+      expect(tool?.inputSchema.properties).toHaveProperty('provider');
+      expect(tool?.inputSchema.properties).toHaveProperty('model');
+      expect(tool?.inputSchema.properties).toHaveProperty('temperature');
+    });
+
+    it('chat_with_duck should have conversation_id and message as required', () => {
+      const tool = findTool('chat_with_duck');
+      expect(tool?.inputSchema.required).toContain('conversation_id');
+      expect(tool?.inputSchema.required).toContain('message');
+      expect(tool?.inputSchema.required).not.toContain('provider');
+      expect(tool?.inputSchema.required).not.toContain('model');
+    });
+
+    it('clear_conversations should have no required properties', () => {
+      const tool = findTool('clear_conversations');
+      // No inputSchema properties expected (no args tool)
+      const required = tool?.inputSchema.required || [];
+      expect(required).toHaveLength(0);
+    });
+
+    it('compare_ducks should have prompt as required and providers/model optional', () => {
+      const tool = findTool('compare_ducks');
+      expect(tool?.inputSchema.required).toContain('prompt');
+      expect(tool?.inputSchema.required).not.toContain('providers');
+      expect(tool?.inputSchema.properties?.providers).toHaveProperty('type', 'array');
+    });
+
+    it('duck_vote should have question and options as required', () => {
+      const tool = findTool('duck_vote');
+      expect(tool?.inputSchema.required).toContain('question');
+      expect(tool?.inputSchema.required).toContain('options');
+      expect(tool?.inputSchema.required).not.toContain('voters');
+      expect(tool?.inputSchema.required).not.toContain('require_reasoning');
+    });
+
+    it('duck_judge should have responses as required with nested object schema', () => {
+      const tool = findTool('duck_judge');
+      expect(tool?.inputSchema.required).toContain('responses');
+      expect(tool?.inputSchema.required).not.toContain('judge');
+      expect(tool?.inputSchema.required).not.toContain('criteria');
+      expect(tool?.inputSchema.required).not.toContain('persona');
+      // responses should be an array type
+      const responses = tool?.inputSchema.properties?.responses as Record<string, unknown>;
+      expect(responses?.type).toBe('array');
+    });
+
+    it('duck_iterate should have prompt, providers, and mode as required', () => {
+      const tool = findTool('duck_iterate');
+      expect(tool?.inputSchema.required).toContain('prompt');
+      expect(tool?.inputSchema.required).toContain('providers');
+      expect(tool?.inputSchema.required).toContain('mode');
+      expect(tool?.inputSchema.required).not.toContain('iterations');
+    });
+
+    it('duck_debate should have prompt and format as required', () => {
+      const tool = findTool('duck_debate');
+      expect(tool?.inputSchema.required).toContain('prompt');
+      expect(tool?.inputSchema.required).toContain('format');
+      expect(tool?.inputSchema.required).not.toContain('rounds');
+      expect(tool?.inputSchema.required).not.toContain('providers');
+      expect(tool?.inputSchema.required).not.toContain('synthesizer');
+    });
+
+    it('get_usage_stats should have no required properties (period has default)', () => {
+      const tool = findTool('get_usage_stats');
+      const required = tool?.inputSchema.required || [];
+      expect(required).not.toContain('period');
+    });
+
+    it('all tools should have descriptions', () => {
+      for (const tool of tools) {
+        expect(tool.description).toBeDefined();
+        expect(typeof tool.description).toBe('string');
+        expect(tool.description!.length).toBeGreaterThan(0);
+      }
+    });
+  });
+
+  describe('Prompts registration', () => {
+    it('should register all 8 prompts via MCP protocol', async () => {
+      const result = await client.listPrompts();
+      expect(result.prompts).toHaveLength(8);
+    });
+
+    it('should register prompts with correct names', async () => {
+      const result = await client.listPrompts();
+      const names = result.prompts.map((p) => p.name);
+      const expectedNames = [
+        'perspectives',
+        'assumptions',
+        'blindspots',
+        'tradeoffs',
+        'red_team',
+        'reframe',
+        'architecture',
+        'diverge_converge',
+      ];
+      for (const name of expectedNames) {
+        expect(names).toContain(name);
+      }
+    });
+
+    it('should register prompts with descriptions', async () => {
+      const result = await client.listPrompts();
+      for (const prompt of result.prompts) {
+        expect(prompt.description).toBeDefined();
+        expect(typeof prompt.description).toBe('string');
+        expect(prompt.description!.length).toBeGreaterThan(0);
+      }
+    });
+
+    it('should return prompt messages via getPrompt', async () => {
+      const result = await client.getPrompt({
+        name: 'reframe',
+        arguments: { problem: 'Test problem' },
+      });
+      expect(result.messages).toBeDefined();
+      expect(result.messages.length).toBeGreaterThan(0);
+      expect(result.messages[0].role).toBe('user');
+    });
+
+    it('should return prompt messages containing the user input', async () => {
+      const result = await client.getPrompt({
+        name: 'perspectives',
+        arguments: { problem: 'My test problem', perspectives: 'security, perf' },
+      });
+      const text = (result.messages[0].content as { type: string; text: string }).text;
+      expect(text).toContain('My test problem');
+      expect(text).toContain('security, perf');
+    });
+  });
 });
 
 describe('MCP-specific Tool Annotations', () => {
   let server: RubberDuckServer;
+  let client: Client;
   let tools: Tool[];
 
-  beforeEach(() => {
+  beforeEach(async () => {
     // Enable MCP bridge for these tests
     process.env.OPENAI_API_KEY = 'test-key';
     process.env.MCP_BRIDGE_ENABLED = 'true';
@@ -393,13 +559,24 @@ describe('MCP-specific Tool Annotations', () => {
 
     server = new RubberDuckServer();
 
-    // Access private getTools method via reflection for testing
+    // Create in-memory client-server pair
+    const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+
+    // Connect server (access underlying McpServer)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    tools = (server as any).getTools();
+    await (server as any).server.connect(serverTransport);
+
+    client = new Client({ name: 'test-client', version: '1.0.0' });
+    await client.connect(clientTransport);
+
+    // List tools via proper MCP protocol
+    const result = await client.listTools();
+    tools = result.tools;
   });
 
-  afterEach(() => {
+  afterEach(async () => {
     delete process.env.MCP_BRIDGE_ENABLED;
+    await client.close();
   });
 
   // Helper to find a tool by name
@@ -407,8 +584,12 @@ describe('MCP-specific Tool Annotations', () => {
     return tools.find((t) => t.name === name);
   };
 
-  // Note: MCP tools are only added when mcpEnabled is true in the server
-  // These tests may not find the tools if MCP is not properly initialized
+  it('should register 15 tools when MCP bridge is enabled', () => {
+    expect(tools).toHaveLength(15);
+    expect(findTool('get_pending_approvals')).toBeDefined();
+    expect(findTool('approve_mcp_request')).toBeDefined();
+    expect(findTool('mcp_status')).toBeDefined();
+  });
 
   describe('get_pending_approvals (when MCP enabled)', () => {
     /**
@@ -417,18 +598,14 @@ describe('MCP-specific Tool Annotations', () => {
      * - readOnlyHint: true - Only reads approval state
      * - openWorldHint: NOT set - Pure local operation
      */
-    it('should be marked as read-only when present', () => {
+    it('should be marked as read-only', () => {
       const tool = findTool('get_pending_approvals');
-      if (tool) {
-        expect(tool.annotations?.readOnlyHint).toBe(true);
-      }
+      expect(tool?.annotations?.readOnlyHint).toBe(true);
     });
 
-    it('should be explicitly marked as NOT open-world when present', () => {
+    it('should be explicitly marked as NOT open-world', () => {
       const tool = findTool('get_pending_approvals');
-      if (tool) {
-        expect(tool.annotations?.openWorldHint).toBe(false);
-      }
+      expect(tool?.annotations?.openWorldHint).toBe(false);
     });
   });
 
@@ -441,25 +618,19 @@ describe('MCP-specific Tool Annotations', () => {
      * - readOnlyHint: NOT set - Modifies approval state
      * - openWorldHint: NOT set - Pure local operation
      */
-    it('should be marked as idempotent when present', () => {
+    it('should be marked as idempotent', () => {
       const tool = findTool('approve_mcp_request');
-      if (tool) {
-        expect(tool.annotations?.idempotentHint).toBe(true);
-      }
+      expect(tool?.annotations?.idempotentHint).toBe(true);
     });
 
-    it('should NOT be marked as read-only when present', () => {
+    it('should NOT be marked as read-only', () => {
       const tool = findTool('approve_mcp_request');
-      if (tool) {
-        expect(tool.annotations?.readOnlyHint).toBeUndefined();
-      }
+      expect(tool?.annotations?.readOnlyHint).toBeUndefined();
     });
 
-    it('should be explicitly marked as NOT open-world when present', () => {
+    it('should be explicitly marked as NOT open-world', () => {
       const tool = findTool('approve_mcp_request');
-      if (tool) {
-        expect(tool.annotations?.openWorldHint).toBe(false);
-      }
+      expect(tool?.annotations?.openWorldHint).toBe(false);
     });
   });
 
@@ -471,18 +642,14 @@ describe('MCP-specific Tool Annotations', () => {
      * - readOnlyHint: true - Only reads status information
      * - openWorldHint: true - Communicates with MCP servers
      */
-    it('should be marked as read-only when present', () => {
+    it('should be marked as read-only', () => {
       const tool = findTool('mcp_status');
-      if (tool) {
-        expect(tool.annotations?.readOnlyHint).toBe(true);
-      }
+      expect(tool?.annotations?.readOnlyHint).toBe(true);
     });
 
-    it('should be marked as open-world when present', () => {
+    it('should be marked as open-world', () => {
       const tool = findTool('mcp_status');
-      if (tool) {
-        expect(tool.annotations?.openWorldHint).toBe(true);
-      }
+      expect(tool?.annotations?.openWorldHint).toBe(true);
     });
   });
 });
