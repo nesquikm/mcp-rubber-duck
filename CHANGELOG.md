@@ -1,3 +1,15 @@
+# [1.10.0](https://github.com/nesquikm/mcp-rubber-duck/compare/v1.9.5...v1.10.0) (2026-01-29)
+
+
+### Bug Fixes
+
+* allowlist GHSA-p5wg-g6qr-c7cg (eslint circular ref stack overflow) ([bf5388e](https://github.com/nesquikm/mcp-rubber-duck/commit/bf5388e26f91e412dba28986a4c177b60539b4f4))
+
+
+### Features
+
+* add interactive UIs for compare, vote, debate, and usage tools via MCP Apps ([9904ad9](https://github.com/nesquikm/mcp-rubber-duck/commit/9904ad94b12b2c69a8c5c50e18778966fc7e0069))
+
 ## [1.9.5](https://github.com/nesquikm/mcp-rubber-duck/compare/v1.9.4...v1.9.5) (2026-01-29)
 
 
