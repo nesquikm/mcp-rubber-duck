@@ -55,11 +55,31 @@ export async function compareDucksTool(
 
   logger.info(`Compared ${responses.length} ducks, ${successCount} successful`);
 
+  // Build structured data for UI consumption
+  const structuredData = responses.map(r => ({
+    provider: r.provider,
+    nickname: r.nickname,
+    model: r.model,
+    content: r.content,
+    latency: r.latency,
+    tokens: r.usage ? {
+      prompt: r.usage.prompt_tokens,
+      completion: r.usage.completion_tokens,
+      total: r.usage.total_tokens,
+    } : null,
+    cached: r.cached,
+    error: r.content.startsWith('Error:') ? r.content : undefined,
+  }));
+
   return {
     content: [
       {
         type: 'text',
         text: response,
+      },
+      {
+        type: 'text',
+        text: JSON.stringify(structuredData),
       },
     ],
   };

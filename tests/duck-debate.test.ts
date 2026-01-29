@@ -163,7 +163,9 @@ describe('duckDebateTool', () => {
       rounds: 2,
     });
 
-    expect(result.content).toHaveLength(1);
+    expect(result.content).toHaveLength(2);
+    expect(result.content[1].type).toBe('text');
+    expect(() => JSON.parse(result.content[1].text)).not.toThrow();
     const text = result.content[0].text;
 
     expect(text).toContain('Oxford Debate');

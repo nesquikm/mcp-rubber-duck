@@ -124,11 +124,38 @@ export async function duckDebateTool(
 
   logger.info(`Debate completed: ${rounds} rounds, synthesized by ${synthesizerProvider}`);
 
+  // Build structured data for UI consumption
+  const structuredData = {
+    topic: result.topic,
+    format: result.format,
+    totalRounds: result.totalRounds,
+    participants: result.participants.map(p => ({
+      provider: p.provider,
+      nickname: p.nickname,
+      position: p.position,
+    })),
+    rounds: result.rounds.map(roundArgs =>
+      roundArgs.map(arg => ({
+        round: arg.round,
+        provider: arg.provider,
+        nickname: arg.nickname,
+        position: arg.position,
+        content: arg.content,
+      }))
+    ),
+    synthesis: result.synthesis,
+    synthesizer: result.synthesizer,
+  };
+
   return {
     content: [
       {
         type: 'text',
         text: formattedOutput,
+      },
+      {
+        type: 'text',
+        text: JSON.stringify(structuredData),
       },
     ],
   };

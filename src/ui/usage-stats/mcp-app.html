@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Usage Stats</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      line-height: 1.5;
+      color: #1a1a2e;
+      background: #f8f9fa;
+      padding: 16px;
+    }
+    .header { text-align: center; margin-bottom: 20px; }
+    .header h2 { margin-bottom: 4px; }
+    .period-badge {
+      display: inline-block;
+      background: #e3f2fd;
+      color: #1565c0;
+      padding: 2px 14px;
+      border-radius: 16px;
+      font-weight: 600;
+      font-size: 0.85em;
+      margin-bottom: 4px;
+    }
+    .date-range { font-size: 0.8em; opacity: 0.6; }
+    .summary-cards {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin-bottom: 24px;
+    }
+    .card {
+      background: #fff;
+      border: 1px solid #e0e0e0;
+      border-radius: 12px;
+      padding: 12px 20px;
+      text-align: center;
+      min-width: 120px;
+      flex: 1;
+    }
+    .card-value { font-size: 1.4em; font-weight: 700; }
+    .card-label { font-size: 0.8em; opacity: 0.6; }
+    .card-req .card-value { color: #1565c0; }
+    .card-tok .card-value { color: #6a1b9a; }
+    .card-cache .card-value { color: #2e7d32; }
+    .card-err .card-value { color: #c62828; }
+    .card-ok .card-value { color: #2e7d32; }
+    .card-cost .card-value { color: #e65100; }
+    .section { margin-bottom: 20px; }
+    .section h3 { margin-bottom: 12px; font-size: 1em; }
+    .provider-row {
+      background: #fff;
+      border-radius: 10px;
+      margin-bottom: 8px;
+      overflow: hidden;
+    }
+    .provider-row summary {
+      padding: 10px 16px;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-weight: 600;
+    }
+    .provider-stats { font-weight: 400; font-size: 0.85em; opacity: 0.7; }
+    .token-bar { height: 6px; background: #e0e0e0; margin: 0 16px 8px; border-radius: 3px; overflow: hidden; }
+    .token-fill { height: 100%; background: linear-gradient(90deg, #42a5f5, #7e57c2); border-radius: 3px; }
+    .model-table { width: 100%; border-collapse: collapse; font-size: 0.85em; margin: 0 0 8px; }
+    .model-table th {
+      text-align: left;
+      padding: 6px 12px;
+      background: #f5f5f5;
+      font-weight: 600;
+      font-size: 0.9em;
+    }
+    .model-table td { padding: 6px 12px; border-top: 1px solid #eee; }
+    .err-text { color: #c62828; font-weight: 600; }
+    .empty { text-align: center; padding: 24px; opacity: 0.5; }
+    .error-banner { background: #ffebee; color: #c62828; padding: 12px; border-radius: 8px; text-align: center; font-weight: 600; }
+    @media (prefers-color-scheme: dark) {
+      body { background: #1a1a2e; color: #e0e0e0; }
+      .card { background: #16213e; border-color: #0f3460; color: #e0e0e0; }
+      .card-req .card-value { color: #64b5f6; }
+      .card-tok .card-value { color: #ce93d8; }
+      .card-cache .card-value { color: #81c784; }
+      .card-err .card-value { color: #ef5350; }
+      .card-ok .card-value { color: #81c784; }
+      .card-cost .card-value { color: #ffb74d; }
+      .period-badge { background: #0f3460; color: #a0c4ff; }
+      .provider-row { background: #16213e; color: #e0e0e0; }
+      .model-table th { background: #0d1b2a; color: #b0b0b0; }
+      .model-table td { border-color: #0f3460; color: #d0d0d0; }
+      .token-bar { background: #0d1b2a; }
+      .err-text { color: #ef5350; }
+      .error-banner { background: #5c1a1a; color: #ff8a80; }
+    }
+  </style>
+</head>
+<body>
+  <div id="app"><p style="text-align:center;opacity:0.5">Waiting for results...</p></div>
+  <script type="module" src="./app.ts"></script>
+</body>
+</html>

@@ -2,6 +2,14 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import { z } from 'zod';
+import { readFileSync } from 'fs';
+import { join, dirname } from 'path';
+import { fileURLToPath } from 'url';
+import {
+  registerAppTool,
+  registerAppResource,
+  RESOURCE_MIME_TYPE,
+} from '@modelcontextprotocol/ext-apps/server';
 
 import { ConfigManager } from './config/config.js';
 import { ProviderManager } from './providers/manager.js';
@@ -94,6 +102,7 @@ export class RubberDuckServer {
 
     this.registerTools();
     this.registerPrompts();
+    this.registerUIResources();
 
     // Handle errors
     this.server.server.onerror = (error) => {
@@ -288,7 +297,8 @@ export class RubberDuckServer {
     );
 
     // compare_ducks
-    this.server.registerTool(
+    registerAppTool(
+      this.server,
       'compare_ducks',
       {
         description: 'Ask the same question to multiple ducks simultaneously',
@@ -301,6 +311,7 @@ export class RubberDuckServer {
           readOnlyHint: true,
           openWorldHint: true,
         },
+        _meta: { ui: { resourceUri: 'ui://rubber-duck/compare-ducks' } },
       },
       async (args) => {
         try {
@@ -341,7 +352,8 @@ export class RubberDuckServer {
     );
 
     // duck_vote
-    this.server.registerTool(
+    registerAppTool(
+      this.server,
       'duck_vote',
       {
         description: 'Have multiple ducks vote on options with reasoning. Returns vote tally, confidence scores, and consensus level.',
@@ -355,6 +367,7 @@ export class RubberDuckServer {
           readOnlyHint: true,
           openWorldHint: true,
         },
+        _meta: { ui: { resourceUri: 'ui://rubber-duck/duck-vote' } },
       },
       async (args) => {
         try {
@@ -421,7 +434,8 @@ export class RubberDuckServer {
     );
 
     // duck_debate
-    this.server.registerTool(
+    registerAppTool(
+      this.server,
       'duck_debate',
       {
         description: 'Structured multi-round debate between ducks. Supports oxford (pro/con), socratic (questioning), and adversarial (attack/defend) formats.',
@@ -436,6 +450,7 @@ export class RubberDuckServer {
           readOnlyHint: true,
           openWorldHint: true,
         },
+        _meta: { ui: { resourceUri: 'ui://rubber-duck/duck-debate' } },
       },
       async (args) => {
         try {
@@ -447,7 +462,8 @@ export class RubberDuckServer {
     );
 
     // get_usage_stats
-    this.server.registerTool(
+    registerAppTool(
+      this.server,
       'get_usage_stats',
       {
         description: 'Get usage statistics for a time period. Shows token counts and costs (when pricing configured).',
@@ -458,6 +474,7 @@ export class RubberDuckServer {
           readOnlyHint: true,
           openWorldHint: false,
         },
+        _meta: { ui: { resourceUri: 'ui://rubber-duck/usage-stats' } },
       },
       (args) => {
         try {
@@ -581,6 +598,44 @@ export class RubberDuckServer {
     }
   }
 
+  private registerUIResources() {
+    const currentDir = dirname(fileURLToPath(import.meta.url));
+    const uiDir = join(currentDir, '..', 'dist', 'ui');
+
+    const uiApps = [
+      { name: 'Compare Ducks', uri: 'ui://rubber-duck/compare-ducks', file: 'compare-ducks/mcp-app.html' },
+      { name: 'Duck Vote', uri: 'ui://rubber-duck/duck-vote', file: 'duck-vote/mcp-app.html' },
+      { name: 'Duck Debate', uri: 'ui://rubber-duck/duck-debate', file: 'duck-debate/mcp-app.html' },
+      { name: 'Usage Stats', uri: 'ui://rubber-duck/usage-stats', file: 'usage-stats/mcp-app.html' },
+    ];
+
+    for (const app of uiApps) {
+      registerAppResource(
+        this.server,
+        app.name,
+        app.uri,
+        { description: `Interactive UI for ${app.name}` },
+        () => {
+          let html: string;
+          try {
+            html = readFileSync(join(uiDir, app.file), 'utf-8');
+          } catch {
+            html = `<html><body><p>UI not built. Run npm run build:ui</p></body></html>`;
+          }
+          return {
+            contents: [
+              {
+                uri: app.uri,
+                mimeType: RESOURCE_MIME_TYPE,
+                text: html,
+              },
+            ],
+          };
+        }
+      );
+    }
+  }
+
   // MCP-enhanced tool handlers
   private async handleAskDuckWithMCP(args: Record<string, unknown>) {
     if (!this.enhancedProviderManager || !this.cache) {
@@ -641,11 +696,31 @@ export class RubberDuckServer {
       .map((response) => this.formatEnhancedDuckResponse(response))
       .join('\n\n═══════════════════════════════════════\n\n');
 
+    // Build structured data for UI consumption (same shape as compareDucksTool)
+    const structuredData = responses.map(r => ({
+      provider: r.provider,
+      nickname: r.nickname,
+      model: r.model,
+      content: r.content,
+      latency: r.latency,
+      tokens: r.usage ? {
+        prompt: r.usage.prompt_tokens,
+        completion: r.usage.completion_tokens,
+        total: r.usage.total_tokens,
+      } : null,
+      cached: r.cached,
+      error: r.content.startsWith('Error:') ? r.content : undefined,
+    }));
+
     return {
       content: [
         {
           type: 'text' as const,
           text: formattedResponse,
+        },
+        {
+          type: 'text' as const,
+          text: JSON.stringify(structuredData),
         },
       ],
     };

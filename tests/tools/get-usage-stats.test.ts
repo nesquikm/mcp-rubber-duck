@@ -62,9 +62,11 @@ describe('getUsageStatsTool', () => {
       const result = getUsageStatsTool(usageService, { period: 'today' });
 
       expect(result.content).toBeDefined();
-      expect(result.content).toHaveLength(1);
+      expect(result.content).toHaveLength(2);
       expect(result.content[0].type).toBe('text');
       expect(typeof result.content[0].text).toBe('string');
+      expect(result.content[1].type).toBe('text');
+      expect(() => JSON.parse(result.content[1].text)).not.toThrow();
     });
 
     it('should include period label in output', () => {

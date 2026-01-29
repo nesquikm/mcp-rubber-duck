@@ -76,11 +76,35 @@ export async function duckVoteTool(
     `winner: ${aggregatedResult.winner || 'none'}`
   );
 
+  // Build structured data for UI consumption
+  const structuredData = {
+    question: aggregatedResult.question,
+    options: aggregatedResult.options,
+    winner: aggregatedResult.winner,
+    isTie: aggregatedResult.isTie,
+    tally: aggregatedResult.tally,
+    confidenceByOption: aggregatedResult.confidenceByOption,
+    votes: aggregatedResult.votes.map(v => ({
+      voter: v.voter,
+      nickname: v.nickname,
+      choice: v.choice,
+      confidence: v.confidence,
+      reasoning: v.reasoning,
+    })),
+    totalVoters: aggregatedResult.totalVoters,
+    validVotes: aggregatedResult.validVotes,
+    consensusLevel: aggregatedResult.consensusLevel,
+  };
+
   return {
     content: [
       {
         type: 'text',
         text: formattedOutput,
+      },
+      {
+        type: 'text',
+        text: JSON.stringify(structuredData),
       },
     ],
   };

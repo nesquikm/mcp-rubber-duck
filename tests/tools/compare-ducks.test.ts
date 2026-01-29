@@ -58,10 +58,12 @@ describe('compareDucksTool', () => {
       undefined,
       { model: undefined }
     );
-    expect(result.content).toHaveLength(1);
+    expect(result.content).toHaveLength(2);
     expect(result.content[0].type).toBe('text');
     expect(result.content[0].text).toContain('Asked:');
     expect(result.content[0].text).toContain('What is TypeScript?');
+    expect(result.content[1].type).toBe('text');
+    expect(() => JSON.parse(result.content[1].text)).not.toThrow();
   });
 
   it('should display all duck responses', async () => {

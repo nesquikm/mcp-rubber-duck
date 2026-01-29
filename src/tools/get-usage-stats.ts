@@ -75,11 +75,25 @@ export function getUsageStatsTool(
 
   logger.info(`Retrieved usage stats for period: ${period}`);
 
+  // Build structured data for UI consumption
+  const structuredData = {
+    period: stats.period,
+    startDate: stats.startDate,
+    endDate: stats.endDate,
+    totals: stats.totals,
+    usage: stats.usage,
+    costByProvider: stats.costByProvider,
+  };
+
   return {
     content: [
       {
         type: 'text',
         text: output,
+      },
+      {
+        type: 'text',
+        text: JSON.stringify(structuredData),
       },
     ],
   };

@@ -22,5 +22,6 @@ export default {
     'src/**/*.ts',
     '!src/**/*.d.ts',
     '!src/index.ts',
+    '!src/ui/**',
   ],
 };

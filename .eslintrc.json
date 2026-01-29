@@ -36,6 +36,8 @@
     "node_modules/",
     "coverage/",
     "tests/",
-    "*.config.js"
+    "src/ui/",
+    "*.config.js",
+    "*.config.ts"
   ]
 }

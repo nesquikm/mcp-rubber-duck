@@ -20,6 +20,7 @@ An MCP (Model Context Protocol) server that acts as a bridge to query multiple O
 - [Claude Desktop Configuration](#claude-desktop-configuration)
 - [MCP Bridge](#mcp-bridge---connect-to-other-mcp-servers)
 - [Guardrails](#guardrails---safety--compliance-layer)
+- [Interactive UIs (MCP Apps)](#interactive-uis-mcp-apps)
 - [Available Tools](#available-tools)
   - [Basic Tools](#basic-tools)
   - [Multi-Agent Tools](#multi-agent-consensus--debate-tools)
@@ -29,8 +30,8 @@ An MCP (Model Context Protocol) server that acts as a bridge to query multiple O
   - [Recommended: Use Prompts as Templates](#recommended-use-prompts-as-templates)
 - [Usage Examples](#usage-examples)
 - [Provider-Specific Setup](#provider-specific-setup)
-- [Docker Support](#docker-support)
 - [Development](#development)
+- [Docker Support](#docker-support)
 - [Troubleshooting](#troubleshooting)
 - [Contributing](#contributing)
 
@@ -52,6 +53,7 @@ An MCP (Model Context Protocol) server that acts as a bridge to query multiple O
 - 🔗 **MCP Bridge**: Connect ducks to other MCP servers for extended functionality
 - 🛡️ **Guardrails**: Pluggable safety layer with rate limiting, token limits, pattern blocking, and PII redaction
 - 🔐 **Granular Security**: Per-server approval controls with session-based approvals
+- 🖼️ **Interactive UIs**: Rich HTML panels for compare, vote, debate, and usage tools (via [MCP Apps](https://github.com/modelcontextprotocol/ext-apps))
 - 🏷️ **Tool Annotations**: MCP-compliant hints for tool behavior (read-only, destructive, etc.)
 - 🎨 **Fun Duck Theme**: Rubber duck debugging with personality!
 
@@ -139,9 +141,6 @@ GROQ_DEFAULT_MODEL=llama-3.3-70b-versatile  # Optional: defaults to llama-3.3-70
 OLLAMA_BASE_URL=http://localhost:11434/v1  # Optional
 OLLAMA_DEFAULT_MODEL=llama3.2  # Optional: defaults to llama3.2
 
-# Together AI
-TOGETHER_API_KEY=...
-
 # Custom Providers (you can add multiple)
 # Format: CUSTOM_{NAME}_* where NAME becomes the provider key (lowercase)
 
@@ -179,7 +178,7 @@ OPENAI_NICKNAME="DUCK-4"              # Optional: defaults to "GPT Duck"
 GEMINI_NICKNAME="Duckmini"            # Optional: defaults to "Gemini Duck"
 GROQ_NICKNAME="Quackers"              # Optional: defaults to "Groq Duck"
 OLLAMA_NICKNAME="Local Quacker"       # Optional: defaults to "Local Duck"
-CUSTOM_NICKNAME="My Special Duck"     # Optional: defaults to "Custom Duck"
+# For custom providers, use: CUSTOM_{NAME}_NICKNAME (see custom provider section above)
 ```
 
 **Note:** Duck nicknames are completely optional! If you don't set them, you'll get the charming defaults (GPT Duck, Gemini Duck, etc.). If you use a `config.json` file, those nicknames take priority over environment variables.
@@ -600,6 +599,42 @@ Guardrails intercept at multiple points in the request lifecycle:
 | `pre_tool_input` | Before MCP tool execution | PII redactor |
 | `post_tool_output` | After MCP tool returns | PII redactor (restore) |
 
+## Interactive UIs (MCP Apps)
+
+Four tools — `compare_ducks`, `duck_vote`, `duck_debate`, and `get_usage_stats` — can render rich interactive HTML panels inside supported MCP clients via [MCP Apps](https://github.com/modelcontextprotocol/ext-apps). Once this MCP server is configured in a supporting client, the UIs appear automatically — no additional setup is required. Clients without MCP Apps support still receive the same plain text output (no functionality is lost). See the [MCP Apps repo](https://github.com/modelcontextprotocol/ext-apps) for an up-to-date list of supported clients.
+
+### Compare Ducks
+
+Compare multiple model responses side-by-side, with latency indicators, token counts, model badges, and error states.
+
+<p align="center">
+  <img src="assets/ext-apps-compare.png" alt="Compare Ducks interactive UI" width="600">
+</p>
+
+### Duck Vote
+
+Have multiple ducks vote on options, displayed as a visual vote tally with bar charts, consensus badge, winner card, confidence bars, and collapsible reasoning.
+
+<p align="center">
+  <img src="assets/ext-apps-vote.png" alt="Duck Vote interactive UI" width="600">
+</p>
+
+### Duck Debate
+
+Structured multi-round debate between ducks, shown as a round-by-round view with format badge, participant list, collapsible rounds, and synthesis section.
+
+<p align="center">
+  <img src="assets/ext-apps-debate.png" alt="Duck Debate interactive UI" width="600">
+</p>
+
+### Usage Stats
+
+Usage analytics with summary cards, provider breakdown with expandable rows, token distribution bars, and estimated costs.
+
+<p align="center">
+  <img src="assets/ext-apps-usage-stats.png" alt="Usage Stats interactive UI" width="600">
+</p>
+
 ## Available Tools
 
 ### Basic Tools
@@ -655,7 +690,7 @@ List available models for LLM providers.
 ```
 
 #### 🔍 compare_ducks
-Ask the same question to multiple providers simultaneously.
+Ask the same question to multiple providers simultaneously. Renders an [interactive UI](#compare-ducks) in supported clients.
 
 ```typescript
 {
@@ -674,7 +709,7 @@ Get responses from all configured ducks - like a panel discussion!
 ```
 
 #### 📊 get_usage_stats
-Get usage statistics and estimated costs for your duck queries.
+Get usage statistics and estimated costs for your duck queries. Renders an [interactive UI](#usage-stats) in supported clients.
 
 ```typescript
 {
@@ -691,7 +726,7 @@ Usage data is stored in `~/.mcp-rubber-duck/data/usage.json`.
 Research-backed tools for multi-agent coordination.
 
 #### 🗳️ duck_vote
-Have multiple ducks vote on options with reasoning and confidence scores.
+Have multiple ducks vote on options with reasoning and confidence scores. Renders an [interactive UI](#duck-vote) in supported clients.
 
 ```typescript
 {
@@ -733,7 +768,7 @@ Modes:
 - **critique-improve**: Alternates between critiquing and improving
 
 #### 🎓 duck_debate
-Structured multi-round debate between ducks.
+Structured multi-round debate between ducks. Renders an [interactive UI](#duck-debate) in supported clients.
 
 ```typescript
 {
@@ -1005,7 +1040,13 @@ ollama pull llama3.2
 
 ### Together AI
 1. Get API key from https://api.together.xyz/
-2. Add to environment: `TOGETHER_API_KEY=...`
+2. Configure as a custom provider:
+```env
+CUSTOM_TOGETHER_API_KEY=...
+CUSTOM_TOGETHER_BASE_URL=https://api.together.xyz/v1
+CUSTOM_TOGETHER_DEFAULT_MODEL=meta-llama/Llama-3.3-70B-Instruct-Turbo
+CUSTOM_TOGETHER_NICKNAME=Together Duck
+```
 
 ## Verifying OpenAI Compatibility
 
@@ -1217,10 +1258,13 @@ mcp-rubber-duck/
 ├── src/
 │   ├── server.ts           # MCP server implementation
 │   ├── config/             # Configuration management
+│   ├── data/               # Default pricing data
+│   ├── guardrails/         # Safety & compliance plugins
 │   ├── providers/          # OpenAI client wrapper
 │   ├── tools/              # MCP tool implementations
 │   ├── prompts/            # MCP prompt templates
 │   ├── services/           # Health, cache, conversations
+│   ├── ui/                 # Interactive UI apps (MCP Apps)
 │   └── utils/              # Logging, ASCII art
 ├── config/                 # Configuration examples
 └── tests/                  # Test suites
