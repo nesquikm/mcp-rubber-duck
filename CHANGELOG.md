@@ -1,3 +1,10 @@
+## [1.9.5](https://github.com/nesquikm/mcp-rubber-duck/compare/v1.9.4...v1.9.5) (2026-01-29)
+
+
+### Bug Fixes
+
+* allowlist GHSA-34x7-hfp2-rc4v (tar via npm internals) ([76718d8](https://github.com/nesquikm/mcp-rubber-duck/commit/76718d86391469b04e1d74792ed8ab212d547e3d))
+
 ## [1.9.4](https://github.com/nesquikm/mcp-rubber-duck/compare/v1.9.3...v1.9.4) (2026-01-26)
 
 
