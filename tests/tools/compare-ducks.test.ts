@@ -189,4 +189,23 @@ describe('compareDucksTool', () => {
     // (the code checks latency > 0)
     expect(result.content[0].text).not.toContain('0ms');
   });
+
+  it('should use compareDucksWithProgress when progress is provided', async () => {
+    mockProviderManager.compareDucksWithProgress = jest.fn().mockResolvedValue(mockResponses) as any;
+    const mockProgress = {
+      enabled: true,
+      report: jest.fn<() => Promise<void>>().mockResolvedValue(undefined),
+    };
+
+    await compareDucksTool(mockProviderManager, { prompt: 'Test' }, mockProgress);
+
+    expect(mockProviderManager.compareDucksWithProgress).toHaveBeenCalled();
+    expect(mockProviderManager.compareDucks).not.toHaveBeenCalled();
+  });
+
+  it('should use compareDucks when no progress is provided', async () => {
+    await compareDucksTool(mockProviderManager, { prompt: 'Test' });
+
+    expect(mockProviderManager.compareDucks).toHaveBeenCalled();
+  });
 });

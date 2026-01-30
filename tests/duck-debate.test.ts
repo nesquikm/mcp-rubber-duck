@@ -389,4 +389,84 @@ describe('duckDebateTool', () => {
     // Should not contain the full 900 A's
     expect(text).not.toContain('A'.repeat(900));
   });
+
+  it('should throw when signal is already aborted before starting', async () => {
+    const controller = new AbortController();
+    controller.abort();
+
+    await expect(
+      duckDebateTool(mockProviderManager, {
+        prompt: 'Test',
+        format: 'oxford',
+      }, undefined, controller.signal)
+    ).rejects.toThrow('Task cancelled');
+  });
+
+  it('should throw when signal is aborted between rounds', async () => {
+    const controller = new AbortController();
+    let callCount = 0;
+
+    // Use mockImplementation so we can abort after round 1 completes
+    mockCreate.mockImplementation(async () => {
+      callCount++;
+      // After both participants in round 1 finish (2 calls), abort
+      if (callCount === 2) {
+        controller.abort();
+      }
+      return {
+        choices: [{ message: { content: `Response ${callCount}` }, finish_reason: 'stop' }],
+        usage: { prompt_tokens: 10, completion_tokens: 20, total_tokens: 30 },
+        model: 'gpt-4',
+      };
+    });
+
+    await expect(
+      duckDebateTool(mockProviderManager, {
+        prompt: 'Test',
+        format: 'oxford',
+        rounds: 3,
+      }, undefined, controller.signal)
+    ).rejects.toThrow('Task cancelled');
+
+    // Only round 1 calls (2 participants), round 2 was never started
+    expect(mockCreate).toHaveBeenCalledTimes(2);
+  });
+
+  it('should report progress when a ProgressReporter is provided', async () => {
+    const mockProgress = {
+      enabled: true,
+      report: jest.fn<() => Promise<void>>().mockResolvedValue(undefined),
+    };
+
+    // 1 round, 2 participants + synthesis = 3 calls
+    mockCreate
+      .mockResolvedValueOnce({
+        choices: [{ message: { content: 'PRO' }, finish_reason: 'stop' }],
+        usage: { prompt_tokens: 10, completion_tokens: 20, total_tokens: 30 },
+        model: 'gpt-4',
+      })
+      .mockResolvedValueOnce({
+        choices: [{ message: { content: 'CON' }, finish_reason: 'stop' }],
+        usage: { prompt_tokens: 10, completion_tokens: 20, total_tokens: 30 },
+        model: 'gemini-pro',
+      })
+      .mockResolvedValueOnce({
+        choices: [{ message: { content: 'Synthesis' }, finish_reason: 'stop' }],
+        usage: { prompt_tokens: 10, completion_tokens: 20, total_tokens: 30 },
+        model: 'gpt-4',
+      });
+
+    await duckDebateTool(mockProviderManager, {
+      prompt: 'Test',
+      format: 'oxford',
+      rounds: 1,
+    }, mockProgress);
+
+    // 2 participants + 1 synthesis = 3 progress reports
+    expect(mockProgress.report).toHaveBeenCalledTimes(3);
+    // Total steps = 1 round * 2 participants + 1 synthesis = 3
+    expect(mockProgress.report).toHaveBeenNthCalledWith(1, 1, 3, expect.stringContaining('Round 1/1'));
+    expect(mockProgress.report).toHaveBeenNthCalledWith(2, 2, 3, expect.stringContaining('Round 1/1'));
+    expect(mockProgress.report).toHaveBeenNthCalledWith(3, 3, 3, 'Synthesis complete');
+  });
 });

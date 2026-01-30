@@ -190,6 +190,25 @@ describe('duckCouncilTool', () => {
     expect(result.content[0].text).not.toContain('tokens');
   });
 
+  it('should use compareDucksWithProgress when progress is provided', async () => {
+    mockProviderManager.compareDucksWithProgress = jest.fn().mockResolvedValue(mockResponses) as any;
+    const mockProgress = {
+      enabled: true,
+      report: jest.fn<() => Promise<void>>().mockResolvedValue(undefined),
+    };
+
+    await duckCouncilTool(mockProviderManager, { prompt: 'Test' }, mockProgress);
+
+    expect(mockProviderManager.compareDucksWithProgress).toHaveBeenCalled();
+    expect(mockProviderManager.duckCouncil).not.toHaveBeenCalled();
+  });
+
+  it('should use duckCouncil when no progress is provided', async () => {
+    await duckCouncilTool(mockProviderManager, { prompt: 'Test' });
+
+    expect(mockProviderManager.duckCouncil).toHaveBeenCalled();
+  });
+
   it('should show error message when all ducks fail', async () => {
     mockProviderManager.duckCouncil.mockResolvedValue([
       {

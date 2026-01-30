@@ -1283,6 +1283,14 @@ All tools include MCP-compliant annotations that describe their behavioral chara
 
 These help MCP clients make informed decisions about tool execution and user confirmations.
 
+### Async Task Support
+
+Long-running tools (`duck_iterate`, `duck_debate`) use the MCP SDK's experimental Tasks API for async execution. Instead of blocking the client, they return a task handle that can be polled for progress and results.
+
+- **Progress reporting** — All multi-provider tools (`compare_ducks`, `duck_council`, `duck_vote`, `duck_debate`, `duck_iterate`) emit `notifications/progress` as each provider responds.
+- **Cancellation** — Task-based tools accept an `AbortSignal`, checked between rounds, allowing clients to cancel mid-execution.
+- **Task lifecycle** — Managed by `TaskManager` (`src/services/task-manager.ts`), which wraps `InMemoryTaskStore` and handles background work, cancellation, and cleanup on shutdown.
+
 ## Troubleshooting
 
 ### Provider Not Working

@@ -1,10 +1,12 @@
 import { ProviderManager } from '../providers/manager.js';
 import { duckArt, getRandomDuckMessage } from '../utils/ascii-art.js';
 import { logger } from '../utils/logger.js';
+import type { ProgressReporter } from '../services/progress.js';
 
 export async function duckCouncilTool(
   providerManager: ProviderManager,
-  args: Record<string, unknown>
+  args: Record<string, unknown>,
+  progress?: ProgressReporter
 ) {
   const { prompt, model } = args as {
     prompt?: string;
@@ -19,13 +21,22 @@ export async function duckCouncilTool(
 
   // Get all available ducks
   const allProviders = providerManager.getProviderNames();
-  
+
   if (allProviders.length === 0) {
     throw new Error('No ducks available for the council!');
   }
 
-  // Get responses from all ducks
-  const responses = await providerManager.duckCouncil(prompt, { model });
+  // Get responses from all ducks, reporting progress as each completes
+  const responses = progress
+    ? await providerManager.compareDucksWithProgress(
+        prompt,
+        undefined,
+        { model },
+        (providerName, completed, total) => {
+          void progress.report(completed, total, `${providerName} responded (${completed}/${total})`);
+        }
+      )
+    : await providerManager.duckCouncil(prompt, { model });
 
   // Build council response with a panel discussion format
   let response = `${duckArt.panel}\n\n`;

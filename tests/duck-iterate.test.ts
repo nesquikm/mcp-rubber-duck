@@ -276,4 +276,85 @@ describe('duckIterateTool', () => {
     // Final response section should have the short refined response
     expect(text).toContain('Short refined response');
   });
+
+  it('should throw when signal is already aborted', async () => {
+    const controller = new AbortController();
+    controller.abort();
+
+    await expect(
+      duckIterateTool(mockProviderManager, {
+        prompt: 'Test',
+        providers: ['openai', 'gemini'],
+        mode: 'refine',
+      }, undefined, controller.signal)
+    ).rejects.toThrow('Task cancelled');
+  });
+
+  it('should throw when signal is aborted between iterations', async () => {
+    const controller = new AbortController();
+    let callCount = 0;
+
+    // Use mockImplementation so we can abort after round 1 completes
+    mockCreate.mockImplementation(async () => {
+      callCount++;
+      // After round 1 (first call = initial generation), abort
+      if (callCount === 1) {
+        controller.abort();
+      }
+      return {
+        choices: [{ message: { content: `Response ${callCount}` }, finish_reason: 'stop' }],
+        usage: { prompt_tokens: 10, completion_tokens: 20, total_tokens: 30 },
+        model: 'gpt-4',
+      };
+    });
+
+    await expect(
+      duckIterateTool(mockProviderManager, {
+        prompt: 'Test',
+        providers: ['openai', 'gemini'],
+        mode: 'refine',
+        iterations: 3,
+      }, undefined, controller.signal)
+    ).rejects.toThrow('Task cancelled');
+
+    // Only 1 call (initial generation), round 2 was never started
+    expect(mockCreate).toHaveBeenCalledTimes(1);
+  });
+
+  it('should report progress when a ProgressReporter is provided', async () => {
+    const mockProgress = {
+      enabled: true,
+      report: jest.fn<() => Promise<void>>().mockResolvedValue(undefined),
+    };
+
+    mockCreate
+      .mockResolvedValueOnce({
+        choices: [{ message: { content: 'Initial response' }, finish_reason: 'stop' }],
+        usage: { prompt_tokens: 10, completion_tokens: 20, total_tokens: 30 },
+        model: 'gpt-4',
+      })
+      .mockResolvedValueOnce({
+        choices: [{ message: { content: 'Refined response' }, finish_reason: 'stop' }],
+        usage: { prompt_tokens: 10, completion_tokens: 20, total_tokens: 30 },
+        model: 'gemini-pro',
+      })
+      .mockResolvedValueOnce({
+        choices: [{ message: { content: 'Final refinement' }, finish_reason: 'stop' }],
+        usage: { prompt_tokens: 10, completion_tokens: 20, total_tokens: 30 },
+        model: 'gpt-4',
+      });
+
+    await duckIterateTool(mockProviderManager, {
+      prompt: 'Test prompt',
+      providers: ['openai', 'gemini'],
+      mode: 'refine',
+      iterations: 3,
+    }, mockProgress);
+
+    // 3 rounds = 3 progress reports
+    expect(mockProgress.report).toHaveBeenCalledTimes(3);
+    expect(mockProgress.report).toHaveBeenNthCalledWith(1, 1, 3, expect.stringContaining('Round 1/3'));
+    expect(mockProgress.report).toHaveBeenNthCalledWith(2, 2, 3, expect.stringContaining('Round 2/3'));
+    expect(mockProgress.report).toHaveBeenNthCalledWith(3, 3, 3, expect.stringContaining('Round 3/3'));
+  });
 });

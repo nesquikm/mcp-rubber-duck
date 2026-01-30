@@ -7,6 +7,7 @@ import {
   DebateResult,
 } from '../config/types.js';
 import { logger } from '../utils/logger.js';
+import type { ProgressReporter } from '../services/progress.js';
 
 export interface DuckDebateArgs {
   prompt: string;
@@ -20,7 +21,9 @@ const DEFAULT_ROUNDS = 3;
 
 export async function duckDebateTool(
   providerManager: ProviderManager,
-  args: Record<string, unknown>
+  args: Record<string, unknown>,
+  progress?: ProgressReporter,
+  signal?: AbortSignal
 ) {
   const {
     prompt,
@@ -73,13 +76,23 @@ export async function duckDebateTool(
 
   // Run debate rounds
   const debateRounds: DebateArgument[][] = [];
+  const totalSteps = rounds * participants.length + 1; // +1 for synthesis
+  let completedSteps = 0;
 
   for (let roundNum = 1; roundNum <= rounds; roundNum++) {
+    if (signal?.aborted) {
+      throw new Error('Task cancelled');
+    }
+
     logger.info(`Debate round ${roundNum}/${rounds}`);
     const roundArguments: DebateArgument[] = [];
 
     // Each participant argues in this round
     for (const participant of participants) {
+      if (signal?.aborted) {
+        throw new Error('Task cancelled');
+      }
+
       const argumentPrompt = buildArgumentPrompt(
         prompt,
         format,
@@ -99,15 +112,32 @@ export async function duckDebateTool(
         content: response.content,
         timestamp: new Date(),
       });
+
+      completedSteps++;
+      if (progress) {
+        void progress.report(
+          completedSteps,
+          totalSteps,
+          `Round ${roundNum}/${rounds}: ${participant.nickname} (${participant.position})`
+        );
+      }
     }
 
     debateRounds.push(roundArguments);
+  }
+
+  if (signal?.aborted) {
+    throw new Error('Task cancelled');
   }
 
   // Generate synthesis
   const synthesizerProvider = synthesizer || debateProviders[0];
   const synthesisPrompt = buildSynthesisPrompt(prompt, format, debateRounds, participants);
   const synthesisResponse = await providerManager.askDuck(synthesizerProvider, synthesisPrompt);
+
+  if (progress) {
+    void progress.report(totalSteps, totalSteps, 'Synthesis complete');
+  }
 
   const result: DebateResult = {
     topic: prompt,

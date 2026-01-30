@@ -183,6 +183,51 @@ export class ProviderManager {
     return Promise.all(promises);
   }
 
+  async compareDucksWithProgress(
+    prompt: string,
+    providerNames: string[] | undefined,
+    options: Partial<ChatOptions> | undefined,
+    onProviderComplete: (providerName: string, completed: number, total: number) => void
+  ): Promise<DuckResponse[]> {
+    const providersToUse = providerNames
+      ? providerNames.map(name => this.providers.get(name)).filter(Boolean)
+      : Array.from(this.providers.values());
+
+    if (providersToUse.length === 0) {
+      throw new Error('No valid providers specified');
+    }
+
+    const total = providersToUse.length;
+    let completed = 0;
+
+    const promises = providersToUse.map(provider =>
+      provider ? this.askDuck(provider.name, prompt, options)
+        .catch(error => ({
+          provider: provider.name,
+          nickname: provider.nickname,
+          model: '',
+          content: `Error: ${error instanceof Error ? error.message : String(error)}`,
+          latency: 0,
+          cached: false,
+        }))
+        .then(result => {
+          completed++;
+          onProviderComplete(provider.name, completed, total);
+          return result;
+        })
+      : Promise.resolve({
+          provider: 'unknown',
+          nickname: 'Unknown',
+          model: '',
+          content: 'Error: Invalid provider',
+          latency: 0,
+          cached: false,
+        })
+    );
+
+    return Promise.all(promises);
+  }
+
   async duckCouncil(
     prompt: string,
     options?: Partial<ChatOptions>

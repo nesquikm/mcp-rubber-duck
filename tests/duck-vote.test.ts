@@ -266,6 +266,76 @@ describe('duckVoteTool', () => {
     mockProviderManager.getProviderNames = originalGetProviderNames;
   });
 
+  it('should use compareDucksWithProgress when progress is provided', async () => {
+    const mockProgress = {
+      enabled: true,
+      report: jest.fn<() => Promise<void>>().mockResolvedValue(undefined),
+    };
+
+    mockCreate
+      .mockResolvedValueOnce({
+        choices: [{
+          message: { content: '{"choice": "Option A", "confidence": 80, "reasoning": "Good"}' },
+          finish_reason: 'stop',
+        }],
+        usage: { prompt_tokens: 10, completion_tokens: 20, total_tokens: 30 },
+        model: 'gpt-4',
+      })
+      .mockResolvedValueOnce({
+        choices: [{
+          message: { content: '{"choice": "Option A", "confidence": 75, "reasoning": "Also good"}' },
+          finish_reason: 'stop',
+        }],
+        usage: { prompt_tokens: 10, completion_tokens: 20, total_tokens: 30 },
+        model: 'gemini-pro',
+      });
+
+    await duckVoteTool(mockProviderManager, {
+      question: 'Best approach?',
+      options: ['Option A', 'Option B'],
+    }, mockProgress);
+
+    // 2 voters = 2 progress reports
+    expect(mockProgress.report).toHaveBeenCalledTimes(2);
+    expect(mockProgress.report).toHaveBeenNthCalledWith(1, 1, 2, expect.stringContaining('voted'));
+    expect(mockProgress.report).toHaveBeenNthCalledWith(2, 2, 2, expect.stringContaining('voted'));
+  });
+
+  it('should use compareDucks when no progress is provided', async () => {
+    mockCreate
+      .mockResolvedValueOnce({
+        choices: [{
+          message: { content: '{"choice": "Option A", "confidence": 80}' },
+          finish_reason: 'stop',
+        }],
+        usage: { prompt_tokens: 10, completion_tokens: 20, total_tokens: 30 },
+        model: 'gpt-4',
+      })
+      .mockResolvedValueOnce({
+        choices: [{
+          message: { content: '{"choice": "Option A", "confidence": 75}' },
+          finish_reason: 'stop',
+        }],
+        usage: { prompt_tokens: 10, completion_tokens: 20, total_tokens: 30 },
+        model: 'gemini-pro',
+      });
+
+    // Spy on compareDucks to ensure it's called (not compareDucksWithProgress)
+    const compareDucksSpy = jest.spyOn(mockProviderManager, 'compareDucks');
+    const compareDucksWithProgressSpy = jest.spyOn(mockProviderManager, 'compareDucksWithProgress');
+
+    await duckVoteTool(mockProviderManager, {
+      question: 'Best approach?',
+      options: ['Option A', 'Option B'],
+    });
+
+    expect(compareDucksSpy).toHaveBeenCalled();
+    expect(compareDucksWithProgressSpy).not.toHaveBeenCalled();
+
+    compareDucksSpy.mockRestore();
+    compareDucksWithProgressSpy.mockRestore();
+  });
+
   it('should handle case when no valid votes result in no winner', async () => {
     // Both responses don't mention any valid option
     mockCreate

@@ -1,6 +1,7 @@
 import { ProviderManager } from '../providers/manager.js';
 import { IterationRound, IterationResult } from '../config/types.js';
 import { logger } from '../utils/logger.js';
+import type { ProgressReporter } from '../services/progress.js';
 
 export interface DuckIterateArgs {
   prompt: string;
@@ -14,7 +15,9 @@ const CONVERGENCE_THRESHOLD = 0.8; // 80% similarity indicates convergence
 
 export async function duckIterateTool(
   providerManager: ProviderManager,
-  args: Record<string, unknown>
+  args: Record<string, unknown>,
+  progress?: ProgressReporter,
+  signal?: AbortSignal
 ) {
   const {
     prompt,
@@ -54,6 +57,10 @@ export async function duckIterateTool(
   let lastResponse = '';
   let converged = false;
 
+  if (signal?.aborted) {
+    throw new Error('Task cancelled');
+  }
+
   // Round 1: Initial generation by provider A
   const initialResponse = await providerManager.askDuck(providers[0], prompt);
   const providerAInfo = providerManager.getProvider(providers[0]);
@@ -70,8 +77,16 @@ export async function duckIterateTool(
   lastResponse = initialResponse.content;
   logger.info(`Round 1: ${providers[0]} generated initial response`);
 
+  if (progress) {
+    void progress.report(1, iterations, `Round 1/${iterations}: ${providers[0]} generated`);
+  }
+
   // Subsequent rounds: Alternate between providers
   for (let i = 2; i <= iterations; i++) {
+    if (signal?.aborted) {
+      throw new Error('Task cancelled');
+    }
+
     const isProviderA = i % 2 === 1;
     const currentProvider = isProviderA ? providers[0] : providers[1];
     const providerInfo = providerManager.getProvider(currentProvider);
@@ -99,6 +114,10 @@ export async function duckIterateTool(
 
     lastResponse = response.content;
     logger.info(`Round ${i}: ${currentProvider} ${role === 'critic' ? 'critiqued' : 'refined'}`);
+
+    if (progress) {
+      void progress.report(i, iterations, `Round ${i}/${iterations}: ${currentProvider} ${role}`);
+    }
 
     if (converged) {
       break;

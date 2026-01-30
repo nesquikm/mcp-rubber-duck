@@ -371,6 +371,127 @@ describe('ProviderManager', () => {
   });
 });
 
+describe('ProviderManager compareDucksWithProgress', () => {
+  let manager: ProviderManager;
+  let mockConfigManager: jest.Mocked<ConfigManager>;
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+
+    mockCreate.mockResolvedValue({
+      choices: [{
+        message: { content: 'Mocked response' },
+        finish_reason: 'stop',
+      }],
+      usage: {
+        prompt_tokens: 10,
+        completion_tokens: 20,
+        total_tokens: 30,
+      },
+      model: 'mock-model',
+    });
+
+    mockConfigManager = {
+      getConfig: jest.fn().mockReturnValue({
+        providers: {
+          test1: {
+            api_key: 'key1',
+            base_url: 'https://api1.test.com/v1',
+            default_model: 'model1',
+            nickname: 'Duck 1',
+            models: ['model1'],
+          },
+          test2: {
+            api_key: 'key2',
+            base_url: 'https://api2.test.com/v1',
+            default_model: 'model2',
+            nickname: 'Duck 2',
+            models: ['model2'],
+          },
+        },
+        default_provider: 'test1',
+        cache_ttl: 300,
+        enable_failover: true,
+        default_temperature: 0.7,
+      }),
+    } as any;
+
+    manager = new ProviderManager(mockConfigManager);
+
+    const provider1 = manager.getProvider('test1');
+    const provider2 = manager.getProvider('test2');
+    provider1['client'].chat.completions.create = mockCreate;
+    provider2['client'].chat.completions.create = mockCreate;
+  });
+
+  it('should call onProviderComplete for each provider', async () => {
+    const onComplete = jest.fn();
+
+    await manager.compareDucksWithProgress('Hello', ['test1', 'test2'], undefined, onComplete);
+
+    expect(onComplete).toHaveBeenCalledTimes(2);
+    // First call: completed=1, total=2
+    expect(onComplete).toHaveBeenNthCalledWith(1, expect.any(String), 1, 2);
+    // Second call: completed=2, total=2
+    expect(onComplete).toHaveBeenNthCalledWith(2, expect.any(String), 2, 2);
+  });
+
+  it('should return responses from all providers', async () => {
+    const onComplete = jest.fn();
+
+    const responses = await manager.compareDucksWithProgress('Hello', ['test1', 'test2'], undefined, onComplete);
+
+    expect(responses).toHaveLength(2);
+    expect(responses[0].provider).toBe('test1');
+    expect(responses[1].provider).toBe('test2');
+    expect(responses[0].content).toBe('Mocked response');
+  });
+
+  it('should use all providers when providerNames is undefined', async () => {
+    const onComplete = jest.fn();
+
+    const responses = await manager.compareDucksWithProgress('Hello', undefined, undefined, onComplete);
+
+    expect(responses).toHaveLength(2);
+    expect(onComplete).toHaveBeenCalledTimes(2);
+  });
+
+  it('should call onProviderComplete even when a provider errors', async () => {
+    const provider1 = manager.getProvider('test1');
+    provider1['client'].chat.completions.create = jest.fn().mockRejectedValue(new Error('API Error'));
+
+    const onComplete = jest.fn();
+
+    const responses = await manager.compareDucksWithProgress('Hello', ['test1', 'test2'], undefined, onComplete);
+
+    // Both callbacks should fire (error path included via .catch().then())
+    expect(onComplete).toHaveBeenCalledTimes(2);
+    expect(responses).toHaveLength(2);
+    expect(responses[0].content).toContain('Error');
+    expect(responses[1].content).toBe('Mocked response');
+  });
+
+  it('should throw when no valid providers specified', async () => {
+    const onComplete = jest.fn();
+
+    await expect(
+      manager.compareDucksWithProgress('Hello', ['nonexistent'], undefined, onComplete)
+    ).rejects.toThrow('No valid providers specified');
+
+    expect(onComplete).not.toHaveBeenCalled();
+  });
+
+  it('should pass options through to askDuck', async () => {
+    const onComplete = jest.fn();
+    const askDuckSpy = jest.spyOn(manager, 'askDuck');
+
+    await manager.compareDucksWithProgress('Hello', ['test1'], { model: 'custom-model' }, onComplete);
+
+    expect(askDuckSpy).toHaveBeenCalledWith('test1', 'Hello', { model: 'custom-model' });
+    askDuckSpy.mockRestore();
+  });
+});
+
 describe('ProviderManager Error Cases', () => {
   it('should throw error when no default provider and none specified', () => {
     const mockConfigManager = {

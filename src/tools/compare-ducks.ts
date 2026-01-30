@@ -1,10 +1,12 @@
 import { ProviderManager } from '../providers/manager.js';
 import { duckArt } from '../utils/ascii-art.js';
 import { logger } from '../utils/logger.js';
+import type { ProgressReporter } from '../services/progress.js';
 
 export async function compareDucksTool(
   providerManager: ProviderManager,
-  args: Record<string, unknown>
+  args: Record<string, unknown>,
+  progress?: ProgressReporter
 ) {
   const { prompt, providers, model } = args as {
     prompt?: string;
@@ -16,8 +18,17 @@ export async function compareDucksTool(
     throw new Error('Prompt is required');
   }
 
-  // Get responses from multiple ducks
-  const responses = await providerManager.compareDucks(prompt, providers, { model });
+  // Get responses from multiple ducks, reporting progress as each completes
+  const responses = progress
+    ? await providerManager.compareDucksWithProgress(
+        prompt,
+        providers,
+        { model },
+        (providerName, completed, total) => {
+          void progress.report(completed, total, `${providerName} responded (${completed}/${total})`);
+        }
+      )
+    : await providerManager.compareDucks(prompt, providers, { model });
 
   // Build comparison response
   let response = `${duckArt.panel}\n`;

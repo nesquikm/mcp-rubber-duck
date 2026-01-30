@@ -2,6 +2,7 @@ import { ProviderManager } from '../providers/manager.js';
 import { ConsensusService } from '../services/consensus.js';
 import { VoteResult } from '../config/types.js';
 import { logger } from '../utils/logger.js';
+import type { ProgressReporter } from '../services/progress.js';
 
 export interface DuckVoteArgs {
   question: string;
@@ -12,7 +13,8 @@ export interface DuckVoteArgs {
 
 export async function duckVoteTool(
   providerManager: ProviderManager,
-  args: Record<string, unknown>
+  args: Record<string, unknown>,
+  progress?: ProgressReporter
 ) {
   const {
     question,
@@ -52,8 +54,17 @@ export async function duckVoteTool(
     require_reasoning
   );
 
-  // Get votes from all ducks in parallel
-  const responses = await providerManager.compareDucks(votePrompt, voterNames);
+  // Get votes from all ducks in parallel, reporting progress as each votes
+  const responses = progress
+    ? await providerManager.compareDucksWithProgress(
+        votePrompt,
+        voterNames,
+        undefined,
+        (providerName, completed, total) => {
+          void progress.report(completed, total, `${providerName} voted (${completed}/${total})`);
+        }
+      )
+    : await providerManager.compareDucks(votePrompt, voterNames);
 
   // Parse votes
   const votes: VoteResult[] = responses.map(response => {

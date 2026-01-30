@@ -24,6 +24,8 @@ import { DuckResponse } from './config/types.js';
 import { ApprovalService } from './services/approval.js';
 import { FunctionBridge } from './services/function-bridge.js';
 import { GuardrailsService } from './guardrails/service.js';
+import { TaskManager } from './services/task-manager.js';
+import { createProgressReporter } from './services/progress.js';
 import { logger } from './utils/logger.js';
 import { duckArt, getRandomDuckMessage } from './utils/ascii-art.js';
 
@@ -69,13 +71,32 @@ export class RubberDuckServer {
   private functionBridge?: FunctionBridge;
   private mcpEnabled: boolean = false;
 
+  // Task management
+  private taskManager: TaskManager;
+
   constructor() {
+    this.taskManager = new TaskManager();
+
     this.server = new McpServer(
       {
         name: 'mcp-rubber-duck',
         version: '1.0.0',
       },
-      {}
+      {
+        capabilities: {
+          tasks: {
+            list: {},
+            cancel: {},
+            requests: {
+              tools: { call: {} },
+            },
+          },
+        },
+        taskStore: this.taskManager.taskStore,
+        taskMessageQueue: this.taskManager.taskMessageQueue,
+        defaultTaskPollInterval: this.taskManager.config.pollInterval,
+        maxTaskQueueSize: this.taskManager.config.maxQueueSize,
+      }
     );
 
     // Initialize managers
@@ -313,12 +334,13 @@ export class RubberDuckServer {
         },
         _meta: { ui: { resourceUri: 'ui://rubber-duck/compare-ducks' } },
       },
-      async (args) => {
+      async (args, extra) => {
         try {
+          const progress = createProgressReporter(extra._meta?.progressToken, extra.sendNotification);
           if (this.mcpEnabled && this.enhancedProviderManager) {
-            return this.toolResult(await this.handleCompareDucksWithMCP(args as Record<string, unknown>));
+            return this.toolResult(await this.handleCompareDucksWithMCP(args as Record<string, unknown>, progress));
           }
-          return this.toolResult(await compareDucksTool(this.providerManager, args as Record<string, unknown>));
+          return this.toolResult(await compareDucksTool(this.providerManager, args as Record<string, unknown>, progress));
         } catch (error) {
           return this.toolErrorResult(error);
         }
@@ -339,12 +361,13 @@ export class RubberDuckServer {
           openWorldHint: true,
         },
       },
-      async (args) => {
+      async (args, extra) => {
         try {
+          const progress = createProgressReporter(extra._meta?.progressToken, extra.sendNotification);
           if (this.mcpEnabled && this.enhancedProviderManager) {
-            return this.toolResult(await this.handleDuckCouncilWithMCP(args as Record<string, unknown>));
+            return this.toolResult(await this.handleDuckCouncilWithMCP(args as Record<string, unknown>, progress));
           }
-          return this.toolResult(await duckCouncilTool(this.providerManager, args as Record<string, unknown>));
+          return this.toolResult(await duckCouncilTool(this.providerManager, args as Record<string, unknown>, progress));
         } catch (error) {
           return this.toolErrorResult(error);
         }
@@ -369,9 +392,10 @@ export class RubberDuckServer {
         },
         _meta: { ui: { resourceUri: 'ui://rubber-duck/duck-vote' } },
       },
-      async (args) => {
+      async (args, extra) => {
         try {
-          return this.toolResult(await duckVoteTool(this.providerManager, args as Record<string, unknown>));
+          const progress = createProgressReporter(extra._meta?.progressToken, extra.sendNotification);
+          return this.toolResult(await duckVoteTool(this.providerManager, args as Record<string, unknown>, progress));
         } catch (error) {
           return this.toolErrorResult(error);
         }
@@ -408,8 +432,8 @@ export class RubberDuckServer {
       }
     );
 
-    // duck_iterate
-    this.server.registerTool(
+    // duck_iterate (task-based: supports async execution for long-running iterations)
+    this.server.experimental.tasks.registerToolTask(
       'duck_iterate',
       {
         description: 'Iteratively refine a response between two ducks. One generates, the other critiques/improves, alternating for multiple rounds.',
@@ -423,19 +447,36 @@ export class RubberDuckServer {
           readOnlyHint: true,
           openWorldHint: true,
         },
+        execution: {
+          taskSupport: 'optional',
+        },
       },
-      async (args) => {
-        try {
-          return this.toolResult(await duckIterateTool(this.providerManager, args as Record<string, unknown>));
-        } catch (error) {
-          return this.toolErrorResult(error);
-        }
+      {
+        createTask: async (args, extra) => {
+          const task = await extra.taskStore.createTask({
+            ttl: this.taskManager.config.defaultTtl,
+            pollInterval: this.taskManager.config.pollInterval,
+          });
+          const progress = createProgressReporter(extra._meta?.progressToken, extra.sendNotification);
+          this.taskManager.startBackground(task.taskId, async (signal) => {
+            return this.toolResult(
+              await duckIterateTool(this.providerManager, args as Record<string, unknown>, progress, signal)
+            );
+          });
+          return { task };
+        },
+        getTask: async (_args, extra) => {
+          const task = await extra.taskStore.getTask(extra.taskId);
+          return task;
+        },
+        getTaskResult: async (_args, extra) => {
+          return await extra.taskStore.getTaskResult(extra.taskId) as CallToolResult;
+        },
       }
     );
 
-    // duck_debate
-    registerAppTool(
-      this.server,
+    // duck_debate (task-based: supports async execution for multi-round debates)
+    this.server.experimental.tasks.registerToolTask(
       'duck_debate',
       {
         description: 'Structured multi-round debate between ducks. Supports oxford (pro/con), socratic (questioning), and adversarial (attack/defend) formats.',
@@ -451,13 +492,31 @@ export class RubberDuckServer {
           openWorldHint: true,
         },
         _meta: { ui: { resourceUri: 'ui://rubber-duck/duck-debate' } },
+        execution: {
+          taskSupport: 'optional',
+        },
       },
-      async (args) => {
-        try {
-          return this.toolResult(await duckDebateTool(this.providerManager, args as Record<string, unknown>));
-        } catch (error) {
-          return this.toolErrorResult(error);
-        }
+      {
+        createTask: async (args, extra) => {
+          const task = await extra.taskStore.createTask({
+            ttl: this.taskManager.config.defaultTtl,
+            pollInterval: this.taskManager.config.pollInterval,
+          });
+          const progress = createProgressReporter(extra._meta?.progressToken, extra.sendNotification);
+          this.taskManager.startBackground(task.taskId, async (signal) => {
+            return this.toolResult(
+              await duckDebateTool(this.providerManager, args as Record<string, unknown>, progress, signal)
+            );
+          });
+          return { task };
+        },
+        getTask: async (_args, extra) => {
+          const task = await extra.taskStore.getTask(extra.taskId);
+          return task;
+        },
+        getTaskResult: async (_args, extra) => {
+          return await extra.taskStore.getTaskResult(extra.taskId) as CallToolResult;
+        },
       }
     );
 
@@ -677,7 +736,7 @@ export class RubberDuckServer {
     };
   }
 
-  private async handleCompareDucksWithMCP(args: Record<string, unknown>) {
+  private async handleCompareDucksWithMCP(args: Record<string, unknown>, progress?: import('./services/progress.js').ProgressReporter) {
     if (!this.enhancedProviderManager) {
       throw new Error('Enhanced provider manager not available');
     }
@@ -688,9 +747,16 @@ export class RubberDuckServer {
       model?: string;
     };
 
-    const responses = await this.enhancedProviderManager.compareDucksWithMCP(prompt, providers, {
-      model,
-    });
+    const responses = progress
+      ? await this.enhancedProviderManager.compareDucksWithProgressMCP(
+          prompt,
+          providers,
+          { model },
+          (providerName, completed, total) => {
+            void progress.report(completed, total, `${providerName} responded (${completed}/${total})`);
+          }
+        )
+      : await this.enhancedProviderManager.compareDucksWithMCP(prompt, providers, { model });
 
     const formattedResponse = responses
       .map((response) => this.formatEnhancedDuckResponse(response))
@@ -726,14 +792,23 @@ export class RubberDuckServer {
     };
   }
 
-  private async handleDuckCouncilWithMCP(args: Record<string, unknown>) {
+  private async handleDuckCouncilWithMCP(args: Record<string, unknown>, progress?: import('./services/progress.js').ProgressReporter) {
     if (!this.enhancedProviderManager) {
       throw new Error('Enhanced provider manager not available');
     }
 
     const { prompt, model } = args as { prompt: string; model?: string };
 
-    const responses = await this.enhancedProviderManager.duckCouncilWithMCP(prompt, { model });
+    const responses = progress
+      ? await this.enhancedProviderManager.compareDucksWithProgressMCP(
+          prompt,
+          undefined,
+          { model },
+          (providerName, completed, total) => {
+            void progress.report(completed, total, `${providerName} responded (${completed}/${total})`);
+          }
+        )
+      : await this.enhancedProviderManager.duckCouncilWithMCP(prompt, { model });
 
     const header = '🦆 Duck Council in Session 🦆\n=============================';
     const formattedResponse = responses
@@ -839,6 +914,9 @@ export class RubberDuckServer {
   }
 
   async stop() {
+    // Cleanup task manager (cancel active tasks, clear timers)
+    this.taskManager.shutdown();
+
     // Cleanup usage service (flush pending writes)
     this.usageService.shutdown();
 
