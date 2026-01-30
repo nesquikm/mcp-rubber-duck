@@ -1,3 +1,10 @@
+# [1.11.0](https://github.com/nesquikm/mcp-rubber-duck/compare/v1.10.0...v1.11.0) (2026-01-30)
+
+
+### Features
+
+* add progress reporting and async task support for multi-provider tools ([d9d6802](https://github.com/nesquikm/mcp-rubber-duck/commit/d9d68023ede7bf74fc6917b4adcdb97d3badb982))
+
 # [1.10.0](https://github.com/nesquikm/mcp-rubber-duck/compare/v1.9.5...v1.10.0) (2026-01-29)
 
 
