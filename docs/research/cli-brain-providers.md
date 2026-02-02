@@ -1,149 +1,185 @@
 # Research: CLI Coding Agents as Duck Brains
 
-> This document contains research findings for using CLI coding agents (OpenAI Codex CLI, Google Gemini CLI, Anthropic Claude Code CLI) as duck "brains" — spawning CLI processes instead of making HTTP API calls.
+> This document contains research findings for using CLI coding agents as duck "brains" — spawning CLI processes instead of making HTTP API calls.
 
 See the corresponding GitHub issue for discussion and tracking.
 
 ## Summary
 
-All three CLI tools support non-interactive execution with JSON output, making integration feasible. **The recommended approach is CLI subprocess spawning (not SDKs)** because it allows users to leverage their existing subscriptions (ChatGPT Plus/Pro, Google AI, Claude Pro/Max) instead of per-token API pricing, and avoids third-party auth restrictions.
+Multiple CLI coding agents support non-interactive execution, making integration feasible. **The recommended approach is CLI subprocess spawning (not SDKs)** because it allows users to leverage their existing subscriptions instead of per-token API pricing, avoids third-party auth restrictions, and provides a uniform integration pattern for any CLI tool.
+
+The architecture should support **built-in presets** for major CLI tools (Codex, Gemini, Claude Code) plus a **fully configurable custom provider** for any CLI tool that can take a prompt and return text.
 
 ## Why CLI Subprocess Over SDKs
 
-SDKs exist for Codex (`@openai/codex-sdk`) and Claude Code (`@anthropic-ai/claude-agent-sdk`), but **using the CLI tools directly is the better approach**:
-
 | Concern | CLI Subprocess | SDK |
 |---------|---------------|-----|
-| **Codex pricing** | User's ChatGPT subscription (OAuth) | ChatGPT subscription (OAuth supported) |
-| **Gemini pricing** | User's free tier or Google AI subscription (OAuth) | No SDK exists — subprocess is the only option |
-| **Claude pricing** | User's Claude Pro/Max subscription (OAuth) | **Per-token API pricing only** — Anthropic blocks subscription auth for third-party SDK usage |
-| **Auth management** | None — user pre-configures their CLI | We must manage API keys per provider |
-| **Uniform interface** | Same `spawn()` pattern for all three | Different SDK APIs, Gemini has none |
+| **Claude pricing** | User's Claude Pro/Max subscription (OAuth) | **Blocked** — Anthropic prohibits subscription auth for third-party SDK usage |
+| **Codex pricing** | User's ChatGPT subscription (OAuth) | OAuth supported too |
+| **Gemini pricing** | User's free tier / Google AI subscription | **No SDK exists** |
+| **Auth management** | None — user pre-configures their CLI | Must manage API keys per provider |
+| **Custom tools** | Any CLI tool works via generic config | Must write/find an SDK for each |
+| **Uniform interface** | Same `spawn()` pattern for all | Different SDK APIs |
 
-**The decisive factor is Claude Code:** Anthropic explicitly prohibits third-party apps from using Claude.ai subscription OAuth via the Agent SDK. But when we spawn the `claude` CLI, the user's own pre-configured subscription auth applies — no restriction.
+**The decisive factor:** Anthropic blocks subscription OAuth for third-party SDK apps. Spawning the `claude` CLI avoids this — the user's own auth applies transparently. And the generic config approach means we support *any* CLI tool, not just the ones with SDKs.
 
-## Research Findings
+## CLI Agent Landscape
 
-### 1. OpenAI Codex CLI
+### Tier 1: Full JSON Output + Headless Mode
 
-| Attribute | Details |
-|-----------|---------|
-| **Repository** | [github.com/openai/codex](https://github.com/openai/codex) |
-| **License** | Apache-2.0 (fully open source) |
-| **Language** | Rust |
-| **Non-interactive mode** | `codex exec "prompt"` |
-| **JSON output** | `--json` flag (JSONL event stream to stdout) |
-| **Structured output** | `--output-schema <file>` enforces JSON schema on response |
-| **Auto-approve tools** | `--full-auto` or `--yolo` |
-| **Session resume** | `codex exec resume --last "follow-up"` |
-| **Auth (subscription)** | `codex login` → browser OAuth → ChatGPT Plus/Pro |
-| **Auth (API key)** | `CODEX_API_KEY` or `OPENAI_API_KEY` env var |
+| Tool | Command | JSON Output | Subscription Auth | License |
+|------|---------|-------------|-------------------|---------|
+| **Claude Code** | `claude -p "prompt"` | `--output-format json` | `claude login` (OAuth) | Proprietary |
+| **Codex** | `codex exec "prompt"` | `--json` (JSONL) | `codex login` (OAuth) | Apache-2.0 |
+| **Gemini CLI** | `gemini -p "prompt"` | `--output-format json` | Google OAuth (first-run) | Apache-2.0 |
+| **OpenCode** | `opencode -p "prompt"` | `-f json` | N/A (75+ provider API keys) | MIT |
 
-**Key integration pattern:**
-```bash
-codex exec --json "your prompt" --skip-git-repo-check --full-auto
-# stdout: JSONL events; stderr: progress
-```
+### Tier 2: Headless Mode, Text Output Only
 
-**Subscription pricing:** ChatGPT Plus ($20/mo), Pro ($200/mo) — usage limits per 5-hour window, no per-token charges.
+| Tool | Command | JSON Output | Auth | License |
+|------|---------|-------------|------|---------|
+| **Grok CLI** (superagent-ai) | `grok -p "prompt"` | None | `GROK_API_KEY` (manual from console.x.ai) | MIT |
+| **Aider** | `aider -m "prompt"` | None | Provider API keys | Apache-2.0 |
+| **Cline CLI** | `cline "prompt"` | Via gRPC API | Provider API keys | Apache-2.0 |
+| **Qwen Code** | `qwen -p "prompt"` | Unknown | Qwen OAuth (2K free req/day) | Apache-2.0 |
 
-**Limitations:**
-- Requires git repo (override with `--skip-git-repo-check`)
-- JSONL output doesn't include token counts
-- `OPENAI_API_KEY` in `.env` can silently override OAuth (causes unexpected per-token billing)
+### Upcoming / Not Yet Released
 
-### 2. Google Gemini CLI
+| Tool | Status | Notes |
+|------|--------|-------|
+| **xAI Grok Build** (official) | Teased Jan 2026, expected Feb 2026 | May ship with JSON output and proper subscription auth |
+| **Cursor CLI** | Limited headless mode | `cursor-agent -p`, no JSON output documented |
 
-| Attribute | Details |
-|-----------|---------|
-| **Repository** | [github.com/google-gemini/gemini-cli](https://github.com/google-gemini/gemini-cli) |
-| **License** | Apache-2.0 (fully open source) |
-| **Language** | TypeScript/Node.js |
-| **Non-interactive mode** | `gemini -p "prompt"` |
-| **JSON output** | `--output-format json` (single JSON object) |
-| **Streaming JSON** | `--output-format stream-json` (NDJSON) |
-| **Auto-approve tools** | `--yolo` or `--approval-mode yolo` |
-| **Session resume** | `--resume` flag |
-| **Auth (subscription)** | Google account OAuth (first-run guided flow) |
-| **Auth (API key)** | `GEMINI_API_KEY` env var |
-| **No SDK** | Must use subprocess — no programmatic SDK exists |
+## Detailed Findings: Primary Targets
 
-**Key integration pattern:**
-```bash
-gemini -p "your prompt" --output-format json --yolo
-# Returns: {"response": "...", "stats": {...}}
-```
+### OpenAI Codex CLI
 
-**Subscription pricing:** Free tier via Google account: 60 req/min, 1K req/day with full model access (Gemini 2.5 Pro). Paid Google AI Pro/Ultra for higher quotas.
+- **Repo:** [github.com/openai/codex](https://github.com/openai/codex) | **License:** Apache-2.0
+- **Command:** `codex exec --json "prompt" --skip-git-repo-check --full-auto`
+- **Output:** JSONL event stream on stdout
+- **Auth:** `codex login` (browser OAuth → ChatGPT subscription) or `CODEX_API_KEY`
+- **Subscription:** ChatGPT Plus $20/mo, Pro $200/mo — limits per 5hr window
+- **Gotcha:** `OPENAI_API_KEY` in `.env` silently overrides OAuth → per-token billing
 
-**JSON output includes token usage:**
+### Google Gemini CLI
+
+- **Repo:** [github.com/google-gemini/gemini-cli](https://github.com/google-gemini/gemini-cli) | **License:** Apache-2.0
+- **Command:** `gemini -p "prompt" --output-format json --yolo`
+- **Output:** `{"response": "...", "stats": {"models": {...}}}`
+- **Auth:** Google OAuth (first-run guided) or `GEMINI_API_KEY`
+- **Subscription:** Free: 60 req/min, 1K req/day. Paid AI Pro/Ultra for higher quotas
+- **Token usage:** Included in `stats.models.*.tokens`
+
+### Anthropic Claude Code CLI
+
+- **Repo:** [github.com/anthropics/claude-code](https://github.com/anthropics/claude-code) | **License:** Proprietary
+- **Command:** `claude -p "prompt" --output-format json --max-turns 3`
+- **Output:** `{"result": "...", "session_id": "..."}`
+- **Auth:** `claude login` (OAuth → Claude Pro/Max) or `ANTHROPIC_API_KEY`
+- **Subscription:** Pro $20/mo, Max $100-200/mo — shared limits
+- **Cost control:** `--max-turns N`, `--max-budget-usd N`
+- **SDK restriction:** Agent SDK cannot use subscription auth for third-party apps
+
+### Grok CLI (superagent-ai)
+
+- **Repo:** [github.com/superagent-ai/grok-cli](https://github.com/superagent-ai/grok-cli) | **License:** MIT
+- **Command:** `grok -p "prompt" -m grok-code-fast-1`
+- **Output:** Plain text only — **no JSON mode**
+- **Auth:** `GROK_API_KEY` from console.x.ai (manual, no `grok login` OAuth flow)
+- **Pricing:** Pay-as-you-go API credits. X Premium provides console access but requires manual key copy
+- **Models:** `grok-code-fast-1`, `grok-4-latest`, `grok-3-latest`
+- **Note:** xAI's official "Grok Build" CLI is expected Feb 2026, may improve this
+
+### Aider
+
+- **Repo:** [github.com/Aider-AI/aider](https://github.com/Aider-AI/aider) | **License:** Apache-2.0
+- **Command:** `aider --message "prompt" --yes`
+- **Output:** Plain text only — no JSON mode
+- **Auth:** Any provider API key (OpenAI, Anthropic, Gemini, local, etc.)
+- **Note:** Highly mature, supports 75+ models, but text-only output
+
+## Generic Custom CLI Provider Design
+
+Any CLI tool can be a duck brain if we know three things:
+
+1. **How to pass the prompt** — flag (`-p`), positional arg, or stdin
+2. **How to read the response** — raw stdout, or JSON field extraction
+3. **What extra flags to add** — auto-approve, JSON mode, model selection
+
+### Config schema for custom providers
+
 ```json
 {
-  "response": "...",
-  "stats": {
-    "models": { "gemini-2.5-pro": { "tokens": { "prompt": 24939, "candidates": 20, "total": 25113 } } }
+  "my-custom-agent": {
+    "type": "cli",
+    "cli_type": "custom",
+    "cli_command": "/usr/local/bin/my-tool",
+    "prompt_delivery": "flag",
+    "prompt_flag": "-p",
+    "output_format": "json",
+    "response_json_path": "$.response",
+    "usage_json_path": "$.stats.tokens",
+    "cli_args": ["--no-confirm", "--quiet"],
+    "process_timeout": 120000,
+    "working_directory": "/path/to/project",
+    "env_vars": { "MY_TOOL_API_KEY": "${MY_API_KEY}" },
+    "nickname": "My Custom Agent"
   }
 }
 ```
 
-**Limitations:**
-- Positional prompt + other flags sometimes ignored (known bug — always use `-p` flag)
-- No `--output-schema` for response content shaping
-- Free tier: auto-switches Pro to Flash after ~10-15 prompts
-- `--resume` incompatible with stdin/positional args
+### `prompt_delivery` options
 
-### 3. Anthropic Claude Code CLI
+| Mode | Behavior | Example |
+|------|----------|---------|
+| `"flag"` | Pass as `--flag "prompt text"` | `gemini -p "explain this"` |
+| `"positional"` | Pass as trailing argument | `codex exec "explain this"` |
+| `"stdin"` | Pipe via stdin | `echo "explain this" \| my-tool` |
 
-| Attribute | Details |
-|-----------|---------|
-| **Repository** | [github.com/anthropics/claude-code](https://github.com/anthropics/claude-code) |
-| **License** | **Proprietary** (Anthropic Commercial ToS) |
-| **Language** | Closed source |
-| **Non-interactive mode** | `claude -p "prompt"` |
-| **JSON output** | `--output-format json` or `--output-format stream-json` |
-| **Structured output** | `--json-schema '{...}'` enforces response schema |
-| **Auto-approve tools** | `--dangerously-skip-permissions` or `--allowedTools` |
-| **Session resume** | `--continue` or `--resume <id>` |
-| **Cost control** | `--max-turns N`, `--max-budget-usd N` |
-| **Auth (subscription)** | `claude login` → browser OAuth → Claude Pro/Max |
-| **Auth (API key)** | `ANTHROPIC_API_KEY` env var |
+### `output_format` options
 
-**Key integration pattern:**
-```bash
-claude -p "your prompt" --output-format json --max-turns 3
-# Returns: {"result": "...", "session_id": "...", ...}
+| Mode | Behavior |
+|------|----------|
+| `"text"` | Capture raw stdout as the response (for tools without JSON output) |
+| `"json"` | Parse stdout as JSON, extract via `response_json_path` |
+| `"jsonl"` | Parse stdout as JSONL stream, extract final message event |
+
+### Built-in presets
+
+The built-in adapters (codex, gemini, claude) are just pre-configured presets of this same generic system. Users can override any field:
+
+```json
+{
+  "claude-agent": {
+    "type": "cli",
+    "cli_type": "claude",
+    "cli_args": ["--max-turns", "5", "--max-budget-usd", "1.00"],
+    "nickname": "Claude (conservative)"
+  }
+}
 ```
 
-**Subscription pricing:** Claude Pro ($20/mo), Max ($100-200/mo) — shared usage limits, no per-token charges.
+When `cli_type` is `"codex"`, `"gemini"`, or `"claude"`, defaults are filled in automatically. When `cli_type` is `"custom"`, all fields must be specified explicitly.
 
-**Critical note on SDK vs CLI:**
-- The SDK (`@anthropic-ai/claude-agent-sdk`) **cannot** use subscription OAuth — Anthropic blocks this for third-party apps
-- The CLI **can** use subscription OAuth — user has already authenticated
-- This is the primary reason to prefer CLI subprocess over SDK
+## Authentication: Zero Management
 
-**Limitations:**
-- Proprietary license — cannot redistribute
-- Model sometimes thinks it's in interactive mode with `-p` flag
-- Without `--max-turns`/`--max-budget-usd`, agentic loops can run indefinitely
-
-## Authentication: Zero Management Required
-
-By using CLI subprocess spawning, we delegate all authentication to the user's pre-existing CLI setup:
+We delegate all auth to the user's pre-existing CLI setup:
 
 | Provider | User Setup (one-time) | Our Code |
 |----------|----------------------|----------|
-| **Codex** | `codex login` (browser OAuth) or set `CODEX_API_KEY` | Just spawn `codex exec ...` |
-| **Gemini** | First run guides OAuth, or set `GEMINI_API_KEY` | Just spawn `gemini -p ...` |
-| **Claude** | `claude login` (browser OAuth) or set `ANTHROPIC_API_KEY` | Just spawn `claude -p ...` |
+| **Codex** | `codex login` or `CODEX_API_KEY` | Spawn `codex exec ...` |
+| **Gemini** | First-run OAuth or `GEMINI_API_KEY` | Spawn `gemini -p ...` |
+| **Claude** | `claude login` or `ANTHROPIC_API_KEY` | Spawn `claude -p ...` |
+| **Grok** | Set `GROK_API_KEY` from console.x.ai | Spawn `grok -p ...` |
+| **Custom** | Whatever the tool requires | Spawn configured command |
 
-We don't store, validate, or manage any credentials. If the CLI is authenticated, it works. If not, it returns an error exit code that we surface to the user.
+We don't store, validate, or manage credentials. If the CLI is authenticated, it works. If not, we get an error exit code and surface it.
 
-## Pricing Comparison: Subscription vs API
+## Pricing: Subscription vs API
 
 | Provider | Subscription (via CLI) | Per-Token (via API/SDK) |
 |----------|----------------------|------------------------|
-| **Codex** | ChatGPT Plus $20/mo, Pro $200/mo — usage limits per 5hr window | ~$1.50/M input, $6/M output |
-| **Gemini** | Free: 60 req/min, 1K req/day. Pro/Ultra: monthly fee | $0.10-$4/M input depending on model |
-| **Claude** | Pro $20/mo, Max $100-200/mo — shared limits | Avg ~$6/dev/day (90% under $12/day) |
-
-For a rubber duck debugging tool, subscription pricing is significantly more cost-effective — users likely already have subscriptions and won't incur additional per-token costs.
+| **Codex** | ChatGPT Plus $20/mo, Pro $200/mo | ~$1.50/M input, $6/M output |
+| **Gemini** | Free: 60 req/min, 1K req/day | $0.10-$4/M input |
+| **Claude** | Pro $20/mo, Max $100-200/mo | Avg ~$6/dev/day |
+| **Grok** | No subscription CLI auth | $0.20/M input, $1.50/M output |
