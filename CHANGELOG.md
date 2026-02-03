@@ -1,3 +1,10 @@
+# [1.12.0](https://github.com/nesquikm/mcp-rubber-duck/compare/v1.11.0...v1.12.0) (2026-02-03)
+
+
+### Features
+
+* add CLI coding agents as duck providers ([#51](https://github.com/nesquikm/mcp-rubber-duck/issues/51)) ([476c790](https://github.com/nesquikm/mcp-rubber-duck/commit/476c7900cbc65b96b76d7d80107edd092aa66883))
+
 # [1.11.0](https://github.com/nesquikm/mcp-rubber-duck/compare/v1.10.0...v1.11.0) (2026-01-30)
 
 
