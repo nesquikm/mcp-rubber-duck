@@ -177,6 +177,36 @@ describe('CLIDuckProvider', () => {
       ).rejects.toThrow(/Test CLI couldn't respond/);
     });
 
+    it('should handle non-Error thrown objects', async () => {
+      mockRunCLIProcess.mockRejectedValue('string error');
+
+      const provider = new CLIDuckProvider('test', makeConfig());
+
+      await expect(
+        provider.chat({
+          messages: [{ role: 'user', content: 'test', timestamp: new Date() }],
+        })
+      ).rejects.toThrow(/Test CLI couldn't respond: string error/);
+    });
+
+    it('should return empty string when messages array is empty', async () => {
+      mockRunCLIProcess.mockResolvedValue({
+        stdout: 'response',
+        stderr: '',
+        exitCode: 0,
+      });
+
+      const provider = new CLIDuckProvider('test', makeConfig());
+      await provider.chat({
+        messages: [],
+      });
+
+      const callArgs = mockRunCLIProcess.mock.calls[0][0] as { args: string[] };
+      // The -p flag should have an empty string as prompt
+      expect(callArgs.args).toContain('-p');
+      expect(callArgs.args).toContain('');
+    });
+
     it('should include configured CLI args', async () => {
       mockRunCLIProcess.mockResolvedValue({
         stdout: 'ok',

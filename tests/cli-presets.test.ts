@@ -147,4 +147,13 @@ describe('resolvePreset', () => {
     expect(resolved.models).toEqual(['claude-opus-4-5-20251101', 'claude-sonnet-4-20250514']);
     expect(resolved.system_prompt).toBe('You are helpful.');
   });
+
+  it('should throw for unknown CLI preset', () => {
+    const config: CLIProviderConfig = {
+      type: 'cli',
+      cli_type: 'unknown-preset' as 'claude', // Type cast to bypass TS check
+      nickname: 'Unknown',
+    };
+    expect(() => resolvePreset(config)).toThrow('Unknown CLI preset: unknown-preset');
+  });
 });

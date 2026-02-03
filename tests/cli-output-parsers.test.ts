@@ -117,6 +117,12 @@ describe('parseJsonOutput', () => {
     expect(result.content).toBe('from content field');
   });
 
+  it('should try "message" field as fallback', () => {
+    const json = JSON.stringify({ message: 'from message field' });
+    const result = parseJsonOutput(json);
+    expect(result.content).toBe('from message field');
+  });
+
   it('should handle invalid JSON by returning raw text', () => {
     const result = parseJsonOutput('not valid json');
     expect(result.content).toBe('not valid json');
