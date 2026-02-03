@@ -24,6 +24,7 @@ jest.mock('../src/utils/logger');
 import { DuckProvider } from '../src/providers/provider';
 import { ProviderManager } from '../src/providers/manager';
 import { ConfigManager } from '../src/config/config';
+import { CLIDuckProvider } from '../src/providers/cli/cli-provider';
 
 describe('DuckProvider', () => {
   let provider: DuckProvider;
@@ -68,6 +69,8 @@ describe('DuckProvider', () => {
       name: 'test',
       nickname: 'Test Duck',
       model: 'test-model',
+      type: 'http',
+      availableModels: undefined,
       baseURL: 'https://api.test.com/v1',
       hasApiKey: true,
     });
@@ -1716,5 +1719,125 @@ describe('EnhancedDuckProvider with Guardrails', () => {
     });
 
     expect(result.content).toBe('Final response with SSN: [REDACTED]');
+  });
+});
+
+describe('ProviderManager with CLI Providers', () => {
+  it('should initialize CLI provider when config has type cli', () => {
+    const mockConfigManager = {
+      getConfig: jest.fn().mockReturnValue({
+        providers: {
+          'cli-claude': {
+            type: 'cli',
+            cli_type: 'claude',
+            nickname: 'Claude Agent',
+            default_model: 'claude-sonnet-4-20250514',
+          },
+        },
+        default_provider: 'cli-claude',
+        cache_ttl: 300,
+        enable_failover: false,
+        default_temperature: 0.7,
+      }),
+    } as any;
+
+    const manager = new ProviderManager(mockConfigManager);
+    const provider = manager.getProvider('cli-claude');
+
+    expect(provider).toBeInstanceOf(CLIDuckProvider);
+    expect(provider.name).toBe('cli-claude');
+    expect(provider.nickname).toBe('Claude Agent');
+  });
+
+  it('should initialize mixed HTTP and CLI providers', () => {
+    const mockConfigManager = {
+      getConfig: jest.fn().mockReturnValue({
+        providers: {
+          openai: {
+            type: 'http',
+            api_key: 'sk-test',
+            base_url: 'https://api.openai.com/v1',
+            default_model: 'gpt-4',
+            nickname: 'OpenAI Duck',
+            models: ['gpt-4'],
+          },
+          'cli-claude': {
+            type: 'cli',
+            cli_type: 'claude',
+            nickname: 'Claude Agent',
+          },
+        },
+        default_provider: 'openai',
+        cache_ttl: 300,
+        enable_failover: false,
+        default_temperature: 0.7,
+      }),
+    } as any;
+
+    const manager = new ProviderManager(mockConfigManager);
+
+    expect(manager.getProvider('openai')).toBeInstanceOf(DuckProvider);
+    expect(manager.getProvider('cli-claude')).toBeInstanceOf(CLIDuckProvider);
+    expect(manager.getProviderNames()).toContain('openai');
+    expect(manager.getProviderNames()).toContain('cli-claude');
+  });
+
+  it('should return correct info for CLI provider via getAllProviders', () => {
+    const mockConfigManager = {
+      getConfig: jest.fn().mockReturnValue({
+        providers: {
+          'cli-claude': {
+            type: 'cli',
+            cli_type: 'claude',
+            nickname: 'Claude Agent',
+            default_model: 'claude-sonnet-4-20250514',
+          },
+        },
+        default_provider: 'cli-claude',
+        cache_ttl: 300,
+        enable_failover: false,
+        default_temperature: 0.7,
+      }),
+    } as any;
+
+    const manager = new ProviderManager(mockConfigManager);
+    const providers = manager.getAllProviders();
+
+    expect(providers).toHaveLength(1);
+    expect(providers[0].info.type).toBe('cli');
+    expect(providers[0].info.cliCommand).toBe('claude');
+    expect(providers[0].info.cliType).toBe('claude');
+    expect(providers[0].info.model).toBe('claude-sonnet-4-20250514');
+  });
+
+  it('should initialize custom CLI provider with cli_command', () => {
+    const mockConfigManager = {
+      getConfig: jest.fn().mockReturnValue({
+        providers: {
+          'my-tool': {
+            type: 'cli',
+            cli_type: 'custom',
+            cli_command: '/usr/local/bin/my-llm',
+            prompt_delivery: 'stdin',
+            output_format: 'text',
+            nickname: 'My Custom Tool',
+          },
+        },
+        default_provider: 'my-tool',
+        cache_ttl: 300,
+        enable_failover: false,
+        default_temperature: 0.7,
+      }),
+    } as any;
+
+    const manager = new ProviderManager(mockConfigManager);
+    const provider = manager.getProvider('my-tool');
+
+    expect(provider).toBeInstanceOf(CLIDuckProvider);
+    expect(provider.nickname).toBe('My Custom Tool');
+
+    const info = provider.getInfo();
+    expect(info.cliCommand).toBe('/usr/local/bin/my-llm');
+    expect(info.cliType).toBe('custom');
   });
 });

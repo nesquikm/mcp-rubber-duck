@@ -64,6 +64,26 @@ export type OpenAIMessage = ChatCompletionMessageParam;
 export type OpenAIChatResponse = ChatCompletion;
 export type OpenAIToolCall = ChatCompletionMessageToolCall;
 
+// Common interface for all duck providers (HTTP and CLI)
+export interface IDuckProvider {
+  name: string;
+  nickname: string;
+  chat(options: ChatOptions): Promise<ChatResponse>;
+  healthCheck(): Promise<boolean>;
+  listModels(): Promise<ModelInfo[]>;
+  getInfo(): {
+    name: string;
+    nickname: string;
+    model: string;
+    type: 'http' | 'cli';
+    availableModels?: string[];
+    baseURL?: string;
+    hasApiKey?: boolean;
+    cliCommand?: string;
+    cliType?: string;
+  };
+}
+
 // Enhanced response type with MCP functionality
 export interface MCPResult {
   id: string;

@@ -1,8 +1,14 @@
 import { describe, it, expect, jest, beforeEach, afterEach } from '@jest/globals';
 import { ConfigManager } from '../src/config/config';
+import type { HttpProviderConfig, ProviderConfig } from '../src/config/types';
 
 // Mock logger to avoid console noise during tests
 jest.mock('../src/utils/logger');
+
+/** Type guard: narrow ProviderConfig to HttpProviderConfig */
+function isHttp(p: ProviderConfig): p is HttpProviderConfig {
+  return p.type === 'http';
+}
 
 describe('ConfigManager - Default Providers', () => {
   let originalEnv: NodeJS.ProcessEnv;
@@ -32,9 +38,11 @@ describe('ConfigManager - Default Providers', () => {
     const providers = configManager.getAllProviders();
 
     expect(providers.openai).toBeDefined();
-    expect(providers.openai.api_key).toBe('sk-test-key');
-    expect(providers.openai.base_url).toBe('https://api.openai.com/v1');
-    expect(providers.openai.nickname).toBe('GPT Duck');
+    expect(isHttp(providers.openai)).toBe(true);
+    const openai = providers.openai as HttpProviderConfig;
+    expect(openai.api_key).toBe('sk-test-key');
+    expect(openai.base_url).toBe('https://api.openai.com/v1');
+    expect(openai.nickname).toBe('GPT Duck');
   });
 
   it('should use custom OpenAI model and nickname from env', () => {
@@ -56,8 +64,9 @@ describe('ConfigManager - Default Providers', () => {
     const providers = configManager.getAllProviders();
 
     expect(providers.gemini).toBeDefined();
-    expect(providers.gemini.api_key).toBe('gemini-test-key');
-    expect(providers.gemini.nickname).toBe('Gemini Duck');
+    const gemini = providers.gemini as HttpProviderConfig;
+    expect(gemini.api_key).toBe('gemini-test-key');
+    expect(gemini.nickname).toBe('Gemini Duck');
   });
 
   it('should use custom Gemini model and nickname from env', () => {
@@ -79,8 +88,9 @@ describe('ConfigManager - Default Providers', () => {
     const providers = configManager.getAllProviders();
 
     expect(providers.groq).toBeDefined();
-    expect(providers.groq.api_key).toBe('gsk-test-key');
-    expect(providers.groq.nickname).toBe('Groq Duck');
+    const groq = providers.groq as HttpProviderConfig;
+    expect(groq.api_key).toBe('gsk-test-key');
+    expect(groq.nickname).toBe('Groq Duck');
   });
 
   it('should use custom Groq model and nickname from env', () => {
@@ -103,9 +113,10 @@ describe('ConfigManager - Default Providers', () => {
     const providers = configManager.getAllProviders();
 
     expect(providers.ollama).toBeDefined();
-    expect(providers.ollama.api_key).toBe('not-needed');
-    expect(providers.ollama.base_url).toBe('http://localhost:11434/v1');
-    expect(providers.ollama.nickname).toBe('Local Duck');
+    const ollama = providers.ollama as HttpProviderConfig;
+    expect(ollama.api_key).toBe('not-needed');
+    expect(ollama.base_url).toBe('http://localhost:11434/v1');
+    expect(ollama.nickname).toBe('Local Duck');
   });
 
   it('should create Ollama provider when ENABLE_OLLAMA is true', () => {
@@ -116,7 +127,7 @@ describe('ConfigManager - Default Providers', () => {
     const providers = configManager.getAllProviders();
 
     expect(providers.ollama).toBeDefined();
-    expect(providers.ollama.base_url).toBe('http://localhost:11434/v1');
+    expect((providers.ollama as HttpProviderConfig).base_url).toBe('http://localhost:11434/v1');
   });
 
   it('should use custom Ollama model and nickname from env', () => {
@@ -383,7 +394,7 @@ describe('ConfigManager - Public Methods', () => {
       const provider = configManager.getProvider('openai');
 
       expect(provider).toBeDefined();
-      expect(provider.api_key).toBe('openai-key');
+      expect((provider as HttpProviderConfig).api_key).toBe('openai-key');
     });
 
     it('should return undefined for non-existent provider', () => {
@@ -405,7 +416,7 @@ describe('ConfigManager - Public Methods', () => {
       const provider = configManager.getDefaultProvider();
 
       expect(provider).toBeDefined();
-      expect(provider.api_key).toBe('openai-key');
+      expect((provider as HttpProviderConfig).api_key).toBe('openai-key');
     });
 
     it('should use first provider as default when none specified', () => {
@@ -416,7 +427,7 @@ describe('ConfigManager - Public Methods', () => {
       const provider = configManager.getDefaultProvider();
 
       expect(provider).toBeDefined();
-      expect(provider.api_key).toBe('openai-key');
+      expect((provider as HttpProviderConfig).api_key).toBe('openai-key');
     });
   });
 
@@ -514,6 +525,7 @@ describe('ConfigManager - Custom Providers', () => {
 
       expect(providers.myapi).toBeDefined();
       expect(providers.myapi).toEqual({
+        type: 'http',
         api_key: 'test-key-123',
         base_url: 'https://my-api.com/v1',
         models: ['model1', 'model2', 'model3'],
@@ -539,19 +551,21 @@ describe('ConfigManager - Custom Providers', () => {
 
       // Check first provider
       expect(providers.api1).toBeDefined();
-      expect(providers.api1.api_key).toBe('key1');
-      expect(providers.api1.base_url).toBe('https://api1.com/v1');
-      expect(providers.api1.nickname).toBe('API 1 Duck');
-      expect(providers.api1.models).toEqual(['custom-model']); // default
-      expect(providers.api1.default_model).toBe('custom-model'); // default
+      const api1 = providers.api1 as HttpProviderConfig;
+      expect(api1.api_key).toBe('key1');
+      expect(api1.base_url).toBe('https://api1.com/v1');
+      expect(api1.nickname).toBe('API 1 Duck');
+      expect(api1.models).toEqual(['custom-model']); // default
+      expect(api1.default_model).toBe('custom-model'); // default
 
       // Check second provider
       expect(providers.api2).toBeDefined();
-      expect(providers.api2.api_key).toBe('key2');
-      expect(providers.api2.base_url).toBe('https://api2.com/v1');
-      expect(providers.api2.models).toEqual(['model-a', 'model-b']);
-      expect(providers.api2.default_model).toBe('model-a');
-      expect(providers.api2.nickname).toBe('API2 Duck'); // auto-generated
+      const api2 = providers.api2 as HttpProviderConfig;
+      expect(api2.api_key).toBe('key2');
+      expect(api2.base_url).toBe('https://api2.com/v1');
+      expect(api2.models).toEqual(['model-a', 'model-b']);
+      expect(api2.default_model).toBe('model-a');
+      expect(api2.nickname).toBe('API2 Duck'); // auto-generated
     });
 
     it('should convert provider names to lowercase', () => {
@@ -605,6 +619,7 @@ describe('ConfigManager - Custom Providers', () => {
 
       expect(providers.minimal).toBeDefined();
       expect(providers.minimal).toEqual({
+        type: 'http',
         api_key: 'test-key',
         base_url: 'https://minimal.com/v1',
         models: ['custom-model'], // default
@@ -658,8 +673,8 @@ describe('ConfigManager - Custom Providers', () => {
       expect(providers.integration).toBeDefined();
       
       // Custom provider shouldn't override built-ins
-      expect(providers.openai.base_url).toBe('https://api.openai.com/v1');
-      expect(providers.integration.base_url).toBe('https://custom.com/v1');
+      expect((providers.openai as HttpProviderConfig).base_url).toBe('https://api.openai.com/v1');
+      expect((providers.integration as HttpProviderConfig).base_url).toBe('https://custom.com/v1');
     });
 
     it('should handle local LLM configuration via custom providers', () => {
@@ -678,13 +693,15 @@ describe('ConfigManager - Custom Providers', () => {
       const providers = configManager.getAllProviders();
 
       expect(providers.ollama).toBeDefined();
-      expect(providers.ollama.api_key).toBe('not-needed');
-      expect(providers.ollama.base_url).toBe('http://localhost:11434/v1');
-      expect(providers.ollama.models).toEqual(['llama3.2', 'mistral', 'codellama']);
+      const ollama = providers.ollama as HttpProviderConfig;
+      expect(ollama.api_key).toBe('not-needed');
+      expect(ollama.base_url).toBe('http://localhost:11434/v1');
+      expect(ollama.models).toEqual(['llama3.2', 'mistral', 'codellama']);
 
       expect(providers.lmstudio).toBeDefined();
-      expect(providers.lmstudio.api_key).toBe('not-needed');
-      expect(providers.lmstudio.base_url).toBe('http://localhost:1234/v1');
+      const lmstudio = providers.lmstudio as HttpProviderConfig;
+      expect(lmstudio.api_key).toBe('not-needed');
+      expect(lmstudio.base_url).toBe('http://localhost:1234/v1');
     });
   });
 
@@ -700,8 +717,181 @@ describe('ConfigManager - Custom Providers', () => {
 
       expect(config.providers.testprovider).toBeDefined();
       expect(config.providers.testprovider.nickname).toBe('Test Provider Duck');
-      expect(config.providers.testprovider.api_key).toBe('test-key');
-      expect(config.providers.testprovider.base_url).toBe('https://test.com/v1');
+      // Access HTTP-specific fields via type guard
+      const tp = config.providers.testprovider;
+      if (tp.type === 'http') {
+        expect(tp.api_key).toBe('test-key');
+        expect(tp.base_url).toBe('https://test.com/v1');
+      } else {
+        throw new Error('Expected HTTP provider');
+      }
     });
+  });
+});
+
+describe('ConfigManager - CLI Providers', () => {
+  let originalEnv: NodeJS.ProcessEnv;
+
+  beforeEach(() => {
+    originalEnv = { ...process.env };
+    jest.clearAllMocks();
+    delete process.env.OPENAI_API_KEY;
+    delete process.env.GEMINI_API_KEY;
+    delete process.env.GROQ_API_KEY;
+    Object.keys(process.env).forEach(key => {
+      if (key.startsWith('CUSTOM_') || key.startsWith('CLI_')) delete process.env[key];
+    });
+  });
+
+  afterEach(() => {
+    process.env = originalEnv;
+  });
+
+  it('should create CLI claude provider when CLI_CLAUDE_ENABLED=true', () => {
+    process.env.OPENAI_API_KEY = 'dummy-key';
+    process.env.CLI_CLAUDE_ENABLED = 'true';
+
+    const configManager = new ConfigManager();
+    const providers = configManager.getAllProviders();
+
+    expect(providers['cli-claude']).toBeDefined();
+    expect(providers['cli-claude'].type).toBe('cli');
+    expect(providers['cli-claude'].nickname).toBe('Claude Agent');
+    if (providers['cli-claude'].type === 'cli') {
+      expect(providers['cli-claude'].cli_type).toBe('claude');
+    }
+  });
+
+  it('should create CLI codex provider when CLI_CODEX_ENABLED=true', () => {
+    process.env.OPENAI_API_KEY = 'dummy-key';
+    process.env.CLI_CODEX_ENABLED = 'true';
+
+    const configManager = new ConfigManager();
+    const providers = configManager.getAllProviders();
+
+    expect(providers['cli-codex']).toBeDefined();
+    expect(providers['cli-codex'].type).toBe('cli');
+    if (providers['cli-codex'].type === 'cli') {
+      expect(providers['cli-codex'].cli_type).toBe('codex');
+    }
+  });
+
+  it('should use custom nickname from env var', () => {
+    process.env.OPENAI_API_KEY = 'dummy-key';
+    process.env.CLI_CLAUDE_ENABLED = 'true';
+    process.env.CLI_CLAUDE_NICKNAME = 'My Claude';
+
+    const configManager = new ConfigManager();
+    const providers = configManager.getAllProviders();
+
+    expect(providers['cli-claude'].nickname).toBe('My Claude');
+  });
+
+  it('should parse CLI_ARGS from env var', () => {
+    process.env.OPENAI_API_KEY = 'dummy-key';
+    process.env.CLI_CLAUDE_ENABLED = 'true';
+    process.env.CLI_CLAUDE_CLI_ARGS = '--max-turns,5,--verbose';
+
+    const configManager = new ConfigManager();
+    const providers = configManager.getAllProviders();
+
+    if (providers['cli-claude'].type === 'cli') {
+      expect(providers['cli-claude'].cli_args).toEqual(['--max-turns', '5', '--verbose']);
+    }
+  });
+
+  it('should create custom CLI provider with CLI_CUSTOM_ prefix', () => {
+    process.env.OPENAI_API_KEY = 'dummy-key';
+    process.env.CLI_CUSTOM_MYTOOL_COMMAND = '/usr/local/bin/mytool';
+    process.env.CLI_CUSTOM_MYTOOL_PROMPT_DELIVERY = 'flag';
+    process.env.CLI_CUSTOM_MYTOOL_PROMPT_FLAG = '-p';
+    process.env.CLI_CUSTOM_MYTOOL_OUTPUT_FORMAT = 'text';
+    process.env.CLI_CUSTOM_MYTOOL_NICKNAME = 'My Tool';
+
+    const configManager = new ConfigManager();
+    const providers = configManager.getAllProviders();
+
+    expect(providers['cli-mytool']).toBeDefined();
+    expect(providers['cli-mytool'].type).toBe('cli');
+    if (providers['cli-mytool'].type === 'cli') {
+      expect(providers['cli-mytool'].cli_type).toBe('custom');
+      expect(providers['cli-mytool'].cli_command).toBe('/usr/local/bin/mytool');
+      expect(providers['cli-mytool'].prompt_delivery).toBe('flag');
+      expect(providers['cli-mytool'].prompt_flag).toBe('-p');
+    }
+  });
+
+  it('should parse PROCESS_TIMEOUT for custom CLI provider', () => {
+    process.env.OPENAI_API_KEY = 'dummy-key';
+    process.env.CLI_CUSTOM_SLOWTOOL_COMMAND = '/usr/local/bin/slow-tool';
+    process.env.CLI_CUSTOM_SLOWTOOL_PROCESS_TIMEOUT = '600000';
+    process.env.CLI_CUSTOM_SLOWTOOL_NICKNAME = 'Slow Tool';
+
+    const configManager = new ConfigManager();
+    const providers = configManager.getAllProviders();
+
+    expect(providers['cli-slowtool']).toBeDefined();
+    if (providers['cli-slowtool'].type === 'cli') {
+      expect(providers['cli-slowtool'].process_timeout).toBe(600000);
+    }
+  });
+
+  it('should parse WORKING_DIRECTORY for custom CLI provider', () => {
+    process.env.OPENAI_API_KEY = 'dummy-key';
+    process.env.CLI_CUSTOM_DIRTOOL_COMMAND = '/usr/local/bin/dir-tool';
+    process.env.CLI_CUSTOM_DIRTOOL_WORKING_DIRECTORY = '/home/user/projects';
+    process.env.CLI_CUSTOM_DIRTOOL_NICKNAME = 'Dir Tool';
+
+    const configManager = new ConfigManager();
+    const providers = configManager.getAllProviders();
+
+    expect(providers['cli-dirtool']).toBeDefined();
+    if (providers['cli-dirtool'].type === 'cli') {
+      expect(providers['cli-dirtool'].working_directory).toBe('/home/user/projects');
+    }
+  });
+
+  it('should skip custom CLI provider without COMMAND', () => {
+    process.env.OPENAI_API_KEY = 'dummy-key';
+    process.env.CLI_CUSTOM_NOCMD_NICKNAME = 'No Command';
+    process.env.CLI_CUSTOM_NOCMD_PROMPT_DELIVERY = 'stdin';
+
+    const configManager = new ConfigManager();
+    const providers = configManager.getAllProviders();
+
+    expect(providers['cli-nocmd']).toBeUndefined();
+  });
+
+  it('should not create CLI provider without ENABLED=true', () => {
+    process.env.OPENAI_API_KEY = 'dummy-key';
+    process.env.CLI_CLAUDE_ENABLED = 'false';
+
+    const configManager = new ConfigManager();
+    const providers = configManager.getAllProviders();
+
+    expect(providers['cli-claude']).toBeUndefined();
+  });
+
+  it('should coexist with HTTP providers', () => {
+    process.env.OPENAI_API_KEY = 'test-key';
+    process.env.CLI_CLAUDE_ENABLED = 'true';
+
+    const configManager = new ConfigManager();
+    const providers = configManager.getAllProviders();
+
+    expect(providers.openai).toBeDefined();
+    expect(providers.openai.type).toBe('http');
+    expect(providers['cli-claude']).toBeDefined();
+    expect(providers['cli-claude'].type).toBe('cli');
+  });
+
+  it('should handle config without type field as HTTP (backward compatibility)', () => {
+    process.env.OPENAI_API_KEY = 'test-key';
+
+    const configManager = new ConfigManager();
+    const providers = configManager.getAllProviders();
+
+    // Provider should have type 'http' after parsing
+    expect(providers.openai.type).toBe('http');
   });
 });

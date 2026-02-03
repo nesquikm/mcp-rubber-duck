@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
-export const ProviderConfigSchema = z.object({
+export const HttpProviderConfigSchema = z.object({
+  type: z.literal('http').default('http'),
   api_key: z.string().optional(),
   base_url: z.string().url(),
   models: z.array(z.string()),
@@ -11,6 +12,37 @@ export const ProviderConfigSchema = z.object({
   timeout: z.number().positive().optional(),
   max_retries: z.number().min(0).max(5).optional(),
 });
+
+export const CLIProviderConfigSchema = z.object({
+  type: z.literal('cli'),
+  cli_type: z.enum(['claude', 'codex', 'gemini', 'grok', 'aider', 'custom']),
+  cli_command: z.string().optional(),
+  prompt_delivery: z.enum(['flag', 'positional', 'stdin']).optional(),
+  prompt_flag: z.string().optional(),
+  output_format: z.enum(['text', 'json', 'jsonl']).optional(),
+  response_json_path: z.string().optional(),
+  usage_json_path: z.string().optional(),
+  cli_args: z.array(z.string()).optional(),
+  process_timeout: z.number().positive().optional(),
+  working_directory: z.string().optional(),
+  env_vars: z.record(z.string(), z.string()).optional(),
+  nickname: z.string(),
+  default_model: z.string().optional(),
+  models: z.array(z.string()).optional(),
+  system_prompt: z.string().optional(),
+});
+
+// Unified provider config: backward-compatible discriminated union
+// Configs without `type` default to 'http'
+export const ProviderConfigSchema = z.preprocess(
+  (val) => {
+    if (val && typeof val === 'object' && !('type' in val)) {
+      return { ...val, type: 'http' };
+    }
+    return val;
+  },
+  z.discriminatedUnion('type', [HttpProviderConfigSchema, CLIProviderConfigSchema])
+);
 
 export const MCPServerConfigSchema = z.object({
   name: z.string(),
@@ -121,7 +153,9 @@ export const ConfigSchema = z.object({
   guardrails: GuardrailsConfigSchema.optional(),
 });
 
-export type ProviderConfig = z.infer<typeof ProviderConfigSchema>;
+export type HttpProviderConfig = z.infer<typeof HttpProviderConfigSchema>;
+export type CLIProviderConfig = z.infer<typeof CLIProviderConfigSchema>;
+export type ProviderConfig = HttpProviderConfig | CLIProviderConfig;
 export type MCPServerConfig = z.infer<typeof MCPServerConfigSchema>;
 export type MCPBridgeConfig = z.infer<typeof MCPBridgeConfigSchema>;
 export type ModelPricing = z.infer<typeof ModelPricingSchema>;

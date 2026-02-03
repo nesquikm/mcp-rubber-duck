@@ -1,6 +1,6 @@
 # 🦆 MCP Rubber Duck
 
-An MCP (Model Context Protocol) server that acts as a bridge to query multiple OpenAI-compatible LLMs. Just like rubber duck debugging, explain your problems to various AI "ducks" and get different perspectives!
+An MCP (Model Context Protocol) server that acts as a bridge to query multiple LLMs — both OpenAI-compatible HTTP APIs and CLI coding agents. Just like rubber duck debugging, explain your problems to various AI "ducks" and get different perspectives!
 
 [![npm version](https://img.shields.io/npm/v/mcp-rubber-duck.svg)](https://www.npmjs.com/package/mcp-rubber-duck)
 [![Docker Image](https://img.shields.io/badge/docker-ghcr.io-blue)](https://github.com/nesquikm/mcp-rubber-duck/pkgs/container/mcp-rubber-duck)
@@ -29,6 +29,7 @@ An MCP (Model Context Protocol) server that acts as a bridge to query multiple O
   - [Known Limitations (Claude Code)](#known-limitations-claude-code)
   - [Recommended: Use Prompts as Templates](#recommended-use-prompts-as-templates)
 - [Usage Examples](#usage-examples)
+- [CLI Providers](#cli-providers---coding-agents-as-ducks)
 - [Provider-Specific Setup](#provider-specific-setup)
 - [Development](#development)
 - [Docker Support](#docker-support)
@@ -38,6 +39,7 @@ An MCP (Model Context Protocol) server that acts as a bridge to query multiple O
 ## Features
 
 - 🔌 **Universal OpenAI Compatibility**: Works with any OpenAI-compatible API endpoint
+- 🖥️ **CLI Agent Support**: Use CLI coding agents (Claude Code, Codex, Gemini CLI, Grok, Aider) as ducks
 - 🦆 **Multiple Ducks**: Configure and query multiple LLM providers simultaneously
 - 💬 **Conversation Management**: Maintain context across multiple messages
 - 🏛️ **Duck Council**: Get responses from all your configured LLMs at once
@@ -59,6 +61,8 @@ An MCP (Model Context Protocol) server that acts as a bridge to query multiple O
 
 ## Supported Providers
 
+### HTTP Providers (OpenAI-compatible API)
+
 Any provider with an OpenAI-compatible API endpoint, including:
 
 - **OpenAI** (GPT-5.1, o3, o4-mini)
@@ -72,6 +76,17 @@ Any provider with an OpenAI-compatible API endpoint, including:
 - **Ollama** (Local models)
 - **LM Studio** (Local models)
 - **Custom** (Any OpenAI-compatible endpoint)
+
+### CLI Providers (Coding Agents)
+
+Command-line coding agents that run as local processes:
+
+- **Claude Code** (`claude`) — Anthropic's CLI agent
+- **Codex** (`codex`) — OpenAI's CLI agent
+- **Gemini CLI** (`gemini`) — Google's CLI agent
+- **Grok CLI** (`grok`) — xAI's CLI agent
+- **Aider** (`aider`) — Open-source AI pair programmer
+- **Custom** — Any CLI tool that accepts prompts and returns text
 
 ## Quick Start
 
@@ -91,7 +106,7 @@ npx mcp-rubber-duck
 
 - Node.js 20 or higher
 - npm or yarn
-- At least one API key for a supported provider
+- At least one API key for an HTTP provider, **or** a CLI coding agent installed locally
 
 ### Installation Methods
 
@@ -151,9 +166,31 @@ CUSTOM_MYAPI_DEFAULT_MODEL=custom-model  # Optional
 CUSTOM_MYAPI_MODELS=model1,model2        # Optional: comma-separated list
 CUSTOM_MYAPI_NICKNAME=My Custom Duck     # Optional: display name
 
-# Example: Add provider "azure" 
+# Example: Add provider "azure"
 CUSTOM_AZURE_API_KEY=...
 CUSTOM_AZURE_BASE_URL=https://mycompany.openai.azure.com/v1
+
+# CLI Providers (coding agents as ducks)
+# Enable preset CLI agents
+CLI_CLAUDE_ENABLED=true                      # Claude Code CLI
+CLI_CODEX_ENABLED=true                       # OpenAI Codex CLI
+CLI_GEMINI_ENABLED=true                      # Gemini CLI
+CLI_GROK_ENABLED=true                        # Grok CLI
+CLI_AIDER_ENABLED=true                       # Aider
+
+# Optional overrides for preset CLI agents
+CLI_CLAUDE_NICKNAME=My Claude                # Optional: display name
+CLI_CLAUDE_DEFAULT_MODEL=claude-sonnet-4-20250514  # Optional: model override
+CLI_CLAUDE_SYSTEM_PROMPT=Be concise          # Optional: system prompt
+CLI_CLAUDE_CLI_ARGS=--max-turns,5,--verbose  # Optional: extra CLI args
+
+# Custom CLI providers (any CLI tool)
+CLI_CUSTOM_MYTOOL_COMMAND=/usr/local/bin/mytool
+CLI_CUSTOM_MYTOOL_NICKNAME=My Tool
+CLI_CUSTOM_MYTOOL_PROMPT_DELIVERY=stdin      # flag, positional, or stdin
+CLI_CUSTOM_MYTOOL_OUTPUT_FORMAT=text         # text, json, or jsonl
+CLI_CUSTOM_MYTOOL_PROCESS_TIMEOUT=60000      # Optional: ms (default: 120000)
+CLI_CUSTOM_MYTOOL_WORKING_DIRECTORY=/tmp     # Optional: working directory
 
 # Global Settings
 DEFAULT_PROVIDER=openai
@@ -462,7 +499,7 @@ GUARDRAILS_PII_REDACTOR_ALLOWLIST_DOMAINS="mycompany.com"
 | Variable | Type | Default | Description |
 |----------|------|---------|-------------|
 | `GUARDRAILS_ENABLED` | boolean | `false` | Master switch for guardrails system |
-| `GUARDRAILS_LOG_VIOLATIONS` | boolean | `false` | Log when guardrails detect violations |
+| `GUARDRAILS_LOG_VIOLATIONS` | boolean | `true` | Log when guardrails detect violations |
 | `GUARDRAILS_LOG_MODIFICATIONS` | boolean | `false` | Log when guardrails modify content |
 | `GUARDRAILS_FAIL_OPEN` | boolean | `false` | If `true`, allow requests when guardrails error; if `false`, block on error |
 
@@ -552,7 +589,7 @@ GUARDRAILS_PII_REDACTOR_RESTORE_ON_RESPONSE="true"
 | `GUARDRAILS_PII_REDACTOR_ALLOWLIST` | string | - | Comma-separated exact values to skip |
 | `GUARDRAILS_PII_REDACTOR_ALLOWLIST_DOMAINS` | string | - | Comma-separated email domains to skip |
 | `GUARDRAILS_PII_REDACTOR_RESTORE_ON_RESPONSE` | boolean | `false` | Restore original PII in responses |
-| `GUARDRAILS_PII_REDACTOR_LOG_DETECTIONS` | boolean | `false` | Log when PII is detected |
+| `GUARDRAILS_PII_REDACTOR_LOG_DETECTIONS` | boolean | `true` | Log when PII is detected |
 
 **How PII Redaction Works:**
 1. User sends: `"Contact john@secret.com for details"`
@@ -1011,6 +1048,170 @@ await get_usage_stats({ period: "today" });
 await get_usage_stats({ period: "7d" });
 ```
 
+## CLI Providers - Coding Agents as Ducks
+
+Use CLI coding agents as ducks alongside HTTP providers. CLI providers spawn a local process, pipe the prompt, and parse the output — no API key required.
+
+### Preset Agents
+
+Enable known CLI agents with a single env var:
+
+```bash
+CLI_CLAUDE_ENABLED=true    # Uses `claude` command with JSON output
+CLI_CODEX_ENABLED=true     # Uses `codex exec` with JSONL output
+CLI_GEMINI_ENABLED=true    # Uses `gemini` command with JSON output
+CLI_GROK_ENABLED=true      # Uses `grok` command with text output
+CLI_AIDER_ENABLED=true     # Uses `aider --message` with text output
+```
+
+Each preset comes with sensible defaults for command, arguments, prompt delivery, and output parsing. You can override any default:
+
+```bash
+CLI_CLAUDE_NICKNAME=My Claude Agent
+CLI_CLAUDE_DEFAULT_MODEL=claude-sonnet-4-20250514
+CLI_CLAUDE_CLI_ARGS=--max-turns,5,--verbose
+CLI_CLAUDE_SYSTEM_PROMPT=Be concise and technical
+```
+
+### Custom CLI Providers
+
+Add any CLI tool as a duck. You can configure **multiple custom CLI providers** — each unique `{NAME}` in `CLI_CUSTOM_{NAME}_*` becomes a separate duck:
+
+```bash
+# First custom CLI duck: "cli-mytool"
+CLI_CUSTOM_MYTOOL_COMMAND=/usr/local/bin/my-llm
+CLI_CUSTOM_MYTOOL_NICKNAME=My LLM Tool
+CLI_CUSTOM_MYTOOL_PROMPT_DELIVERY=stdin          # flag, positional, or stdin
+CLI_CUSTOM_MYTOOL_OUTPUT_FORMAT=text             # text, json, or jsonl
+CLI_CUSTOM_MYTOOL_PROMPT_FLAG=-p                 # Required when delivery=flag
+CLI_CUSTOM_MYTOOL_DEFAULT_MODEL=my-model         # Optional
+CLI_CUSTOM_MYTOOL_CLI_ARGS=--verbose,--no-color  # Optional: comma-separated
+CLI_CUSTOM_MYTOOL_PROCESS_TIMEOUT=300000         # Optional: ms (default: 120000)
+CLI_CUSTOM_MYTOOL_WORKING_DIRECTORY=/projects    # Optional
+
+# Second custom CLI duck: "cli-localllm"
+CLI_CUSTOM_LOCALLLM_COMMAND=ollama
+CLI_CUSTOM_LOCALLLM_NICKNAME=Local Ollama CLI
+CLI_CUSTOM_LOCALLLM_PROMPT_DELIVERY=positional
+CLI_CUSTOM_LOCALLLM_CLI_ARGS=run,llama3.2
+
+# Third custom CLI duck: "cli-myagent"
+CLI_CUSTOM_MYAGENT_COMMAND=/home/user/bin/my-agent
+CLI_CUSTOM_MYAGENT_NICKNAME=My Custom Agent
+CLI_CUSTOM_MYAGENT_PROMPT_DELIVERY=stdin
+CLI_CUSTOM_MYAGENT_OUTPUT_FORMAT=json
+```
+
+Each custom CLI provider appears as `cli-{name}` (lowercase) in the duck list.
+
+### Prompt Delivery Methods
+
+| Method | Description | Example |
+|--------|-------------|---------|
+| `flag` | Prompt passed via a CLI flag | `tool -p "prompt"` |
+| `positional` | Prompt as a positional argument | `tool "prompt"` |
+| `stdin` | Prompt piped via stdin | `echo "prompt" \| tool` |
+
+### Output Formats
+
+| Format | Description | Use Case |
+|--------|-------------|----------|
+| `text` | Raw text output (trimmed) | Aider, Grok, simple tools |
+| `json` | Single JSON object with path extraction | Claude Code, Gemini CLI |
+| `jsonl` | Newline-delimited JSON (last result used) | Codex |
+
+For `json` and `jsonl` formats, the response is extracted using a JSONPath-like `response_json_path` (configured in presets or via config file).
+
+### Claude Desktop with CLI Providers
+
+```json
+{
+  "mcpServers": {
+    "rubber-duck": {
+      "command": "mcp-rubber-duck",
+      "env": {
+        "MCP_SERVER": "true",
+        "OPENAI_API_KEY": "your-openai-api-key-here",
+        "CLI_CLAUDE_ENABLED": "true",
+        "CLI_AIDER_ENABLED": "true"
+      }
+    }
+  }
+}
+```
+
+CLI ducks appear alongside HTTP ducks in `list_ducks` and can be used with all multi-agent tools (`compare_ducks`, `duck_council`, `duck_vote`, etc.).
+
+### Config File (Alternative to Env Vars)
+
+CLI providers can also be configured via `config/config.json`. Set `"type": "cli"` to distinguish from HTTP providers:
+
+```json
+{
+  "providers": {
+    "openai": {
+      "api_key": "sk-...",
+      "base_url": "https://api.openai.com/v1",
+      "models": ["gpt-5.1"],
+      "default_model": "gpt-5.1",
+      "nickname": "GPT Duck"
+    },
+    "cli-claude": {
+      "type": "cli",
+      "cli_type": "claude",
+      "nickname": "Claude Agent",
+      "system_prompt": "Be concise"
+    },
+    "cli-custom": {
+      "type": "cli",
+      "cli_type": "custom",
+      "cli_command": "/usr/local/bin/my-llm",
+      "prompt_delivery": "stdin",
+      "output_format": "text",
+      "nickname": "My Tool"
+    }
+  }
+}
+```
+
+See `config/config.example.json` for the full example including all preset and custom CLI providers. Existing HTTP-only configs continue to work unchanged (providers without `"type"` default to `"http"`).
+
+### CLI Provider Limitations
+
+CLI coding agents work differently from HTTP providers and have some important limitations:
+
+#### MCP Bridge Not Supported
+
+CLI ducks **cannot use the MCP Bridge feature**. They have their own native tool systems that would conflict with injected MCP tools. Instead, configure MCP servers directly in each CLI tool's native config:
+
+```bash
+# Codex - add MCP servers via its CLI
+codex mcp add context7 --url https://mcp.context7.com/mcp
+codex mcp add chrome -- npx chrome-devtools-mcp@latest
+
+# Gemini CLI - add MCP servers via its CLI
+gemini mcp add context7 https://mcp.context7.com/mcp -t http -s user --trust
+gemini mcp add chrome "npx chrome-devtools-mcp@latest" -s user --trust
+```
+
+#### Non-Interactive Mode Differences
+
+| Feature | Codex | Gemini CLI |
+|---------|-------|------------|
+| HTTP MCP servers (e.g., context7) | ✅ Works | ✅ Works |
+| Stdio MCP servers (e.g., chrome) | ✅ Auto-launches | ❌ Must be pre-running |
+| Launch Chrome on demand | ✅ Yes | ❌ No |
+| Use already-running Chrome | ✅ Yes | ✅ Yes |
+
+**Workaround for Gemini + Chrome**: Use Codex to launch Chrome first, then Gemini can connect to the already-running instance:
+
+```
+1. Ask Codex duck to open Chrome (it auto-launches with debugging)
+2. Ask Gemini duck to use Chrome (connects to existing instance)
+```
+
+This limitation exists because Gemini CLI only activates MCP servers in interactive mode, not when invoked with the `-p` flag for single prompts.
+
 ## Provider-Specific Setup
 
 ### Ollama (Local)
@@ -1260,7 +1461,15 @@ mcp-rubber-duck/
 │   ├── config/             # Configuration management
 │   ├── data/               # Default pricing data
 │   ├── guardrails/         # Safety & compliance plugins
-│   ├── providers/          # OpenAI client wrapper
+│   ├── providers/          # Provider abstraction layer
+│   │   ├── types.ts        # IDuckProvider interface
+│   │   ├── provider.ts     # DuckProvider (HTTP/OpenAI SDK)
+│   │   ├── manager.ts      # ProviderManager factory
+│   │   └── cli/            # CLI subprocess providers
+│   │       ├── cli-provider.ts   # CLIDuckProvider
+│   │       ├── presets.ts        # Built-in CLI tool presets
+│   │       ├── output-parsers.ts # Text/JSON/JSONL parsers
+│   │       └── process-runner.ts # child_process.spawn wrapper
 │   ├── tools/              # MCP tool implementations
 │   ├── prompts/            # MCP prompt templates
 │   ├── services/           # Health, cache, conversations
@@ -1339,7 +1548,8 @@ MIT License - see LICENSE file for details
 
 - Inspired by the rubber duck debugging method
 - Built on the Model Context Protocol (MCP)
-- Uses OpenAI SDK for universal compatibility
+- Uses OpenAI SDK for HTTP provider compatibility
+- Supports CLI coding agents (Claude Code, Codex, Gemini CLI, Grok, Aider)
 
 ## Changelog
 

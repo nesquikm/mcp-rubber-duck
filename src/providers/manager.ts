@@ -1,14 +1,15 @@
 import { DuckProvider } from './provider.js';
 import { ConfigManager } from '../config/config.js';
 import { ProviderHealth, DuckResponse } from '../config/types.js';
-import { ChatOptions, ModelInfo } from './types.js';
+import { ChatOptions, ModelInfo, IDuckProvider } from './types.js';
+import { CLIDuckProvider, resolvePreset } from './cli/index.js';
 import { UsageService } from '../services/usage.js';
 import { GuardrailsService } from '../guardrails/service.js';
 import { logger } from '../utils/logger.js';
 import { getRandomDuckMessage } from '../utils/ascii-art.js';
 
 export class ProviderManager {
-  private providers: Map<string, DuckProvider> = new Map();
+  private providers: Map<string, IDuckProvider> = new Map();
   private healthStatus: Map<string, ProviderHealth> = new Map();
   protected configManager: ConfigManager;
   protected usageService?: UsageService;
@@ -28,19 +29,27 @@ export class ProviderManager {
 
     for (const [name, providerConfig] of Object.entries(allProviders)) {
       try {
-        const provider = new DuckProvider(name, providerConfig.nickname, {
-          apiKey: providerConfig.api_key,
-          baseURL: providerConfig.base_url,
-          model: providerConfig.default_model,
-          availableModels: providerConfig.models,
-          temperature: providerConfig.temperature,
-          timeout: providerConfig.timeout,
-          maxRetries: providerConfig.max_retries,
-          systemPrompt: providerConfig.system_prompt,
-        }, this.guardrailsService);
+        let provider: IDuckProvider;
+
+        if (providerConfig.type === 'cli') {
+          const resolved = resolvePreset(providerConfig);
+          provider = new CLIDuckProvider(name, resolved);
+          logger.info(`Initialized CLI provider: ${name} (${providerConfig.nickname}) [${providerConfig.cli_type}]`);
+        } else {
+          provider = new DuckProvider(name, providerConfig.nickname, {
+            apiKey: providerConfig.api_key,
+            baseURL: providerConfig.base_url,
+            model: providerConfig.default_model,
+            availableModels: providerConfig.models,
+            temperature: providerConfig.temperature,
+            timeout: providerConfig.timeout,
+            maxRetries: providerConfig.max_retries,
+            systemPrompt: providerConfig.system_prompt,
+          }, this.guardrailsService);
+          logger.info(`Initialized provider: ${name} (${providerConfig.nickname})`);
+        }
 
         this.providers.set(name, provider);
-        logger.info(`Initialized provider: ${name} (${providerConfig.nickname})`);
       } catch (error) {
         logger.error(`Failed to initialize provider ${name}:`, error);
       }
@@ -257,15 +266,15 @@ export class ProviderManager {
     throw new Error('All ducks have flown away! No providers available.');
   }
 
-  getProvider(name?: string): DuckProvider {
+  getProvider(name?: string): IDuckProvider {
     const providerName = name || this.defaultProvider;
-    
+
     if (!providerName) {
       throw new Error('No provider specified and no default provider configured');
     }
 
     const provider = this.providers.get(providerName);
-    
+
     if (!provider) {
       throw new Error(`Duck "${providerName}" not found in the pond`);
     }
@@ -273,7 +282,7 @@ export class ProviderManager {
     return provider;
   }
 
-  getAllProviders(): Array<{ name: string; info: ReturnType<DuckProvider['getInfo']>; health?: ProviderHealth }> {
+  getAllProviders(): Array<{ name: string; info: ReturnType<IDuckProvider['getInfo']>; health?: ProviderHealth }> {
     return Array.from(this.providers.entries()).map(([name, provider]) => ({
       name,
       info: provider.getInfo(),

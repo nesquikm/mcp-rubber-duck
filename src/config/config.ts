@@ -5,6 +5,7 @@ import {
   Config,
   ConfigSchema,
   ProviderConfig,
+  CLIProviderConfig,
   MCPBridgeConfig,
   MCPServerConfig,
   GuardrailsConfig,
@@ -117,6 +118,7 @@ export class ConfigManager {
     // OpenAI
     if (process.env.OPENAI_API_KEY) {
       providers.openai = {
+        type: 'http' as const,
         api_key: process.env.OPENAI_API_KEY,
         base_url: 'https://api.openai.com/v1',
         models: ['gpt-5.1', 'gpt-4.1', 'gpt-4o'],
@@ -128,6 +130,7 @@ export class ConfigManager {
     // Google Gemini
     if (process.env.GEMINI_API_KEY) {
       providers.gemini = {
+        type: 'http' as const,
         api_key: process.env.GEMINI_API_KEY,
         base_url: 'https://generativelanguage.googleapis.com/v1beta/openai/',
         models: ['gemini-3-pro-preview', 'gemini-2.5-pro', 'gemini-2.5-flash'],
@@ -139,6 +142,7 @@ export class ConfigManager {
     // Groq
     if (process.env.GROQ_API_KEY) {
       providers.groq = {
+        type: 'http' as const,
         api_key: process.env.GROQ_API_KEY,
         base_url: 'https://api.groq.com/openai/v1',
         models: ['meta-llama/llama-4-scout-17b-16e-instruct', 'meta-llama/llama-4-maverick-17b-128e-instruct', 'llama-3.3-70b-versatile'],
@@ -150,6 +154,7 @@ export class ConfigManager {
     // Local Ollama (only if explicitly configured)
     if (process.env.OLLAMA_BASE_URL || process.env.ENABLE_OLLAMA === 'true') {
       providers.ollama = {
+        type: 'http' as const,
         api_key: 'not-needed',
         base_url: process.env.OLLAMA_BASE_URL || 'http://localhost:11434/v1',
         models: ['llama3.2', 'mistral', 'codellama'],
@@ -161,6 +166,10 @@ export class ConfigManager {
     // Add all custom providers from environment
     const customProviders = this.getCustomProvidersFromEnv();
     Object.assign(providers, customProviders);
+
+    // Add CLI providers from environment
+    const cliProviders = this.getCLIProvidersFromEnv();
+    Object.assign(providers, cliProviders);
 
     return providers;
   }
@@ -264,6 +273,7 @@ export class ConfigManager {
           ['custom-model'];
 
         customProviders[providerKey] = {
+          type: 'http' as const,
           api_key: apiKey,
           base_url: baseUrl,
           models: models.length > 0 ? models : ['custom-model'],
@@ -274,6 +284,87 @@ export class ConfigManager {
     });
 
     return customProviders;
+  }
+
+  private getCLIProvidersFromEnv(): Record<string, ProviderConfig> {
+    const providers: Record<string, ProviderConfig> = {};
+
+    // Known CLI presets: CLI_CLAUDE_ENABLED, CLI_CODEX_ENABLED, etc.
+    const presets: Record<string, { cli_type: CLIProviderConfig['cli_type']; defaultNickname: string }> = {
+      CLAUDE: { cli_type: 'claude', defaultNickname: 'Claude Agent' },
+      CODEX: { cli_type: 'codex', defaultNickname: 'Codex Agent' },
+      GEMINI: { cli_type: 'gemini', defaultNickname: 'Gemini Agent' },
+      GROK: { cli_type: 'grok', defaultNickname: 'Grok Agent' },
+      AIDER: { cli_type: 'aider', defaultNickname: 'Aider Agent' },
+    };
+
+    for (const [envName, preset] of Object.entries(presets)) {
+      if (process.env[`CLI_${envName}_ENABLED`] === 'true') {
+        const prefix = `CLI_${envName}_`;
+        const cliArgsStr = process.env[`${prefix}CLI_ARGS`];
+
+        providers[`cli-${envName.toLowerCase()}`] = {
+          type: 'cli' as const,
+          cli_type: preset.cli_type,
+          nickname: process.env[`${prefix}NICKNAME`] || preset.defaultNickname,
+          ...(process.env[`${prefix}DEFAULT_MODEL`] && {
+            default_model: process.env[`${prefix}DEFAULT_MODEL`],
+          }),
+          ...(process.env[`${prefix}SYSTEM_PROMPT`] && {
+            system_prompt: process.env[`${prefix}SYSTEM_PROMPT`],
+          }),
+          ...(cliArgsStr && {
+            cli_args: cliArgsStr.split(',').map(a => a.trim()),
+          }),
+        };
+      }
+    }
+
+    // Custom CLI providers: CLI_CUSTOM_{NAME}_COMMAND
+    const customNames = new Set<string>();
+    Object.keys(process.env).forEach(key => {
+      const match = key.match(/^CLI_CUSTOM_(.+)_(COMMAND|PROMPT_DELIVERY|PROMPT_FLAG|OUTPUT_FORMAT|NICKNAME|DEFAULT_MODEL|CLI_ARGS|PROCESS_TIMEOUT|WORKING_DIRECTORY)$/);
+      if (match) {
+        customNames.add(match[1]);
+      }
+    });
+
+    customNames.forEach(name => {
+      const prefix = `CLI_CUSTOM_${name}_`;
+      const command = process.env[`${prefix}COMMAND`];
+
+      if (command) {
+        const cliArgsStr = process.env[`${prefix}CLI_ARGS`];
+        const promptDelivery = process.env[`${prefix}PROMPT_DELIVERY`] as 'flag' | 'positional' | 'stdin' | undefined;
+        const outputFormat = process.env[`${prefix}OUTPUT_FORMAT`] as 'text' | 'json' | 'jsonl' | undefined;
+
+        providers[`cli-${name.toLowerCase()}`] = {
+          type: 'cli' as const,
+          cli_type: 'custom' as const,
+          cli_command: command,
+          nickname: process.env[`${prefix}NICKNAME`] || `${name} Agent`,
+          ...(promptDelivery && { prompt_delivery: promptDelivery }),
+          ...(process.env[`${prefix}PROMPT_FLAG`] && {
+            prompt_flag: process.env[`${prefix}PROMPT_FLAG`],
+          }),
+          ...(outputFormat && { output_format: outputFormat }),
+          ...(process.env[`${prefix}DEFAULT_MODEL`] && {
+            default_model: process.env[`${prefix}DEFAULT_MODEL`],
+          }),
+          ...(cliArgsStr && {
+            cli_args: cliArgsStr.split(',').map(a => a.trim()),
+          }),
+          ...(process.env[`${prefix}PROCESS_TIMEOUT`] && {
+            process_timeout: parseInt(process.env[`${prefix}PROCESS_TIMEOUT`]!),
+          }),
+          ...(process.env[`${prefix}WORKING_DIRECTORY`] && {
+            working_directory: process.env[`${prefix}WORKING_DIRECTORY`],
+          }),
+        };
+      }
+    });
+
+    return providers;
   }
 
   private getMCPServersFromEnv(): MCPServerConfig[] {

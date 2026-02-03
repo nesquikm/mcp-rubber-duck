@@ -35,7 +35,15 @@ export class EnhancedProviderManager extends ProviderManager {
 
     for (const [name, providerConfig] of Object.entries(allProviders)) {
       try {
-        // Create enhanced provider if MCP is enabled
+        // Skip CLI providers - they don't support MCP bridge
+        // CLI tools like claude/gemini have their own native tool systems
+        // that conflict with MCP tool injection
+        if (providerConfig.type === 'cli') {
+          logger.debug(`Skipping CLI provider ${name} for MCP bridge (CLI tools have native tool systems)`);
+          continue;
+        }
+
+        // Create enhanced HTTP provider with MCP support
         const enhancedProvider = new EnhancedDuckProvider(
           name,
           providerConfig.nickname,
@@ -89,6 +97,16 @@ export class EnhancedProviderManager extends ProviderManager {
   ): Promise<DuckResponse & { pendingApprovals?: { id: string; message: string }[]; mcpResults?: MCPResult[] }> {
     if (!this.mcpEnabled) {
       // Fall back to regular provider
+      return this.askDuck(providerName, prompt, options);
+    }
+
+    // Resolve provider name
+    const resolvedName = providerName || this.configManager.getConfig().default_provider;
+
+    // Check if this is a CLI provider (not in enhanced providers map)
+    // CLI providers don't support MCP bridge, fall back to regular askDuck
+    if (resolvedName && !this.enhancedProviders.has(resolvedName)) {
+      logger.debug(`Provider ${resolvedName} is not MCP-enhanced (likely CLI), using regular askDuck`);
       return this.askDuck(providerName, prompt, options);
     }
 
@@ -180,16 +198,16 @@ export class EnhancedProviderManager extends ProviderManager {
       return this.compareDucks(prompt, providerNames, options);
     }
 
-    const providersToUse = providerNames 
-      ? providerNames.map(name => this.enhancedProviders.get(name)).filter(Boolean)
-      : Array.from(this.enhancedProviders.values());
+    const allProviderNames = providerNames || Array.from(this.enhancedProviders.keys());
+    const validProviderNames = allProviderNames.filter(name => this.enhancedProviders.has(name));
 
-    if (providersToUse.length === 0) {
+    if (validProviderNames.length === 0) {
       throw new Error('No valid enhanced providers specified');
     }
 
-    const promises = providersToUse.map(provider => 
-      provider ? this.askDuckWithMCP(provider.name, prompt, options).catch(error => ({
+    const promises = validProviderNames.map(name => {
+      const provider = this.enhancedProviders.get(name);
+      return provider ? this.askDuckWithMCP(provider.name, prompt, options).catch(error => ({
         provider: provider.name,
         nickname: provider.nickname,
         model: '',
@@ -203,8 +221,8 @@ export class EnhancedProviderManager extends ProviderManager {
         content: 'Error: Invalid provider',
         latency: 0,
         cached: false,
-      })
-    );
+      });
+    });
 
     return Promise.all(promises);
   }
@@ -219,19 +237,19 @@ export class EnhancedProviderManager extends ProviderManager {
       return this.compareDucksWithProgress(prompt, providerNames, options, onProviderComplete);
     }
 
-    const providersToUse = providerNames
-      ? providerNames.map(name => this.enhancedProviders.get(name)).filter(Boolean)
-      : Array.from(this.enhancedProviders.values());
+    const allProviderNames = providerNames || Array.from(this.enhancedProviders.keys());
+    const validProviderNames = allProviderNames.filter(name => this.enhancedProviders.has(name));
 
-    if (providersToUse.length === 0) {
+    if (validProviderNames.length === 0) {
       throw new Error('No valid enhanced providers specified');
     }
 
-    const total = providersToUse.length;
+    const total = validProviderNames.length;
     let completed = 0;
 
-    const promises = providersToUse.map(provider =>
-      provider ? this.askDuckWithMCP(provider.name, prompt, options)
+    const promises = validProviderNames.map(name => {
+      const provider = this.enhancedProviders.get(name);
+      return provider ? this.askDuckWithMCP(provider.name, prompt, options)
         .catch(error => ({
           provider: provider.name,
           nickname: provider.nickname,
@@ -252,8 +270,8 @@ export class EnhancedProviderManager extends ProviderManager {
           content: 'Error: Invalid provider',
           latency: 0,
           cached: false,
-        })
-    );
+        });
+    });
 
     return Promise.all(promises);
   }
@@ -332,9 +350,9 @@ export class EnhancedProviderManager extends ProviderManager {
   }
 
   // Get enhanced provider statistics
-  getAllEnhancedProviders(): Array<{ 
-    name: string; 
-    info: ReturnType<EnhancedDuckProvider['getInfo']>; 
+  getAllEnhancedProviders(): Array<{
+    name: string;
+    info: ReturnType<EnhancedDuckProvider['getInfo']>;
     mcpEnabled: boolean;
     mcpStats?: ReturnType<EnhancedDuckProvider['getMCPStats']>;
     functionCount?: number;

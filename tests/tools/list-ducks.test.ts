@@ -18,6 +18,7 @@ describe('listDucksTool', () => {
       info: {
         nickname: 'OpenAI Duck',
         model: 'gpt-4',
+        type: 'http' as const,
         baseURL: 'https://api.openai.com/v1',
         hasApiKey: true,
       },
@@ -27,6 +28,7 @@ describe('listDucksTool', () => {
       info: {
         nickname: 'Groq Duck',
         model: 'llama-3.1-70b',
+        type: 'http' as const,
         baseURL: 'https://api.groq.com/openai/v1',
         hasApiKey: true,
       },
@@ -131,6 +133,7 @@ describe('listDucksTool', () => {
         info: {
           nickname: 'Ollama Duck',
           model: 'llama3',
+          type: 'http' as const,
           baseURL: 'http://localhost:11434/v1',
           hasApiKey: false,
         },
@@ -140,5 +143,85 @@ describe('listDucksTool', () => {
     const result = await listDucksTool(mockProviderManager, mockHealthMonitor, {});
 
     expect(result.content[0].text).toContain('Not required');
+  });
+
+  it('should display CLI provider with CLI-specific fields', async () => {
+    mockProviderManager.getAllProviders.mockReturnValue([
+      {
+        name: 'cli-claude',
+        info: {
+          nickname: 'Claude Agent',
+          model: 'claude-sonnet-4-20250514',
+          type: 'cli' as const,
+          cliCommand: 'claude',
+          cliType: 'claude',
+        },
+      },
+    ]);
+
+    const result = await listDucksTool(mockProviderManager, mockHealthMonitor, {});
+
+    const text = result.content[0].text;
+    expect(text).toContain('Claude Agent');
+    expect(text).toContain('[CLI]');
+    expect(text).toContain('Command: claude');
+    expect(text).toContain('CLI Type: claude');
+    // Should NOT show HTTP-specific fields
+    expect(text).not.toContain('Endpoint:');
+    expect(text).not.toContain('API Key:');
+  });
+
+  it('should display mixed HTTP and CLI providers', async () => {
+    mockProviderManager.getAllProviders.mockReturnValue([
+      {
+        name: 'openai',
+        info: {
+          nickname: 'OpenAI Duck',
+          model: 'gpt-4',
+          type: 'http' as const,
+          baseURL: 'https://api.openai.com/v1',
+          hasApiKey: true,
+        },
+      },
+      {
+        name: 'cli-claude',
+        info: {
+          nickname: 'Claude Agent',
+          model: 'cli',
+          type: 'cli' as const,
+          cliCommand: 'claude',
+          cliType: 'claude',
+        },
+      },
+    ]);
+
+    const result = await listDucksTool(mockProviderManager, mockHealthMonitor, {});
+
+    const text = result.content[0].text;
+    expect(text).toContain('Found 2 duck(s)');
+    expect(text).toContain('[HTTP]');
+    expect(text).toContain('[CLI]');
+    expect(text).toContain('Endpoint:');
+    expect(text).toContain('Command: claude');
+  });
+
+  it('should show fallback values for CLI provider with missing optional fields', async () => {
+    mockProviderManager.getAllProviders.mockReturnValue([
+      {
+        name: 'cli-custom',
+        info: {
+          nickname: 'Custom CLI',
+          model: 'cli',
+          type: 'cli' as const,
+          // cliCommand and cliType omitted
+        },
+      },
+    ]);
+
+    const result = await listDucksTool(mockProviderManager, mockHealthMonitor, {});
+
+    const text = result.content[0].text;
+    expect(text).toContain('Command: default');
+    expect(text).toContain('CLI Type: unknown');
   });
 });
