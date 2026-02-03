@@ -235,4 +235,132 @@ describe('duckCouncilTool', () => {
     // Should not show partial council message
     expect(result.content[0].text).not.toContain('Partial council');
   });
+
+  describe('CLI provider support', () => {
+    const mockCLIResponses = [
+      {
+        provider: 'cli-claude',
+        nickname: 'Claude Agent',
+        content: 'CLI Claude council opinion',
+        model: 'cli',
+        latency: 5000,
+        cached: false,
+        usage: { prompt_tokens: 5, completion_tokens: 15, total_tokens: 20 },
+      },
+      {
+        provider: 'cli-gemini',
+        nickname: 'Gemini Agent',
+        content: 'CLI Gemini council opinion',
+        model: 'cli',
+        latency: 8000,
+        cached: false,
+        // no usage
+      },
+    ];
+
+    it('should handle CLI-only council', async () => {
+      mockProviderManager.getProviderNames.mockReturnValue(['cli-claude', 'cli-gemini']);
+      mockProviderManager.duckCouncil.mockResolvedValue(mockCLIResponses);
+
+      const result = await duckCouncilTool(mockProviderManager, {
+        prompt: 'CLI council test',
+      });
+
+      expect(result.content[0].text).toContain('2 ducks in attendance');
+      expect(result.content[0].text).toContain('Claude Agent');
+      expect(result.content[0].text).toContain('Gemini Agent');
+      // Note: duck council shows nickname only, not provider name
+      expect(result.content[0].text).toContain('CLI Claude council opinion');
+      expect(result.content[0].text).toContain('CLI Gemini council opinion');
+    });
+
+    it('should display CLI model as "cli"', async () => {
+      mockProviderManager.getProviderNames.mockReturnValue(['cli-claude']);
+      mockProviderManager.duckCouncil.mockResolvedValue([mockCLIResponses[0]]);
+
+      const result = await duckCouncilTool(mockProviderManager, {
+        prompt: 'Test',
+      });
+
+      expect(result.content[0].text).toContain('cli');
+    });
+
+    it('should handle CLI response without usage', async () => {
+      mockProviderManager.getProviderNames.mockReturnValue(['cli-gemini']);
+      mockProviderManager.duckCouncil.mockResolvedValue([
+        {
+          provider: 'cli-gemini',
+          nickname: 'Gemini Agent',
+          content: 'Response',
+          model: 'cli',
+          latency: 8000,
+          cached: false,
+          // no usage field
+        },
+      ]);
+
+      const result = await duckCouncilTool(mockProviderManager, {
+        prompt: 'Test',
+      });
+
+      expect(result.content[0].text).toContain('Gemini Agent');
+      expect(result.content[0].text).not.toContain('tokens');
+    });
+
+    it('should handle mixed HTTP and CLI council', async () => {
+      mockProviderManager.getProviderNames.mockReturnValue(['openai', 'cli-claude']);
+      mockProviderManager.duckCouncil.mockResolvedValue([
+        {
+          provider: 'openai',
+          nickname: 'GPT Duck',
+          content: 'HTTP opinion',
+          model: 'gpt-4',
+          latency: 500,
+          cached: false,
+          usage: { prompt_tokens: 100, completion_tokens: 50, total_tokens: 150 },
+        },
+        {
+          provider: 'cli-claude',
+          nickname: 'Claude Agent',
+          content: 'CLI opinion',
+          model: 'cli',
+          latency: 5000,
+          cached: false,
+          usage: { prompt_tokens: 5, completion_tokens: 10, total_tokens: 15 },
+        },
+      ]);
+
+      const result = await duckCouncilTool(mockProviderManager, {
+        prompt: 'Mixed council',
+      });
+
+      expect(result.content[0].text).toContain('2 ducks in attendance');
+      expect(result.content[0].text).toContain('GPT Duck');
+      expect(result.content[0].text).toContain('Claude Agent');
+      expect(result.content[0].text).toContain('gpt-4');
+      expect(result.content[0].text).toContain('2/2 ducks provided their wisdom');
+    });
+
+    it('should handle CLI error responses', async () => {
+      mockProviderManager.getProviderNames.mockReturnValue(['cli-claude']);
+      mockProviderManager.duckCouncil.mockResolvedValue([
+        {
+          provider: 'cli-claude',
+          nickname: 'Claude Agent',
+          content: 'Error: CLI process timed out',
+          model: '',
+          latency: 0,
+          cached: false,
+        },
+      ]);
+
+      const result = await duckCouncilTool(mockProviderManager, {
+        prompt: 'Test',
+      });
+
+      expect(result.content[0].text).toContain('Duck had to leave early');
+      expect(result.content[0].text).toContain('CLI process timed out');
+      expect(result.content[0].text).toContain('0/1 ducks provided their wisdom');
+    });
+  });
 });

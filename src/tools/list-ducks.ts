@@ -31,10 +31,16 @@ export async function listDucksTool(
     const health = healthStatus.get(provider.name);
     const statusEmoji = health?.healthy ? '✅' : health === undefined ? '❓' : '❌';
     
-    response += `${statusEmoji} **${provider.info.nickname}** (${provider.name})\n`;
+    const providerType = provider.info.type === 'cli' ? 'CLI' : 'HTTP';
+    response += `${statusEmoji} **${provider.info.nickname}** (${provider.name}) [${providerType}]\n`;
     response += `   📍 Model: ${provider.info.model}\n`;
-    response += `   🔗 Endpoint: ${provider.info.baseURL}\n`;
-    response += `   🔑 API Key: ${provider.info.hasApiKey ? 'Configured' : 'Not required'}\n`;
+    if (provider.info.type === 'cli') {
+      response += `   🖥️ Command: ${provider.info.cliCommand || 'default'}\n`;
+      response += `   🔧 CLI Type: ${provider.info.cliType || 'unknown'}\n`;
+    } else {
+      response += `   🔗 Endpoint: ${provider.info.baseURL}\n`;
+      response += `   🔑 API Key: ${provider.info.hasApiKey ? 'Configured' : 'Not required'}\n`;
+    }
     
     if (health) {
       response += `   💓 Health: ${health.healthy ? 'Healthy' : 'Unhealthy'}`;

@@ -81,6 +81,41 @@
       "nickname": "Custom Duck",
       "temperature": 0.7,
       "system_prompt": "You are a helpful assistant."
+    },
+    "cli-claude": {
+      "type": "cli",
+      "cli_type": "claude",
+      "nickname": "Claude Agent",
+      "system_prompt": "Be concise and technical"
+    },
+    "cli-codex": {
+      "type": "cli",
+      "cli_type": "codex",
+      "nickname": "Codex Agent"
+    },
+    "cli-gemini": {
+      "type": "cli",
+      "cli_type": "gemini",
+      "nickname": "Gemini Agent"
+    },
+    "cli-grok": {
+      "type": "cli",
+      "cli_type": "grok",
+      "nickname": "Grok Agent"
+    },
+    "cli-aider": {
+      "type": "cli",
+      "cli_type": "aider",
+      "nickname": "Aider Agent"
+    },
+    "cli-custom-tool": {
+      "type": "cli",
+      "cli_type": "custom",
+      "cli_command": "/usr/local/bin/my-llm",
+      "prompt_delivery": "stdin",
+      "output_format": "text",
+      "nickname": "My Custom CLI Tool",
+      "process_timeout": 120000
     }
   },
   "default_provider": "openai",

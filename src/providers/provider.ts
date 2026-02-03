@@ -1,11 +1,11 @@
 import OpenAI from 'openai';
-import { ChatOptions, ChatResponse, ProviderOptions, ModelInfo, OpenAIChatParams, OpenAIChatResponse, OpenAIMessage } from './types.js';
+import { ChatOptions, ChatResponse, ProviderOptions, ModelInfo, IDuckProvider, OpenAIChatParams, OpenAIChatResponse, OpenAIMessage } from './types.js';
 import { ConversationMessage } from '../config/types.js';
 import { logger } from '../utils/logger.js';
 import { GuardrailsService } from '../guardrails/service.js';
 import { GuardrailBlockError } from '../guardrails/errors.js';
 
-export class DuckProvider {
+export class DuckProvider implements IDuckProvider {
   protected client: OpenAI;
   protected options: ProviderOptions;
   protected guardrailsService?: GuardrailsService;
@@ -221,6 +221,7 @@ export class DuckProvider {
       name: this.name,
       nickname: this.nickname,
       model: this.options.model,
+      type: 'http' as const,
       availableModels: this.options.availableModels,
       baseURL: this.options.baseURL,
       hasApiKey: !!this.options.apiKey,

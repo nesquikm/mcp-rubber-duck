@@ -183,3 +183,62 @@ We don't store, validate, or manage credentials. If the CLI is authenticated, it
 | **Gemini** | Free: 60 req/min, 1K req/day | $0.10-$4/M input |
 | **Claude** | Pro $20/mo, Max $100-200/mo | Avg ~$6/dev/day |
 | **Grok** | No subscription CLI auth | $0.20/M input, $1.50/M output |
+
+## MCP Bridge: Not Supported for CLI Providers
+
+**Status: Removed** (Feb 2026)
+
+### Why MCP Bridge Doesn't Work for CLI Providers
+
+We attempted to give CLI providers access to external MCP tools via "XML prompt injection" — injecting tool definitions as XML into the prompt and parsing XML tool calls from the output. This approach **fundamentally conflicts** with how modern CLI coding agents work.
+
+#### The Problem
+
+CLI tools like Claude Code, Gemini CLI, and Codex have their own **native tool systems**:
+
+```
+User prompt with XML tool definitions
+         ↓
+    CLI sees:
+    - Native tools: [Bash, Edit, Read, Grep, ...]  ← registered at startup
+    - XML in prompt: <available_tools>...          ← just text
+         ↓
+    CLI prefers native tools (they're "real")
+    Ignores XML tool definitions
+         ↓
+    Outputs: "I'll use Bash to..." (not XML tool calls)
+```
+
+The LLM inside the CLI doesn't output `<tool_call>` XML because it has actual native tools it can call directly. Our injected tool descriptions are treated as regular text, not tool definitions.
+
+#### What We Tried
+
+1. **XML Prompt Injection**: Inject `<available_tools>` block with MCP tool definitions, expect `<tool_call>` XML in output
+2. **Tool Call Parsing**: Parse CLI output for XML tool call patterns
+3. **Iterative Loop**: Feed tool results back and repeat until `<final_answer>`
+
+#### Why It Failed
+
+| Issue | Description |
+|-------|-------------|
+| **Native tools take priority** | CLIs register their tools at startup; XML in prompts comes after |
+| **No XML output** | CLIs execute tools natively, don't output XML requests |
+| **Different tool formats** | Each CLI has its own tool schema, not our XML format |
+
+#### Native MCP Support in CLIs
+
+Some CLIs have their own MCP support, but configuration is **not unified**:
+
+| CLI | MCP Config Method | Inline Args? |
+|-----|------------------|--------------|
+| Claude | `--mcp-config <json>` | ✅ Yes |
+| Gemini | `gemini mcp add` (pre-register) | ❌ No |
+| Codex | None | ❌ N/A |
+
+There's no unified way to pass MCP server configuration to CLI providers via command-line args.
+
+#### Recommendation
+
+- **Use HTTP providers for MCP Bridge** — they support native function calling
+- **Use CLI providers for their native capabilities** — subscription auth, built-in tools
+- **Don't mix CLI providers with external MCP tools** — the architectures conflict
