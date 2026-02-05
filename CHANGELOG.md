@@ -1,3 +1,10 @@
+# [1.13.0](https://github.com/nesquikm/mcp-rubber-duck/compare/v1.12.0...v1.13.0) (2026-02-05)
+
+
+### Features
+
+* add human-readable title to all MCP tools ([#58](https://github.com/nesquikm/mcp-rubber-duck/issues/58)) ([f37cb2c](https://github.com/nesquikm/mcp-rubber-duck/commit/f37cb2c1425b91aaf885781cf0a42dc1ae11789c)), closes [#54](https://github.com/nesquikm/mcp-rubber-duck/issues/54)
+
 # [1.12.0](https://github.com/nesquikm/mcp-rubber-duck/compare/v1.11.0...v1.12.0) (2026-02-03)
 
 
