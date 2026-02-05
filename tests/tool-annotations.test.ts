@@ -75,6 +75,77 @@ describe('Tool Annotations', () => {
     });
   });
 
+  describe('Tool Titles', () => {
+    /**
+     * Tool titles provide human-readable display names for MCP clients.
+     * According to MCP spec (2025-11-25), title is optional but recommended
+     * for better UX in tool pickers and UI displays.
+     *
+     * Test logic:
+     * - Every tool SHOULD have a title for consistent UX
+     * - Titles should be human-readable (not machine identifiers)
+     * - Titles should be non-empty strings
+     * - Titles should be unique to avoid UI confusion
+     */
+
+    it('every tool should have a title', () => {
+      for (const tool of tools) {
+        expect(tool.title).toBeDefined();
+        expect(typeof tool.title).toBe('string');
+        expect(tool.title!.length).toBeGreaterThan(0);
+      }
+    });
+
+    it('titles should be human-readable (contain spaces or be single words)', () => {
+      // Machine identifiers use underscores (ask_duck), titles should not
+      for (const tool of tools) {
+        expect(tool.title).not.toContain('_');
+      }
+    });
+
+    it('titles should be unique across all tools', () => {
+      const titles = tools.map((t) => t.title);
+      const uniqueTitles = new Set(titles);
+      expect(uniqueTitles.size).toBe(titles.length);
+    });
+
+    it('titles should start with an uppercase letter (Title Case)', () => {
+      for (const tool of tools) {
+        const firstChar = tool.title!.charAt(0);
+        expect(firstChar).toBe(firstChar.toUpperCase());
+      }
+    });
+
+    it('titles should be reasonably short for UI display (under 30 chars)', () => {
+      for (const tool of tools) {
+        expect(tool.title!.length).toBeLessThanOrEqual(30);
+      }
+    });
+
+    // Specific title tests to ensure correct mapping
+    const expectedTitles: Record<string, string> = {
+      ask_duck: 'Ask a Duck',
+      chat_with_duck: 'Chat with a Duck',
+      clear_conversations: 'Clear Conversations',
+      list_ducks: 'List Ducks',
+      list_models: 'List Models',
+      compare_ducks: 'Compare Ducks',
+      duck_council: 'Duck Council',
+      duck_vote: 'Duck Vote',
+      duck_judge: 'Duck Judge',
+      duck_iterate: 'Duck Iteration',
+      duck_debate: 'Duck Debate',
+      get_usage_stats: 'Usage Statistics',
+    };
+
+    for (const [toolName, expectedTitle] of Object.entries(expectedTitles)) {
+      it(`${toolName} should have title "${expectedTitle}"`, () => {
+        const tool = findTool(toolName);
+        expect(tool?.title).toBe(expectedTitle);
+      });
+    }
+  });
+
   describe('ask_duck', () => {
     /**
      * ask_duck queries an external LLM API and returns a response.
@@ -650,6 +721,45 @@ describe('MCP-specific Tool Annotations', () => {
     it('should be marked as open-world', () => {
       const tool = findTool('mcp_status');
       expect(tool?.annotations?.openWorldHint).toBe(true);
+    });
+  });
+
+  describe('MCP Tool Titles', () => {
+    /**
+     * Verify that MCP-specific tools also have proper human-readable titles.
+     */
+
+    it('all MCP tools should have titles', () => {
+      const mcpTools = ['get_pending_approvals', 'approve_mcp_request', 'mcp_status'];
+      for (const toolName of mcpTools) {
+        const tool = findTool(toolName);
+        expect(tool?.title).toBeDefined();
+        expect(typeof tool?.title).toBe('string');
+        expect(tool?.title!.length).toBeGreaterThan(0);
+      }
+    });
+
+    it('get_pending_approvals should have title "Pending Approvals"', () => {
+      const tool = findTool('get_pending_approvals');
+      expect(tool?.title).toBe('Pending Approvals');
+    });
+
+    it('approve_mcp_request should have title "Approve MCP Request"', () => {
+      const tool = findTool('approve_mcp_request');
+      expect(tool?.title).toBe('Approve MCP Request');
+    });
+
+    it('mcp_status should have title "MCP Bridge Status"', () => {
+      const tool = findTool('mcp_status');
+      expect(tool?.title).toBe('MCP Bridge Status');
+    });
+
+    it('MCP tool titles should not contain underscores', () => {
+      const mcpTools = ['get_pending_approvals', 'approve_mcp_request', 'mcp_status'];
+      for (const toolName of mcpTools) {
+        const tool = findTool(toolName);
+        expect(tool?.title).not.toContain('_');
+      }
     });
   });
 });

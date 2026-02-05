@@ -202,6 +202,7 @@ export class RubberDuckServer {
     this.server.registerTool(
       'ask_duck',
       {
+        title: 'Ask a Duck',
         description: this.mcpEnabled
           ? 'Ask a question to a specific LLM provider (duck) with MCP tool access'
           : 'Ask a question to a specific LLM provider (duck)',
@@ -232,6 +233,7 @@ export class RubberDuckServer {
     this.server.registerTool(
       'chat_with_duck',
       {
+        title: 'Chat with a Duck',
         description: 'Have a conversation with a duck, maintaining context across messages',
         inputSchema: {
           conversation_id: z.string().describe('Conversation ID (creates new if not exists)'),
@@ -256,6 +258,7 @@ export class RubberDuckServer {
     this.server.registerTool(
       'clear_conversations',
       {
+        title: 'Clear Conversations',
         description: 'Clear all conversation history and start fresh',
         annotations: {
           destructiveHint: true,
@@ -276,6 +279,7 @@ export class RubberDuckServer {
     this.server.registerTool(
       'list_ducks',
       {
+        title: 'List Ducks',
         description: 'List all available LLM providers (ducks) and their status',
         inputSchema: {
           check_health: z.boolean().default(false).describe('Perform health check on all providers'),
@@ -298,6 +302,7 @@ export class RubberDuckServer {
     this.server.registerTool(
       'list_models',
       {
+        title: 'List Models',
         description: 'List available models for LLM providers',
         inputSchema: {
           provider: z.string().optional().describe('Provider name (optional, lists all if not specified)'),
@@ -322,6 +327,7 @@ export class RubberDuckServer {
       this.server,
       'compare_ducks',
       {
+        title: 'Compare Ducks',
         description: 'Ask the same question to multiple ducks simultaneously',
         inputSchema: {
           prompt: z.string().describe('The question to ask all ducks'),
@@ -351,6 +357,7 @@ export class RubberDuckServer {
     this.server.registerTool(
       'duck_council',
       {
+        title: 'Duck Council',
         description: 'Get responses from all configured ducks (like a panel discussion)',
         inputSchema: {
           prompt: z.string().describe('The question for the duck council'),
@@ -379,6 +386,7 @@ export class RubberDuckServer {
       this.server,
       'duck_vote',
       {
+        title: 'Duck Vote',
         description: 'Have multiple ducks vote on options with reasoning. Returns vote tally, confidence scores, and consensus level.',
         inputSchema: {
           question: z.string().describe('The question to vote on (e.g., "Best approach for error handling?")'),
@@ -406,6 +414,7 @@ export class RubberDuckServer {
     this.server.registerTool(
       'duck_judge',
       {
+        title: 'Duck Judge',
         description: 'Have one duck evaluate and rank other ducks\' responses. Use after duck_council to get a comparative evaluation.',
         inputSchema: {
           responses: z.array(z.object({
@@ -436,6 +445,7 @@ export class RubberDuckServer {
     this.server.experimental.tasks.registerToolTask(
       'duck_iterate',
       {
+        title: 'Duck Iteration',
         description: 'Iteratively refine a response between two ducks. One generates, the other critiques/improves, alternating for multiple rounds.',
         inputSchema: {
           prompt: z.string().describe('The initial prompt/task to iterate on'),
@@ -479,6 +489,7 @@ export class RubberDuckServer {
     this.server.experimental.tasks.registerToolTask(
       'duck_debate',
       {
+        title: 'Duck Debate',
         description: 'Structured multi-round debate between ducks. Supports oxford (pro/con), socratic (questioning), and adversarial (attack/defend) formats.',
         inputSchema: {
           prompt: z.string().describe('The debate topic or proposition'),
@@ -525,6 +536,7 @@ export class RubberDuckServer {
       this.server,
       'get_usage_stats',
       {
+        title: 'Usage Statistics',
         description: 'Get usage statistics for a time period. Shows token counts and costs (when pricing configured).',
         inputSchema: {
           period: z.enum(['today', '7d', '30d', 'all']).default('today').describe('Time period for stats'),
@@ -550,6 +562,7 @@ export class RubberDuckServer {
       this.server.registerTool(
         'get_pending_approvals',
         {
+          title: 'Pending Approvals',
           description: 'Get list of pending MCP tool approvals from ducks',
           inputSchema: {
             duck: z.string().optional().describe('Filter by duck name (optional)'),
@@ -575,6 +588,7 @@ export class RubberDuckServer {
       this.server.registerTool(
         'approve_mcp_request',
         {
+          title: 'Approve MCP Request',
           description: "Approve or deny a duck's MCP tool request",
           inputSchema: {
             approval_id: z.string().describe('The approval request ID'),
@@ -602,6 +616,7 @@ export class RubberDuckServer {
       this.server.registerTool(
         'mcp_status',
         {
+          title: 'MCP Bridge Status',
           description: 'Get status of MCP bridge, servers, and pending approvals',
           annotations: {
             readOnlyHint: true,
