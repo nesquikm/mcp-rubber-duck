@@ -3,7 +3,7 @@ import { PricingConfig } from '../config/types.js';
 /**
  * Default pricing data for common LLM providers.
  * Prices are in USD per million tokens.
- * Last updated: 2026-01-08
+ * Last updated: 2026-02-05
  *
  * To update pricing:
  * 1. Research current pricing from provider websites
@@ -14,7 +14,7 @@ import { PricingConfig } from '../config/types.js';
  * Users can override these defaults in their config.json file.
  */
 export const DEFAULT_PRICING_VERSION = 2;
-export const DEFAULT_PRICING_LAST_UPDATED = '2026-01-08';
+export const DEFAULT_PRICING_LAST_UPDATED = '2026-02-05';
 
 export const DEFAULT_PRICING: PricingConfig = {
   openai: {
@@ -55,7 +55,7 @@ export const DEFAULT_PRICING: PricingConfig = {
     'o4-mini': { inputPricePerMillion: 1.1, outputPricePerMillion: 4.4 },
 
     // o3 reasoning models
-    'o3': { inputPricePerMillion: 2, outputPricePerMillion: 8 },
+    'o3': { inputPricePerMillion: 0.4, outputPricePerMillion: 1.6 },
     'o3-mini': { inputPricePerMillion: 1.1, outputPricePerMillion: 4.4 },
 
     // o1 reasoning models
@@ -127,6 +127,7 @@ export const DEFAULT_PRICING: PricingConfig = {
     // Gemini 2.0
     'gemini-2.0-flash': { inputPricePerMillion: 0.1, outputPricePerMillion: 0.4 },
     'gemini-2.0-flash-lite': { inputPricePerMillion: 0.075, outputPricePerMillion: 0.3 },
+    // Note: gemini-2.0-flash deprecated March 31, 2026 - use 2.5 models
     'gemini-2.0-flash-exp': { inputPricePerMillion: 0, outputPricePerMillion: 0 }, // Free during preview
 
     // Gemini 1.5
@@ -154,7 +155,7 @@ export const DEFAULT_PRICING: PricingConfig = {
   groq: {
     // Llama 4
     'llama-4-scout-17b-128k': { inputPricePerMillion: 0.11, outputPricePerMillion: 0.34 },
-    'llama-4-maverick-17b-128k': { inputPricePerMillion: 0.2, outputPricePerMillion: 0.6 },
+    'llama-4-maverick-17b-128k': { inputPricePerMillion: 0.5, outputPricePerMillion: 0.77 },
     'llama-guard-4-12b': { inputPricePerMillion: 0.2, outputPricePerMillion: 0.2 },
 
     // Llama 3.3
@@ -200,21 +201,24 @@ export const DEFAULT_PRICING: PricingConfig = {
   },
 
   mistral: {
-    // Mistral Large
-    'mistral-large-latest': { inputPricePerMillion: 2, outputPricePerMillion: 6 },
+    // Mistral Large 3 (2512 release)
+    'mistral-large-latest': { inputPricePerMillion: 0.5, outputPricePerMillion: 1.5 },
+    'mistral-large-2512': { inputPricePerMillion: 0.5, outputPricePerMillion: 1.5 },
     'mistral-large-2411': { inputPricePerMillion: 2, outputPricePerMillion: 6 },
 
     // Mistral Medium 3
     'mistral-medium-latest': { inputPricePerMillion: 0.4, outputPricePerMillion: 2 },
     'mistral-medium-3': { inputPricePerMillion: 0.4, outputPricePerMillion: 2 },
 
-    // Mistral Small 3
-    'mistral-small-latest': { inputPricePerMillion: 0.1, outputPricePerMillion: 0.3 },
+    // Mistral Small 3.1
+    'mistral-small-latest': { inputPricePerMillion: 0.03, outputPricePerMillion: 0.11 },
+    'mistral-small-3.1': { inputPricePerMillion: 0.03, outputPricePerMillion: 0.11 },
     'mistral-small-2409': { inputPricePerMillion: 0.1, outputPricePerMillion: 0.3 },
     'mistral-small-3': { inputPricePerMillion: 0.1, outputPricePerMillion: 0.3 },
 
     // Codestral
     'codestral-latest': { inputPricePerMillion: 0.3, outputPricePerMillion: 0.9 },
+    'codestral-2508': { inputPricePerMillion: 0.3, outputPricePerMillion: 0.9 },
     'codestral-2501': { inputPricePerMillion: 0.3, outputPricePerMillion: 0.9 },
 
     // Devstral 2
@@ -229,7 +233,7 @@ export const DEFAULT_PRICING: PricingConfig = {
     'pixtral-large-latest': { inputPricePerMillion: 2, outputPricePerMillion: 6 },
 
     // Open models
-    'open-mistral-nemo': { inputPricePerMillion: 0.15, outputPricePerMillion: 0.15 },
+    'open-mistral-nemo': { inputPricePerMillion: 0.02, outputPricePerMillion: 0.02 },
   },
 
   together: {
