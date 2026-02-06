@@ -1841,3 +1841,210 @@ describe('ProviderManager with CLI Providers', () => {
     expect(info.cliType).toBe('custom');
   });
 });
+
+describe('EnhancedProviderManager with CLI Providers', () => {
+  let mockConfigManager: jest.Mocked<ConfigManager>;
+  let mockFunctionBridge: {
+    getFunctionDefinitions: jest.Mock;
+    handleFunctionCall: jest.Mock;
+    getStats: jest.Mock;
+  };
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+
+    mockCreate.mockResolvedValue({
+      choices: [{
+        message: { content: 'Mocked response' },
+        finish_reason: 'stop',
+      }],
+      usage: {
+        prompt_tokens: 10,
+        completion_tokens: 20,
+        total_tokens: 30,
+      },
+      model: 'mock-model',
+    });
+
+    mockFunctionBridge = {
+      getFunctionDefinitions: jest.fn().mockResolvedValue([]),
+      handleFunctionCall: jest.fn(),
+      getStats: jest.fn().mockReturnValue({ totalFunctions: 0, serverCount: 0, trustedToolCount: 0, connectedServers: [] }),
+    };
+
+    mockConfigManager = {
+      getConfig: jest.fn().mockReturnValue({
+        providers: {
+          openai: {
+            type: 'http',
+            api_key: 'sk-test',
+            base_url: 'https://api.openai.com/v1',
+            default_model: 'gpt-4',
+            nickname: 'OpenAI Duck',
+            models: ['gpt-4'],
+          },
+          'cli-codex': {
+            type: 'cli',
+            cli_type: 'codex',
+            nickname: 'Codex Agent',
+          },
+        },
+        default_provider: 'openai',
+        cache_ttl: 300,
+        enable_failover: false,
+        default_temperature: 0.7,
+        mcp_bridge: {
+          enabled: true,
+        },
+      }),
+    } as any;
+  });
+
+  it('compareDucksWithMCP should include CLI providers', async () => {
+    const { EnhancedProviderManager } = await import('../src/providers/enhanced-manager');
+
+    const manager = new EnhancedProviderManager(
+      mockConfigManager,
+      mockFunctionBridge as unknown as import('../src/services/function-bridge').FunctionBridge
+    );
+
+    // Mock the enhanced HTTP provider's client (this is what compareDucksWithMCP uses)
+    const enhancedProvider = manager.getEnhancedProvider('openai');
+    enhancedProvider['client'].chat.completions.create = mockCreate;
+
+    // Mock the CLI provider's chat method to return a response
+    const cliProvider = manager.getProvider('cli-codex');
+    cliProvider.chat = jest.fn().mockResolvedValue({
+      content: 'CLI response',
+      model: 'cli',
+      finishReason: 'stop',
+    });
+
+    const responses = await manager.compareDucksWithMCP('Hello');
+
+    // Should have responses from both HTTP and CLI providers
+    expect(responses).toHaveLength(2);
+
+    const providerNames = responses.map(r => r.provider);
+    expect(providerNames).toContain('openai');
+    expect(providerNames).toContain('cli-codex');
+  });
+
+  it('compareDucksWithProgressMCP should include CLI providers', async () => {
+    const { EnhancedProviderManager } = await import('../src/providers/enhanced-manager');
+
+    const manager = new EnhancedProviderManager(
+      mockConfigManager,
+      mockFunctionBridge as unknown as import('../src/services/function-bridge').FunctionBridge
+    );
+
+    // Mock the enhanced HTTP provider's client
+    const enhancedProvider = manager.getEnhancedProvider('openai');
+    enhancedProvider['client'].chat.completions.create = mockCreate;
+
+    // Mock the CLI provider's chat method
+    const cliProvider = manager.getProvider('cli-codex');
+    cliProvider.chat = jest.fn().mockResolvedValue({
+      content: 'CLI response',
+      model: 'cli',
+      finishReason: 'stop',
+    });
+
+    const onComplete = jest.fn();
+    const responses = await manager.compareDucksWithProgressMCP('Hello', undefined, undefined, onComplete);
+
+    // Should have responses from both providers
+    expect(responses).toHaveLength(2);
+
+    const providerNames = responses.map(r => r.provider);
+    expect(providerNames).toContain('openai');
+    expect(providerNames).toContain('cli-codex');
+
+    // Progress callback should be called for each provider
+    expect(onComplete).toHaveBeenCalledTimes(2);
+  });
+
+  it('compareDucksWithMCP should handle CLI provider errors gracefully', async () => {
+    const { EnhancedProviderManager } = await import('../src/providers/enhanced-manager');
+
+    const manager = new EnhancedProviderManager(
+      mockConfigManager,
+      mockFunctionBridge as unknown as import('../src/services/function-bridge').FunctionBridge
+    );
+
+    // Mock the enhanced HTTP provider's client
+    const enhancedProvider = manager.getEnhancedProvider('openai');
+    enhancedProvider['client'].chat.completions.create = mockCreate;
+
+    // Mock the CLI provider to throw an error
+    const cliProvider = manager.getProvider('cli-codex');
+    cliProvider.chat = jest.fn().mockRejectedValue(new Error('CLI process failed'));
+
+    const responses = await manager.compareDucksWithMCP('Hello');
+
+    // Should still return 2 responses
+    expect(responses).toHaveLength(2);
+
+    // HTTP provider should succeed
+    const httpResponse = responses.find(r => r.provider === 'openai');
+    expect(httpResponse?.content).toBe('Mocked response');
+
+    // CLI provider should have error message
+    const cliResponse = responses.find(r => r.provider === 'cli-codex');
+    expect(cliResponse?.content).toContain('Error');
+    expect(cliResponse?.content).toContain('CLI process failed');
+  });
+
+  it('askDuckWithMCP should fall back to regular askDuck for CLI providers', async () => {
+    const { EnhancedProviderManager } = await import('../src/providers/enhanced-manager');
+
+    const manager = new EnhancedProviderManager(
+      mockConfigManager,
+      mockFunctionBridge as unknown as import('../src/services/function-bridge').FunctionBridge
+    );
+
+    // Mock the CLI provider's chat method
+    const cliProvider = manager.getProvider('cli-codex');
+    cliProvider.chat = jest.fn().mockResolvedValue({
+      content: 'CLI response',
+      model: 'cli',
+      finishReason: 'stop',
+    });
+
+    const response = await manager.askDuckWithMCP('cli-codex', 'Hello');
+
+    expect(response.provider).toBe('cli-codex');
+    expect(response.content).toBe('CLI response');
+    expect(cliProvider.chat).toHaveBeenCalled();
+  });
+
+  it('duckCouncilWithMCP should include CLI providers', async () => {
+    const { EnhancedProviderManager } = await import('../src/providers/enhanced-manager');
+
+    const manager = new EnhancedProviderManager(
+      mockConfigManager,
+      mockFunctionBridge as unknown as import('../src/services/function-bridge').FunctionBridge
+    );
+
+    // Mock the enhanced HTTP provider's client
+    const enhancedProvider = manager.getEnhancedProvider('openai');
+    enhancedProvider['client'].chat.completions.create = mockCreate;
+
+    // Mock the CLI provider's chat method
+    const cliProvider = manager.getProvider('cli-codex');
+    cliProvider.chat = jest.fn().mockResolvedValue({
+      content: 'CLI council response',
+      model: 'cli',
+      finishReason: 'stop',
+    });
+
+    const responses = await manager.duckCouncilWithMCP('Hello');
+
+    // Should have responses from both providers
+    expect(responses).toHaveLength(2);
+
+    const providerNames = responses.map(r => r.provider);
+    expect(providerNames).toContain('openai');
+    expect(providerNames).toContain('cli-codex');
+  });
+});

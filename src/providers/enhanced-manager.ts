@@ -198,29 +198,26 @@ export class EnhancedProviderManager extends ProviderManager {
       return this.compareDucks(prompt, providerNames, options);
     }
 
-    const allProviderNames = providerNames || Array.from(this.enhancedProviders.keys());
-    const validProviderNames = allProviderNames.filter(name => this.enhancedProviders.has(name));
+    // Use ALL providers (including CLI), not just enhanced ones
+    const allProviderNames = providerNames || this.getProviderNames();
 
-    if (validProviderNames.length === 0) {
-      throw new Error('No valid enhanced providers specified');
+    if (allProviderNames.length === 0) {
+      throw new Error('No valid providers specified');
     }
 
-    const promises = validProviderNames.map(name => {
-      const provider = this.enhancedProviders.get(name);
-      return provider ? this.askDuckWithMCP(provider.name, prompt, options).catch(error => ({
-        provider: provider.name,
-        nickname: provider.nickname,
-        model: '',
-        content: `Error: ${error instanceof Error ? error.message : String(error)}`,
-        latency: 0,
-        cached: false,
-      })) : Promise.resolve({
-        provider: 'unknown',
-        nickname: 'Unknown',
-        model: '',
-        content: 'Error: Invalid provider',
-        latency: 0,
-        cached: false,
+    // askDuckWithMCP already handles CLI providers by falling back to regular askDuck
+    const promises = allProviderNames.map(name => {
+      return this.askDuckWithMCP(name, prompt, options).catch(error => {
+        const provider = this.enhancedProviders.get(name);
+        const baseProvider = this.getProvider(name);
+        return {
+          provider: name,
+          nickname: provider?.nickname || baseProvider?.nickname || 'Unknown',
+          model: '',
+          content: `Error: ${error instanceof Error ? error.message : String(error)}`,
+          latency: 0,
+          cached: false,
+        };
       });
     });
 
@@ -237,39 +234,35 @@ export class EnhancedProviderManager extends ProviderManager {
       return this.compareDucksWithProgress(prompt, providerNames, options, onProviderComplete);
     }
 
-    const allProviderNames = providerNames || Array.from(this.enhancedProviders.keys());
-    const validProviderNames = allProviderNames.filter(name => this.enhancedProviders.has(name));
+    // Use ALL providers (including CLI), not just enhanced ones
+    const allProviderNames = providerNames || this.getProviderNames();
 
-    if (validProviderNames.length === 0) {
-      throw new Error('No valid enhanced providers specified');
+    if (allProviderNames.length === 0) {
+      throw new Error('No valid providers specified');
     }
 
-    const total = validProviderNames.length;
+    const total = allProviderNames.length;
     let completed = 0;
 
-    const promises = validProviderNames.map(name => {
-      const provider = this.enhancedProviders.get(name);
-      return provider ? this.askDuckWithMCP(provider.name, prompt, options)
-        .catch(error => ({
-          provider: provider.name,
-          nickname: provider.nickname,
-          model: '',
-          content: `Error: ${error instanceof Error ? error.message : String(error)}`,
-          latency: 0,
-          cached: false,
-        }))
+    // askDuckWithMCP already handles CLI providers by falling back to regular askDuck
+    const promises = allProviderNames.map(name => {
+      return this.askDuckWithMCP(name, prompt, options)
+        .catch(error => {
+          const provider = this.enhancedProviders.get(name);
+          const baseProvider = this.getProvider(name);
+          return {
+            provider: name,
+            nickname: provider?.nickname || baseProvider?.nickname || 'Unknown',
+            model: '',
+            content: `Error: ${error instanceof Error ? error.message : String(error)}`,
+            latency: 0,
+            cached: false,
+          };
+        })
         .then(result => {
           completed++;
-          onProviderComplete(provider.name, completed, total);
+          onProviderComplete(name, completed, total);
           return result;
-        })
-      : Promise.resolve({
-          provider: 'unknown',
-          nickname: 'Unknown',
-          model: '',
-          content: 'Error: Invalid provider',
-          latency: 0,
-          cached: false,
         });
     });
 
