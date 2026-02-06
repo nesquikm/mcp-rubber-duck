@@ -50,7 +50,7 @@ describe('duckDebateTool', () => {
           },
         },
         default_provider: 'openai',
-        cache_ttl: 300,
+
         enable_failover: true,
         default_temperature: 0.7,
       }),
@@ -107,7 +107,7 @@ describe('duckDebateTool', () => {
           },
         },
         default_provider: 'openai',
-        cache_ttl: 300,
+
         enable_failover: false,
         default_temperature: 0.7,
       }),

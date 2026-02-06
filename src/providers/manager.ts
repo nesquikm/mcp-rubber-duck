@@ -121,7 +121,6 @@ export class ProviderManager {
           response.model,
           response.usage.promptTokens,
           response.usage.completionTokens,
-          false,
           false
         );
       }
@@ -140,12 +139,11 @@ export class ProviderManager {
           totalTokens: response.usage.totalTokens,
         } : undefined,
         latency: Date.now() - startTime,
-        cached: false,
       };
     } catch (error: unknown) {
       // Record error
       if (this.usageService) {
-        this.usageService.recordUsage(provider.name, modelToUse, 0, 0, false, true);
+        this.usageService.recordUsage(provider.name, modelToUse, 0, 0, true);
       }
 
       // Try failover if enabled
@@ -178,14 +176,12 @@ export class ProviderManager {
         model: '',
         content: `Error: ${error instanceof Error ? error.message : String(error)}`,
         latency: 0,
-        cached: false,
       })) : Promise.resolve({
         provider: 'unknown',
         nickname: 'Unknown',
         model: '',
         content: 'Error: Invalid provider',
         latency: 0,
-        cached: false,
       })
     );
 
@@ -217,7 +213,6 @@ export class ProviderManager {
           model: '',
           content: `Error: ${error instanceof Error ? error.message : String(error)}`,
           latency: 0,
-          cached: false,
         }))
         .then(result => {
           completed++;
@@ -230,7 +225,6 @@ export class ProviderManager {
           model: '',
           content: 'Error: Invalid provider',
           latency: 0,
-          cached: false,
         })
     );
 

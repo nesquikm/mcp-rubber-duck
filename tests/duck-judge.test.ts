@@ -36,7 +36,7 @@ describe('duckJudgeTool', () => {
       model: 'gpt-4',
       content: 'Response from GPT-4 about error handling using try-catch blocks.',
       latency: 1000,
-      cached: false,
+
     },
     {
       provider: 'gemini',
@@ -44,7 +44,7 @@ describe('duckJudgeTool', () => {
       model: 'gemini-pro',
       content: 'Response from Gemini about error handling using Result types.',
       latency: 1500,
-      cached: false,
+
     },
   ];
 
@@ -70,7 +70,7 @@ describe('duckJudgeTool', () => {
           },
         },
         default_provider: 'openai',
-        cache_ttl: 300,
+
         enable_failover: true,
         default_temperature: 0.7,
       }),

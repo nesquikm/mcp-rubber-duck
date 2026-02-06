@@ -754,7 +754,7 @@ Get usage statistics and estimated costs for your duck queries. Renders an [inte
 }
 ```
 
-Returns requests, tokens (prompt/completion), cache hits, errors, and estimated costs broken down by provider and model.
+Returns requests, tokens (prompt/completion), errors, and estimated costs broken down by provider and model.
 
 Usage data is stored in `~/.mcp-rubber-duck/data/usage.json`.
 
@@ -1472,7 +1472,7 @@ mcp-rubber-duck/
 │   │       └── process-runner.ts # child_process.spawn wrapper
 │   ├── tools/              # MCP tool implementations
 │   ├── prompts/            # MCP prompt templates
-│   ├── services/           # Health, cache, conversations
+│   ├── services/           # Health, conversations
 │   ├── ui/                 # Interactive UI apps (MCP Apps)
 │   └── utils/              # Logging, ASCII art
 ├── config/                 # Configuration examples

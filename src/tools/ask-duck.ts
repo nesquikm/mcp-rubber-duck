@@ -1,11 +1,9 @@
 import { ProviderManager } from '../providers/manager.js';
-import { ResponseCache } from '../services/cache.js';
 import { formatDuckResponse } from '../utils/ascii-art.js';
 import { logger } from '../utils/logger.js';
 
 export async function askDuckTool(
   providerManager: ProviderManager,
-  cache: ResponseCache,
   args: Record<string, unknown>
 ) {
   const { prompt, provider, model, temperature } = args as {
@@ -27,23 +25,10 @@ export async function askDuckTool(
     }
   }
 
-  // Generate cache key
-  const cacheKey = cache.generateKey(
-    provider || 'default',
-    prompt,
-    { model, temperature }
-  );
-
-  // Try to get cached response
-  const { value: response, cached } = await cache.getOrSet(
-    cacheKey,
-    async () => {
-      return await providerManager.askDuck(provider, prompt, {
-        model,
-        temperature,
-      });
-    }
-  );
+  const response = await providerManager.askDuck(provider, prompt, {
+    model,
+    temperature,
+  });
 
   // Format the response
   const formattedResponse = formatDuckResponse(
@@ -58,10 +43,10 @@ export async function askDuckTool(
     usageInfo = `\n\n📊 Tokens used: ${response.usage.total_tokens} (${response.usage.prompt_tokens} prompt, ${response.usage.completion_tokens} completion)`;
   }
 
-  // Add cache and latency info
-  const metaInfo = `\n⏱️ Latency: ${response.latency}ms | ${cached ? '💾 Cached' : '🔄 Fresh'}`;
+  // Add latency info
+  const metaInfo = `\n⏱️ Latency: ${response.latency}ms`;
 
-  logger.info(`Duck ${response.nickname} responded to query ${cached ? '(cached)' : ''}`);
+  logger.info(`Duck ${response.nickname} responded to query`);
 
   return {
     content: [

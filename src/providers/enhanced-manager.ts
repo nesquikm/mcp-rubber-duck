@@ -127,7 +127,6 @@ export class EnhancedProviderManager extends ProviderManager {
           response.model,
           response.usage.promptTokens,
           response.usage.completionTokens,
-          false,
           false
         );
       }
@@ -146,14 +145,13 @@ export class EnhancedProviderManager extends ProviderManager {
           totalTokens: response.usage.totalTokens,
         } : undefined,
         latency: Date.now() - startTime,
-        cached: false,
         pendingApprovals: response.pendingApprovals,
         mcpResults: response.mcpResults,
       };
     } catch (error: unknown) {
       // Record error
       if (this.usageService) {
-        this.usageService.recordUsage(provider.name, modelToUse, 0, 0, false, true);
+        this.usageService.recordUsage(provider.name, modelToUse, 0, 0, true);
       }
 
       // Try failover if enabled
@@ -216,7 +214,6 @@ export class EnhancedProviderManager extends ProviderManager {
           model: '',
           content: `Error: ${error instanceof Error ? error.message : String(error)}`,
           latency: 0,
-          cached: false,
         };
       });
     });
@@ -256,7 +253,6 @@ export class EnhancedProviderManager extends ProviderManager {
             model: '',
             content: `Error: ${error instanceof Error ? error.message : String(error)}`,
             latency: 0,
-            cached: false,
           };
         })
         .then(result => {
@@ -308,7 +304,6 @@ export class EnhancedProviderManager extends ProviderManager {
           response.model,
           response.usage.promptTokens,
           response.usage.completionTokens,
-          false,
           false
         );
       }
@@ -327,14 +322,13 @@ export class EnhancedProviderManager extends ProviderManager {
           totalTokens: response.usage.totalTokens,
         } : undefined,
         latency: Date.now() - startTime,
-        cached: false,
         pendingApprovals: response.pendingApprovals,
         mcpResults: response.mcpResults,
       };
     } catch (error: unknown) {
       // Record error
       if (this.usageService) {
-        this.usageService.recordUsage(provider.name, modelToUse, 0, 0, false, true);
+        this.usageService.recordUsage(provider.name, modelToUse, 0, 0, true);
       }
 
       const errorMessage = error instanceof Error ? error.message : String(error);

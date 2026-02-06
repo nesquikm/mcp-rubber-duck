@@ -212,7 +212,7 @@ describe('ProviderManager', () => {
           },
         },
         default_provider: 'test1',
-        cache_ttl: 300,
+
         enable_failover: true,
         default_temperature: 0.7,
       }),
@@ -360,7 +360,7 @@ describe('ProviderManager', () => {
           },
         },
         default_provider: 'testNoModels',
-        cache_ttl: 300,
+
         enable_failover: false,
         default_temperature: 0.7,
       }),
@@ -413,7 +413,7 @@ describe('ProviderManager compareDucksWithProgress', () => {
           },
         },
         default_provider: 'test1',
-        cache_ttl: 300,
+
         enable_failover: true,
         default_temperature: 0.7,
       }),
@@ -508,7 +508,7 @@ describe('ProviderManager Error Cases', () => {
           },
         },
         // No default_provider set
-        cache_ttl: 300,
+
         enable_failover: false,
         default_temperature: 0.7,
       }),
@@ -536,7 +536,7 @@ describe('ProviderManager Error Cases', () => {
           },
         },
         // No default_provider set
-        cache_ttl: 300,
+
         enable_failover: false,
         default_temperature: 0.7,
       }),
@@ -568,7 +568,7 @@ describe('ProviderManager Health Check Exception', () => {
           },
         },
         default_provider: 'test1',
-        cache_ttl: 300,
+
         enable_failover: false,
         default_temperature: 0.7,
       }),
@@ -646,7 +646,7 @@ describe('ProviderManager Failover', () => {
           },
         },
         default_provider: 'test1',
-        cache_ttl: 300,
+
         enable_failover: true,  // Enable failover
         default_temperature: 0.7,
       }),
@@ -716,7 +716,7 @@ describe('ProviderManager getAllModels', () => {
           },
         },
         default_provider: 'test1',
-        cache_ttl: 300,
+
         enable_failover: false,
         default_temperature: 0.7,
       }),
@@ -1735,7 +1735,7 @@ describe('ProviderManager with CLI Providers', () => {
           },
         },
         default_provider: 'cli-claude',
-        cache_ttl: 300,
+
         enable_failover: false,
         default_temperature: 0.7,
       }),
@@ -1768,7 +1768,7 @@ describe('ProviderManager with CLI Providers', () => {
           },
         },
         default_provider: 'openai',
-        cache_ttl: 300,
+
         enable_failover: false,
         default_temperature: 0.7,
       }),
@@ -1794,7 +1794,7 @@ describe('ProviderManager with CLI Providers', () => {
           },
         },
         default_provider: 'cli-claude',
-        cache_ttl: 300,
+
         enable_failover: false,
         default_temperature: 0.7,
       }),
@@ -1824,7 +1824,7 @@ describe('ProviderManager with CLI Providers', () => {
           },
         },
         default_provider: 'my-tool',
-        cache_ttl: 300,
+
         enable_failover: false,
         default_temperature: 0.7,
       }),
@@ -1890,7 +1890,7 @@ describe('EnhancedProviderManager with CLI Providers', () => {
           },
         },
         default_provider: 'openai',
-        cache_ttl: 300,
+
         enable_failover: false,
         default_temperature: 0.7,
         mcp_bridge: {

@@ -7,8 +7,7 @@ export type GuardrailPhase =
   | 'pre_request' // Before LLM API call
   | 'post_response' // After LLM response, before tool handling
   | 'pre_tool_input' // Before MCP tool execution
-  | 'post_tool_output' // After MCP tool returns
-  | 'pre_cache'; // Before caching response
+  | 'post_tool_output'; // After MCP tool returns
 
 /**
  * Action to take after guardrail evaluation

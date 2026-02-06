@@ -16,7 +16,7 @@ describe('compareDucksTool structured JSON', () => {
       content: 'TypeScript is great!',
       model: 'gpt-4',
       latency: 150,
-      cached: false,
+
       usage: {
         prompt_tokens: 10,
         completion_tokens: 20,
@@ -29,7 +29,7 @@ describe('compareDucksTool structured JSON', () => {
       content: 'TypeScript rocks!',
       model: 'llama-3.1-70b',
       latency: 80,
-      cached: true,
+
       usage: {
         prompt_tokens: 10,
         completion_tokens: 15,
@@ -69,7 +69,6 @@ describe('compareDucksTool structured JSON', () => {
       content: string;
       latency: number;
       tokens: { prompt: number; completion: number; total: number } | null;
-      cached: boolean;
       error?: string;
     }[];
 
@@ -80,10 +79,8 @@ describe('compareDucksTool structured JSON', () => {
     expect(data[0].content).toBe('TypeScript is great!');
     expect(data[0].latency).toBe(150);
     expect(data[0].tokens).toEqual({ prompt: 10, completion: 20, total: 30 });
-    expect(data[0].cached).toBe(false);
 
     expect(data[1].provider).toBe('groq');
-    expect(data[1].cached).toBe(true);
   });
 
   it('should include error info for failed responses', async () => {
@@ -95,7 +92,7 @@ describe('compareDucksTool structured JSON', () => {
         content: 'Error: API key invalid',
         model: '',
         latency: 0,
-        cached: false,
+  
       },
     ]);
 
@@ -114,7 +111,7 @@ describe('compareDucksTool structured JSON', () => {
         content: 'Response',
         model: 'gpt-4',
         latency: 100,
-        cached: false,
+  
       },
     ]);
 

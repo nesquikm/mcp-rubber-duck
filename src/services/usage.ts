@@ -108,7 +108,6 @@ export class UsageService {
     model: string,
     promptTokens: number,
     completionTokens: number,
-    cacheHit: boolean = false,
     error: boolean = false
   ): void {
     const today = this.getTodayKey();
@@ -125,7 +124,6 @@ export class UsageService {
         requests: 0,
         promptTokens: 0,
         completionTokens: 0,
-        cacheHits: 0,
         errors: 0,
       };
     }
@@ -134,7 +132,6 @@ export class UsageService {
     stats.requests++;
     stats.promptTokens += promptTokens;
     stats.completionTokens += completionTokens;
-    if (cacheHit) stats.cacheHits++;
     if (error) stats.errors++;
 
     logger.debug(
@@ -172,7 +169,6 @@ export class UsageService {
       requests: 0,
       promptTokens: 0,
       completionTokens: 0,
-      cacheHits: 0,
       errors: 0,
     };
     const costByProvider: Record<string, number> = {};
@@ -200,7 +196,6 @@ export class UsageService {
               requests: 0,
               promptTokens: 0,
               completionTokens: 0,
-              cacheHits: 0,
               errors: 0,
             };
           }
@@ -209,13 +204,11 @@ export class UsageService {
           agg.requests += stats.requests;
           agg.promptTokens += stats.promptTokens;
           agg.completionTokens += stats.completionTokens;
-          agg.cacheHits += stats.cacheHits;
           agg.errors += stats.errors;
 
           totals.requests += stats.requests;
           totals.promptTokens += stats.promptTokens;
           totals.completionTokens += stats.completionTokens;
-          totals.cacheHits += stats.cacheHits;
           totals.errors += stats.errors;
 
           // Calculate cost if pricing available

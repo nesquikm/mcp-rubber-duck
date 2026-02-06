@@ -145,7 +145,6 @@ export const ConfigSchema = z.object({
   providers: z.record(z.string(), ProviderConfigSchema),
   default_provider: z.string().optional(),
   default_temperature: z.number().min(0).max(2).default(0.7),
-  cache_ttl: z.number().min(0).default(300), // 5 minutes
   enable_failover: z.boolean().default(true),
   log_level: z.enum(['debug', 'info', 'warn', 'error']).default('info'),
   mcp_bridge: MCPBridgeConfigSchema.optional(),
@@ -205,7 +204,6 @@ export interface DuckResponse {
     totalTokens?: number;
   };
   latency: number;
-  cached: boolean;
 }
 
 // Consensus & Voting Types
@@ -305,7 +303,6 @@ export interface ModelUsageStats {
   requests: number;
   promptTokens: number;
   completionTokens: number;
-  cacheHits: number;
   errors: number;
 }
 
@@ -331,7 +328,6 @@ export interface UsageStatsResult {
     requests: number;
     promptTokens: number;
     completionTokens: number;
-    cacheHits: number;
     errors: number;
     estimatedCostUSD?: number;
   };

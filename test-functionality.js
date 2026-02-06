@@ -6,7 +6,6 @@ import { RubberDuckServer } from './dist/server.js';
 import { ConfigManager } from './dist/config/config.js';
 import { ProviderManager } from './dist/providers/manager.js';
 import { ConversationManager } from './dist/services/conversation.js';
-import { ResponseCache } from './dist/services/cache.js';
 import { HealthMonitor } from './dist/services/health.js';
 
 // Import tools
@@ -28,7 +27,6 @@ async function runTests() {
     const configManager = new ConfigManager();
     const providerManager = new ProviderManager(configManager);
     const conversationManager = new ConversationManager();
-    const cache = new ResponseCache(300);
     const healthMonitor = new HealthMonitor(providerManager);
 
     // Test 1: List all ducks
@@ -53,7 +51,7 @@ async function runTests() {
     // Test 4: Ask OpenAI
     console.log('🦆 Test 4: Ask OpenAI');
     try {
-      const openaiResult = await askDuckTool(providerManager, cache, {
+      const openaiResult = await askDuckTool(providerManager, {
         prompt: 'What is 2+2? Answer in one word.',
         provider: 'openai'
       });
@@ -66,7 +64,7 @@ async function runTests() {
     // Test 5: Ask Gemini
     console.log('🦆 Test 5: Ask Gemini');
     try {
-      const geminiResult = await askDuckTool(providerManager, cache, {
+      const geminiResult = await askDuckTool(providerManager, {
         prompt: 'What is 3+3? Answer in one word.',
         provider: 'gemini'
       });
@@ -79,7 +77,7 @@ async function runTests() {
     // Test 6: Compare ducks
     console.log('🔍 Test 6: Compare ducks');
     try {
-      const compareResult = await compareDucksTool(providerManager, cache, {
+      const compareResult = await compareDucksTool(providerManager, {
         prompt: 'What is the capital of France? Answer in one word.'
       });
       console.log(compareResult.content[0].text);
@@ -124,7 +122,7 @@ async function runTests() {
     // Test 9: Test specific model
     console.log('🎯 Test 9: Test specific model');
     try {
-      const modelResult = await askDuckTool(providerManager, cache, {
+      const modelResult = await askDuckTool(providerManager, {
         prompt: 'Say hello',
         provider: 'openai',
         model: 'gpt-4o-mini'
