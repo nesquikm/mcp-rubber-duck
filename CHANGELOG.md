@@ -1,3 +1,5 @@
+## [1.13.1](https://github.com/nesquikm/mcp-rubber-duck/compare/v1.13.0...v1.13.1) (2026-02-06)
+
 # [1.13.0](https://github.com/nesquikm/mcp-rubber-duck/compare/v1.12.0...v1.13.0) (2026-02-05)
 
 
