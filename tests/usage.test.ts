@@ -136,127 +136,114 @@ describe('UsageService', () => {
       expect(stats.startDate).toMatch(/^\d{4}-\d{2}-\d{2}$/);
     });
 
-    it('should aggregate data across multiple days for 7d period', (done) => {
+    it('should aggregate data across multiple days for 7d period', () => {
       // Record some usage for today
       usageService.recordUsage('openai', 'gpt-4o', 100, 50, false, false);
+      usageService.shutdown();
 
-      // Wait for write, then manually add data for previous days
-      setTimeout(() => {
-        usageService.shutdown();
+      // Read and modify the data file to add historical data
+      const usageFile = join(tempDir, 'usage.json');
+      const data = JSON.parse(readFileSync(usageFile, 'utf-8'));
 
-        // Read and modify the data file to add historical data
-        const usageFile = join(tempDir, 'usage.json');
-        const data = JSON.parse(readFileSync(usageFile, 'utf-8'));
+      // Add data for 3 days ago (use local date to match getTodayKey format)
+      const threeDaysAgo = new Date();
+      threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
+      const threeDaysAgoKey = `${threeDaysAgo.getFullYear()}-${String(threeDaysAgo.getMonth() + 1).padStart(2, '0')}-${String(threeDaysAgo.getDate()).padStart(2, '0')}`;
 
-        // Add data for 3 days ago
-        const threeDaysAgo = new Date();
-        threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
-        const threeDaysAgoKey = threeDaysAgo.toISOString().split('T')[0];
+      data.daily[threeDaysAgoKey] = {
+        anthropic: {
+          'claude-3': { requests: 5, promptTokens: 500, completionTokens: 250, cacheHits: 1, errors: 0 },
+        },
+      };
 
-        data.daily[threeDaysAgoKey] = {
-          anthropic: {
-            'claude-3': { requests: 5, promptTokens: 500, completionTokens: 250, cacheHits: 1, errors: 0 },
-          },
-        };
+      writeFileSync(usageFile, JSON.stringify(data, null, 2));
 
-        writeFileSync(usageFile, JSON.stringify(data, null, 2));
+      // Create new service and check 7d aggregation
+      const newService = new UsageService(pricingService, {
+        dataDir: tempDir,
+        debounceMs: 0,
+      });
 
-        // Create new service and check 7d aggregation
-        const newService = new UsageService(pricingService, {
-          dataDir: tempDir,
-          debounceMs: 0,
-        });
+      const stats = newService.getStats('7d');
 
-        const stats = newService.getStats('7d');
+      // Should have both today's and 3-days-ago data
+      expect(stats.totals.requests).toBe(6); // 1 + 5
+      expect(stats.totals.promptTokens).toBe(600); // 100 + 500
+      expect(stats.usage['openai']).toBeDefined();
+      expect(stats.usage['anthropic']).toBeDefined();
 
-        // Should have both today's and 3-days-ago data
-        expect(stats.totals.requests).toBe(6); // 1 + 5
-        expect(stats.totals.promptTokens).toBe(600); // 100 + 500
-        expect(stats.usage['openai']).toBeDefined();
-        expect(stats.usage['anthropic']).toBeDefined();
-
-        newService.shutdown();
-        done();
-      }, 50);
+      newService.shutdown();
     });
 
-    it('should exclude data outside the requested period', (done) => {
+    it('should exclude data outside the requested period', () => {
       usageService.recordUsage('openai', 'gpt-4o', 100, 50, false, false);
+      usageService.shutdown();
 
-      setTimeout(() => {
-        usageService.shutdown();
+      // Add data for 10 days ago (outside 7d window, use local date)
+      const usageFile = join(tempDir, 'usage.json');
+      const data = JSON.parse(readFileSync(usageFile, 'utf-8'));
 
-        // Add data for 10 days ago (outside 7d window)
-        const usageFile = join(tempDir, 'usage.json');
-        const data = JSON.parse(readFileSync(usageFile, 'utf-8'));
+      const tenDaysAgo = new Date();
+      tenDaysAgo.setDate(tenDaysAgo.getDate() - 10);
+      const tenDaysAgoKey = `${tenDaysAgo.getFullYear()}-${String(tenDaysAgo.getMonth() + 1).padStart(2, '0')}-${String(tenDaysAgo.getDate()).padStart(2, '0')}`;
 
-        const tenDaysAgo = new Date();
-        tenDaysAgo.setDate(tenDaysAgo.getDate() - 10);
-        const tenDaysAgoKey = tenDaysAgo.toISOString().split('T')[0];
+      data.daily[tenDaysAgoKey] = {
+        anthropic: {
+          'claude-3': { requests: 99, promptTokens: 9999, completionTokens: 9999, cacheHits: 0, errors: 0 },
+        },
+      };
 
-        data.daily[tenDaysAgoKey] = {
-          anthropic: {
-            'claude-3': { requests: 99, promptTokens: 9999, completionTokens: 9999, cacheHits: 0, errors: 0 },
-          },
-        };
+      writeFileSync(usageFile, JSON.stringify(data, null, 2));
 
-        writeFileSync(usageFile, JSON.stringify(data, null, 2));
+      const newService = new UsageService(pricingService, {
+        dataDir: tempDir,
+        debounceMs: 0,
+      });
 
-        const newService = new UsageService(pricingService, {
-          dataDir: tempDir,
-          debounceMs: 0,
-        });
+      // 7d should NOT include 10-day-old data
+      const stats7d = newService.getStats('7d');
+      expect(stats7d.totals.requests).toBe(1); // Only today's data
+      expect(stats7d.usage['anthropic']).toBeUndefined();
 
-        // 7d should NOT include 10-day-old data
-        const stats7d = newService.getStats('7d');
-        expect(stats7d.totals.requests).toBe(1); // Only today's data
-        expect(stats7d.usage['anthropic']).toBeUndefined();
+      // But 30d SHOULD include it
+      const stats30d = newService.getStats('30d');
+      expect(stats30d.totals.requests).toBe(100); // 1 + 99
+      expect(stats30d.usage['anthropic']).toBeDefined();
 
-        // But 30d SHOULD include it
-        const stats30d = newService.getStats('30d');
-        expect(stats30d.totals.requests).toBe(100); // 1 + 99
-        expect(stats30d.usage['anthropic']).toBeDefined();
-
-        newService.shutdown();
-        done();
-      }, 50);
+      newService.shutdown();
     });
 
-    it('should exclude future dates from stats', (done) => {
+    it('should exclude future dates from stats', () => {
       usageService.recordUsage('openai', 'gpt-4o', 100, 50, false, false);
+      usageService.shutdown();
 
-      setTimeout(() => {
-        usageService.shutdown();
+      // Add data for a future date (should be excluded, use local date)
+      const usageFile = join(tempDir, 'usage.json');
+      const data = JSON.parse(readFileSync(usageFile, 'utf-8'));
 
-        // Add data for a future date (should be excluded)
-        const usageFile = join(tempDir, 'usage.json');
-        const data = JSON.parse(readFileSync(usageFile, 'utf-8'));
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      const tomorrowKey = `${tomorrow.getFullYear()}-${String(tomorrow.getMonth() + 1).padStart(2, '0')}-${String(tomorrow.getDate()).padStart(2, '0')}`;
 
-        const tomorrow = new Date();
-        tomorrow.setDate(tomorrow.getDate() + 1);
-        const tomorrowKey = tomorrow.toISOString().split('T')[0];
+      data.daily[tomorrowKey] = {
+        future: {
+          'model': { requests: 999, promptTokens: 9999, completionTokens: 9999, cacheHits: 0, errors: 0 },
+        },
+      };
 
-        data.daily[tomorrowKey] = {
-          future: {
-            'model': { requests: 999, promptTokens: 9999, completionTokens: 9999, cacheHits: 0, errors: 0 },
-          },
-        };
+      writeFileSync(usageFile, JSON.stringify(data, null, 2));
 
-        writeFileSync(usageFile, JSON.stringify(data, null, 2));
+      const newService = new UsageService(pricingService, {
+        dataDir: tempDir,
+        debounceMs: 0,
+      });
 
-        const newService = new UsageService(pricingService, {
-          dataDir: tempDir,
-          debounceMs: 0,
-        });
+      // Future data should be excluded from all periods
+      const statsAll = newService.getStats('all');
+      expect(statsAll.totals.requests).toBe(1); // Only today's data
+      expect(statsAll.usage['future']).toBeUndefined();
 
-        // Future data should be excluded from all periods
-        const statsAll = newService.getStats('all');
-        expect(statsAll.totals.requests).toBe(1); // Only today's data
-        expect(statsAll.usage['future']).toBeUndefined();
-
-        newService.shutdown();
-        done();
-      }, 50);
+      newService.shutdown();
     });
 
     it('should include cost data when pricing available', () => {
