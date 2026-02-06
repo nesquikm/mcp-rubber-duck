@@ -1,3 +1,4 @@
+import '../shared/base.css';
 import { App } from '@modelcontextprotocol/ext-apps';
 
 interface CompareResponse {
@@ -7,7 +8,6 @@ interface CompareResponse {
   content: string;
   latency: number;
   tokens: { prompt: number; completion: number; total: number } | null;
-  cached: boolean;
   error?: string;
 }
 
@@ -60,9 +60,6 @@ function render(responses: CompareResponse[]) {
       html += `<span class="badge model">${esc(r.model)}</span>`;
       if (r.tokens) {
         html += `<span class="badge tokens">${r.tokens.total} tokens</span>`;
-      }
-      if (r.cached) {
-        html += `<span class="badge cached">Cached</span>`;
       }
       html += `</div>`;
       html += `<div class="latency-bar ${latencyClass}" style="width:${Math.min(100, (r.latency / 10000) * 100)}%"></div>`;

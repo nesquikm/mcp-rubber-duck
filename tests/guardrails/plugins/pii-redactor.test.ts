@@ -876,7 +876,7 @@ describe('PIIRedactorPlugin', () => {
       await plugin.initialize({ enabled: true });
 
       const context = createGuardrailContext({});
-      const result = await plugin.execute('pre_cache', context);
+      const result = await plugin.execute('unknown_phase' as any, context);
 
       expect(result.action).toBe('allow');
     });

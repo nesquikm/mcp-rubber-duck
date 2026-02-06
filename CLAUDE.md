@@ -38,7 +38,6 @@ npm run typecheck      # Type check without emit
 
 **Services** (`src/services/`)
 - `conversation.ts` - `ConversationManager` maintains chat context
-- `cache.ts` - `ResponseCache` with TTL-based caching
 - `health.ts` - `HealthMonitor` checks provider availability
 - `mcp-client-manager.ts` - Connects to external MCP servers (for MCP Bridge)
 - `approval.ts` - MCP tool approval workflow
@@ -90,7 +89,7 @@ export async function myTool(
    - Add to `getTools()` array with JSON Schema for inputs
    - Add case to switch in `CallToolRequestSchema` handler
 
-Note: Tool dependencies vary - some take `providerManager`, others take `conversationManager`, `cache`, `healthMonitor`, etc. Check existing tools for patterns.
+Note: Tool dependencies vary - some take `providerManager`, others take `conversationManager`, `healthMonitor`, etc. Check existing tools for patterns.
 
 ### Config Validation
 Config uses Zod schemas in `src/config/types.ts`. When adding config options:

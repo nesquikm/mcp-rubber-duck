@@ -244,7 +244,7 @@ describe('duckCouncilTool', () => {
         content: 'CLI Claude council opinion',
         model: 'cli',
         latency: 5000,
-        cached: false,
+
         usage: { prompt_tokens: 5, completion_tokens: 15, total_tokens: 20 },
       },
       {
@@ -253,7 +253,7 @@ describe('duckCouncilTool', () => {
         content: 'CLI Gemini council opinion',
         model: 'cli',
         latency: 8000,
-        cached: false,
+
         // no usage
       },
     ];
@@ -294,7 +294,7 @@ describe('duckCouncilTool', () => {
           content: 'Response',
           model: 'cli',
           latency: 8000,
-          cached: false,
+  
           // no usage field
         },
       ]);
@@ -316,7 +316,7 @@ describe('duckCouncilTool', () => {
           content: 'HTTP opinion',
           model: 'gpt-4',
           latency: 500,
-          cached: false,
+  
           usage: { prompt_tokens: 100, completion_tokens: 50, total_tokens: 150 },
         },
         {
@@ -325,7 +325,7 @@ describe('duckCouncilTool', () => {
           content: 'CLI opinion',
           model: 'cli',
           latency: 5000,
-          cached: false,
+  
           usage: { prompt_tokens: 5, completion_tokens: 10, total_tokens: 15 },
         },
       ]);
@@ -350,7 +350,7 @@ describe('duckCouncilTool', () => {
           content: 'Error: CLI process timed out',
           model: '',
           latency: 0,
-          cached: false,
+  
         },
       ]);
 

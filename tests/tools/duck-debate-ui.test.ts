@@ -41,7 +41,7 @@ describe('duckDebateTool structured JSON', () => {
           },
         },
         default_provider: 'openai',
-        cache_ttl: 300,
+
         enable_failover: true,
         default_temperature: 0.7,
       }),

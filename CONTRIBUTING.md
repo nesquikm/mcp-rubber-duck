@@ -103,7 +103,7 @@ We like to keep our code as clean as a duck's... code. Here are our standards:
 src/
 ├── providers/     # Duck provider implementations
 ├── tools/         # MCP tool implementations  
-├── services/      # Core services (cache, conversations, etc.)
+├── services/      # Core services (conversations, usage, etc.)
 ├── config/        # Configuration management
 └── utils/         # Utility functions (logging, validation, etc.)
 ```

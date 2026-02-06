@@ -1,16 +1,13 @@
 import { describe, it, expect, jest, beforeEach } from '@jest/globals';
 import { askDuckTool } from '../../src/tools/ask-duck.js';
 import { ProviderManager } from '../../src/providers/manager.js';
-import { ResponseCache } from '../../src/services/cache.js';
 
 // Mock dependencies
 jest.mock('../../src/utils/logger');
 jest.mock('../../src/providers/manager.js');
-jest.mock('../../src/services/cache.js');
 
 describe('askDuckTool', () => {
   let mockProviderManager: jest.Mocked<ProviderManager>;
-  let mockCache: jest.Mocked<ResponseCache>;
 
   const mockResponse = {
     provider: 'openai',
@@ -30,28 +27,20 @@ describe('askDuckTool', () => {
       askDuck: jest.fn().mockResolvedValue(mockResponse),
       validateModel: jest.fn().mockReturnValue(true),
     } as unknown as jest.Mocked<ProviderManager>;
-
-    mockCache = {
-      generateKey: jest.fn().mockReturnValue('test-cache-key'),
-      getOrSet: jest.fn().mockImplementation(async (_key, fetcher) => {
-        const value = await fetcher();
-        return { value, cached: false };
-      }),
-    } as unknown as jest.Mocked<ResponseCache>;
   });
 
   it('should throw error when prompt is missing', async () => {
-    await expect(askDuckTool(mockProviderManager, mockCache, {})).rejects.toThrow(
+    await expect(askDuckTool(mockProviderManager, {})).rejects.toThrow(
       'Prompt is required'
     );
   });
 
   it('should ask duck with basic prompt', async () => {
-    const result = await askDuckTool(mockProviderManager, mockCache, {
+    const result = await askDuckTool(mockProviderManager, {
       prompt: 'What is TypeScript?',
     });
 
-    expect(mockCache.generateKey).toHaveBeenCalledWith('default', 'What is TypeScript?', {
+    expect(mockProviderManager.askDuck).toHaveBeenCalledWith(undefined, 'What is TypeScript?', {
       model: undefined,
       temperature: undefined,
     });
@@ -62,7 +51,7 @@ describe('askDuckTool', () => {
   });
 
   it('should include usage info in response', async () => {
-    const result = await askDuckTool(mockProviderManager, mockCache, {
+    const result = await askDuckTool(mockProviderManager, {
       prompt: 'Test prompt',
     });
 
@@ -71,50 +60,39 @@ describe('askDuckTool', () => {
     expect(result.content[0].text).toContain('20 completion');
   });
 
-  it('should show latency and fresh status for non-cached response', async () => {
-    const result = await askDuckTool(mockProviderManager, mockCache, {
+  it('should show latency in response', async () => {
+    const result = await askDuckTool(mockProviderManager, {
       prompt: 'Test prompt',
     });
 
     expect(result.content[0].text).toContain('150ms');
-    expect(result.content[0].text).toContain('Fresh');
-  });
-
-  it('should show cached status for cached response', async () => {
-    mockCache.getOrSet.mockResolvedValue({ value: mockResponse, cached: true });
-
-    const result = await askDuckTool(mockProviderManager, mockCache, {
-      prompt: 'Test prompt',
-    });
-
-    expect(result.content[0].text).toContain('Cached');
   });
 
   it('should pass provider option', async () => {
-    await askDuckTool(mockProviderManager, mockCache, {
+    await askDuckTool(mockProviderManager, {
       prompt: 'Test',
       provider: 'groq',
     });
 
-    expect(mockCache.generateKey).toHaveBeenCalledWith('groq', 'Test', expect.any(Object));
+    expect(mockProviderManager.askDuck).toHaveBeenCalledWith('groq', 'Test', expect.any(Object));
   });
 
   it('should pass model and temperature options', async () => {
-    await askDuckTool(mockProviderManager, mockCache, {
+    await askDuckTool(mockProviderManager, {
       prompt: 'Test',
       provider: 'openai',
       model: 'gpt-3.5-turbo',
       temperature: 0.5,
     });
 
-    expect(mockCache.generateKey).toHaveBeenCalledWith('openai', 'Test', {
+    expect(mockProviderManager.askDuck).toHaveBeenCalledWith('openai', 'Test', {
       model: 'gpt-3.5-turbo',
       temperature: 0.5,
     });
   });
 
   it('should validate model when both provider and model are specified', async () => {
-    await askDuckTool(mockProviderManager, mockCache, {
+    await askDuckTool(mockProviderManager, {
       prompt: 'Test',
       provider: 'openai',
       model: 'gpt-4',
@@ -124,7 +102,7 @@ describe('askDuckTool', () => {
   });
 
   it('should not validate model when provider is not specified', async () => {
-    await askDuckTool(mockProviderManager, mockCache, {
+    await askDuckTool(mockProviderManager, {
       prompt: 'Test',
       model: 'gpt-4',
     });
@@ -134,9 +112,9 @@ describe('askDuckTool', () => {
 
   it('should handle response without usage info', async () => {
     const responseWithoutUsage = { ...mockResponse, usage: undefined };
-    mockCache.getOrSet.mockResolvedValue({ value: responseWithoutUsage, cached: false });
+    mockProviderManager.askDuck.mockResolvedValue(responseWithoutUsage);
 
-    const result = await askDuckTool(mockProviderManager, mockCache, {
+    const result = await askDuckTool(mockProviderManager, {
       prompt: 'Test',
     });
 
@@ -147,7 +125,7 @@ describe('askDuckTool', () => {
     mockProviderManager.validateModel.mockReturnValue(false);
 
     // Should still work, just log a warning
-    const result = await askDuckTool(mockProviderManager, mockCache, {
+    const result = await askDuckTool(mockProviderManager, {
       prompt: 'Test',
       provider: 'openai',
       model: 'invalid-model',

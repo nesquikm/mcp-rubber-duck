@@ -15,7 +15,7 @@ import { ConfigManager } from './config/config.js';
 import { ProviderManager } from './providers/manager.js';
 import { EnhancedProviderManager } from './providers/enhanced-manager.js';
 import { ConversationManager } from './services/conversation.js';
-import { ResponseCache } from './services/cache.js';
+
 import { HealthMonitor } from './services/health.js';
 import { MCPClientManager } from './services/mcp-client-manager.js';
 import { PricingService } from './services/pricing.js';
@@ -62,7 +62,6 @@ export class RubberDuckServer {
   private providerManager: ProviderManager;
   private enhancedProviderManager?: EnhancedProviderManager;
   private conversationManager: ConversationManager;
-  private cache: ResponseCache;
   private healthMonitor: HealthMonitor;
 
   // MCP Bridge components
@@ -115,7 +114,6 @@ export class RubberDuckServer {
     // Initialize provider manager with usage tracking and guardrails
     this.providerManager = new ProviderManager(this.configManager, this.usageService, this.guardrailsService);
     this.conversationManager = new ConversationManager();
-    this.cache = new ResponseCache(config.cache_ttl);
     this.healthMonitor = new HealthMonitor(this.providerManager);
 
     // Initialize MCP bridge if enabled
@@ -222,7 +220,7 @@ export class RubberDuckServer {
           if (this.mcpEnabled && this.enhancedProviderManager) {
             return this.toolResult(await this.handleAskDuckWithMCP(args as Record<string, unknown>));
           }
-          return this.toolResult(await askDuckTool(this.providerManager, this.cache, args as Record<string, unknown>));
+          return this.toolResult(await askDuckTool(this.providerManager, args as Record<string, unknown>));
         } catch (error) {
           return this.toolErrorResult(error);
         }
@@ -712,7 +710,7 @@ export class RubberDuckServer {
 
   // MCP-enhanced tool handlers
   private async handleAskDuckWithMCP(args: Record<string, unknown>) {
-    if (!this.enhancedProviderManager || !this.cache) {
+    if (!this.enhancedProviderManager) {
       throw new Error('Enhanced provider manager not available');
     }
 
@@ -727,19 +725,13 @@ export class RubberDuckServer {
       throw new Error('Prompt is required');
     }
 
-    // Generate cache key (same as regular ask_duck)
-    const cacheKey = this.cache.generateKey(provider || 'default', prompt, { model, temperature });
-
-    // Try to get cached response
-    const { value: response, cached } = await this.cache.getOrSet(cacheKey, async () => {
-      return await this.enhancedProviderManager!.askDuckWithMCP(provider, prompt, {
-        model,
-        temperature,
-      });
+    const response = await this.enhancedProviderManager.askDuckWithMCP(provider, prompt, {
+      model,
+      temperature,
     });
 
     // Format the response with MCP information
-    const formattedResponse = this.formatEnhancedDuckResponse(response, cached);
+    const formattedResponse = this.formatEnhancedDuckResponse(response);
 
     return {
       content: [
@@ -789,7 +781,6 @@ export class RubberDuckServer {
         completion: r.usage.completion_tokens,
         total: r.usage.total_tokens,
       } : null,
-      cached: r.cached,
       error: r.content.startsWith('Error:') ? r.content : undefined,
     }));
 
@@ -844,8 +835,7 @@ export class RubberDuckServer {
     response: DuckResponse & {
       pendingApprovals?: { id: string; message: string }[];
       mcpResults?: unknown[];
-    },
-    cached?: boolean
+    }
   ): string {
     let formatted = `🦆 **${response.nickname}** (${response.provider})\n─────────────────────────────────────\n${response.content}`;
 
@@ -870,12 +860,8 @@ export class RubberDuckServer {
       formatted += ` | 📊 Tokens: ${response.usage.total_tokens}`;
     }
     formatted += ` | ⏱️ ${response.latency}ms`;
-    if (cached) {
-      formatted += ' | 💾 Cached';
-    } else if (response.mcpResults) {
+    if (response.mcpResults) {
       formatted += ' | 🔄 MCP Enhanced';
-    } else {
-      formatted += ' | 🔄 Fresh';
     }
 
     return formatted;

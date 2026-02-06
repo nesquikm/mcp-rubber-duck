@@ -41,7 +41,7 @@ describe('UsageService', () => {
 
   describe('recordUsage', () => {
     it('should create nested structure on first record', () => {
-      usageService.recordUsage('openai', 'gpt-4o', 100, 50, false, false);
+      usageService.recordUsage('openai', 'gpt-4o', 100, 50);
 
       const stats = usageService.getStats('today');
       expect(stats.usage['openai']).toBeDefined();
@@ -50,8 +50,8 @@ describe('UsageService', () => {
     });
 
     it('should increment stats on subsequent records', () => {
-      usageService.recordUsage('openai', 'gpt-4o', 100, 50, false, false);
-      usageService.recordUsage('openai', 'gpt-4o', 200, 100, false, false);
+      usageService.recordUsage('openai', 'gpt-4o', 100, 50);
+      usageService.recordUsage('openai', 'gpt-4o', 200, 100);
 
       const stats = usageService.getStats('today');
       expect(stats.usage['openai']['gpt-4o'].requests).toBe(2);
@@ -59,17 +59,9 @@ describe('UsageService', () => {
       expect(stats.usage['openai']['gpt-4o'].completionTokens).toBe(150);
     });
 
-    it('should track cache hits', () => {
-      usageService.recordUsage('openai', 'gpt-4o', 100, 50, true, false);
-      usageService.recordUsage('openai', 'gpt-4o', 100, 50, false, false);
-
-      const stats = usageService.getStats('today');
-      expect(stats.usage['openai']['gpt-4o'].cacheHits).toBe(1);
-    });
-
     it('should track errors', () => {
-      usageService.recordUsage('openai', 'gpt-4o', 0, 0, false, true);
-      usageService.recordUsage('openai', 'gpt-4o', 100, 50, false, false);
+      usageService.recordUsage('openai', 'gpt-4o', 0, 0, true);
+      usageService.recordUsage('openai', 'gpt-4o', 100, 50, false);
 
       const stats = usageService.getStats('today');
       expect(stats.usage['openai']['gpt-4o'].errors).toBe(1);
@@ -77,8 +69,8 @@ describe('UsageService', () => {
     });
 
     it('should track multiple providers separately', () => {
-      usageService.recordUsage('openai', 'gpt-4o', 100, 50, false, false);
-      usageService.recordUsage('anthropic', 'claude-3', 200, 100, false, false);
+      usageService.recordUsage('openai', 'gpt-4o', 100, 50);
+      usageService.recordUsage('anthropic', 'claude-3', 200, 100);
 
       const stats = usageService.getStats('today');
       expect(stats.usage['openai']['gpt-4o'].requests).toBe(1);
@@ -86,8 +78,8 @@ describe('UsageService', () => {
     });
 
     it('should track multiple models separately', () => {
-      usageService.recordUsage('openai', 'gpt-4o', 100, 50, false, false);
-      usageService.recordUsage('openai', 'gpt-4o-mini', 200, 100, false, false);
+      usageService.recordUsage('openai', 'gpt-4o', 100, 50);
+      usageService.recordUsage('openai', 'gpt-4o-mini', 200, 100);
 
       const stats = usageService.getStats('today');
       expect(stats.usage['openai']['gpt-4o'].requests).toBe(1);
@@ -102,21 +94,19 @@ describe('UsageService', () => {
       expect(stats.totals.requests).toBe(0);
       expect(stats.totals.promptTokens).toBe(0);
       expect(stats.totals.completionTokens).toBe(0);
-      expect(stats.totals.cacheHits).toBe(0);
       expect(stats.totals.errors).toBe(0);
     });
 
     it('should aggregate totals correctly', () => {
-      usageService.recordUsage('openai', 'gpt-4o', 100, 50, false, false);
-      usageService.recordUsage('anthropic', 'claude-3', 200, 100, true, false);
-      usageService.recordUsage('groq', 'llama', 50, 25, false, true);
+      usageService.recordUsage('openai', 'gpt-4o', 100, 50);
+      usageService.recordUsage('anthropic', 'claude-3', 200, 100);
+      usageService.recordUsage('groq', 'llama', 50, 25, true);
 
       const stats = usageService.getStats('today');
 
       expect(stats.totals.requests).toBe(3);
       expect(stats.totals.promptTokens).toBe(350);
       expect(stats.totals.completionTokens).toBe(175);
-      expect(stats.totals.cacheHits).toBe(1);
       expect(stats.totals.errors).toBe(1);
     });
 
@@ -136,131 +126,118 @@ describe('UsageService', () => {
       expect(stats.startDate).toMatch(/^\d{4}-\d{2}-\d{2}$/);
     });
 
-    it('should aggregate data across multiple days for 7d period', (done) => {
+    it('should aggregate data across multiple days for 7d period', () => {
       // Record some usage for today
-      usageService.recordUsage('openai', 'gpt-4o', 100, 50, false, false);
+      usageService.recordUsage('openai', 'gpt-4o', 100, 50);
+      usageService.shutdown();
 
-      // Wait for write, then manually add data for previous days
-      setTimeout(() => {
-        usageService.shutdown();
+      // Read and modify the data file to add historical data
+      const usageFile = join(tempDir, 'usage.json');
+      const data = JSON.parse(readFileSync(usageFile, 'utf-8'));
 
-        // Read and modify the data file to add historical data
-        const usageFile = join(tempDir, 'usage.json');
-        const data = JSON.parse(readFileSync(usageFile, 'utf-8'));
+      // Add data for 3 days ago (use local date to match getTodayKey format)
+      const threeDaysAgo = new Date();
+      threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
+      const threeDaysAgoKey = `${threeDaysAgo.getFullYear()}-${String(threeDaysAgo.getMonth() + 1).padStart(2, '0')}-${String(threeDaysAgo.getDate()).padStart(2, '0')}`;
 
-        // Add data for 3 days ago
-        const threeDaysAgo = new Date();
-        threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
-        const threeDaysAgoKey = threeDaysAgo.toISOString().split('T')[0];
+      data.daily[threeDaysAgoKey] = {
+        anthropic: {
+          'claude-3': { requests: 5, promptTokens: 500, completionTokens: 250, errors: 0 },
+        },
+      };
 
-        data.daily[threeDaysAgoKey] = {
-          anthropic: {
-            'claude-3': { requests: 5, promptTokens: 500, completionTokens: 250, cacheHits: 1, errors: 0 },
-          },
-        };
+      writeFileSync(usageFile, JSON.stringify(data, null, 2));
 
-        writeFileSync(usageFile, JSON.stringify(data, null, 2));
+      // Create new service and check 7d aggregation
+      const newService = new UsageService(pricingService, {
+        dataDir: tempDir,
+        debounceMs: 0,
+      });
 
-        // Create new service and check 7d aggregation
-        const newService = new UsageService(pricingService, {
-          dataDir: tempDir,
-          debounceMs: 0,
-        });
+      const stats = newService.getStats('7d');
 
-        const stats = newService.getStats('7d');
+      // Should have both today's and 3-days-ago data
+      expect(stats.totals.requests).toBe(6); // 1 + 5
+      expect(stats.totals.promptTokens).toBe(600); // 100 + 500
+      expect(stats.usage['openai']).toBeDefined();
+      expect(stats.usage['anthropic']).toBeDefined();
 
-        // Should have both today's and 3-days-ago data
-        expect(stats.totals.requests).toBe(6); // 1 + 5
-        expect(stats.totals.promptTokens).toBe(600); // 100 + 500
-        expect(stats.usage['openai']).toBeDefined();
-        expect(stats.usage['anthropic']).toBeDefined();
-
-        newService.shutdown();
-        done();
-      }, 50);
+      newService.shutdown();
     });
 
-    it('should exclude data outside the requested period', (done) => {
-      usageService.recordUsage('openai', 'gpt-4o', 100, 50, false, false);
+    it('should exclude data outside the requested period', () => {
+      usageService.recordUsage('openai', 'gpt-4o', 100, 50);
+      usageService.shutdown();
 
-      setTimeout(() => {
-        usageService.shutdown();
+      // Add data for 10 days ago (outside 7d window, use local date)
+      const usageFile = join(tempDir, 'usage.json');
+      const data = JSON.parse(readFileSync(usageFile, 'utf-8'));
 
-        // Add data for 10 days ago (outside 7d window)
-        const usageFile = join(tempDir, 'usage.json');
-        const data = JSON.parse(readFileSync(usageFile, 'utf-8'));
+      const tenDaysAgo = new Date();
+      tenDaysAgo.setDate(tenDaysAgo.getDate() - 10);
+      const tenDaysAgoKey = `${tenDaysAgo.getFullYear()}-${String(tenDaysAgo.getMonth() + 1).padStart(2, '0')}-${String(tenDaysAgo.getDate()).padStart(2, '0')}`;
 
-        const tenDaysAgo = new Date();
-        tenDaysAgo.setDate(tenDaysAgo.getDate() - 10);
-        const tenDaysAgoKey = tenDaysAgo.toISOString().split('T')[0];
+      data.daily[tenDaysAgoKey] = {
+        anthropic: {
+          'claude-3': { requests: 99, promptTokens: 9999, completionTokens: 9999, errors: 0 },
+        },
+      };
 
-        data.daily[tenDaysAgoKey] = {
-          anthropic: {
-            'claude-3': { requests: 99, promptTokens: 9999, completionTokens: 9999, cacheHits: 0, errors: 0 },
-          },
-        };
+      writeFileSync(usageFile, JSON.stringify(data, null, 2));
 
-        writeFileSync(usageFile, JSON.stringify(data, null, 2));
+      const newService = new UsageService(pricingService, {
+        dataDir: tempDir,
+        debounceMs: 0,
+      });
 
-        const newService = new UsageService(pricingService, {
-          dataDir: tempDir,
-          debounceMs: 0,
-        });
+      // 7d should NOT include 10-day-old data
+      const stats7d = newService.getStats('7d');
+      expect(stats7d.totals.requests).toBe(1); // Only today's data
+      expect(stats7d.usage['anthropic']).toBeUndefined();
 
-        // 7d should NOT include 10-day-old data
-        const stats7d = newService.getStats('7d');
-        expect(stats7d.totals.requests).toBe(1); // Only today's data
-        expect(stats7d.usage['anthropic']).toBeUndefined();
+      // But 30d SHOULD include it
+      const stats30d = newService.getStats('30d');
+      expect(stats30d.totals.requests).toBe(100); // 1 + 99
+      expect(stats30d.usage['anthropic']).toBeDefined();
 
-        // But 30d SHOULD include it
-        const stats30d = newService.getStats('30d');
-        expect(stats30d.totals.requests).toBe(100); // 1 + 99
-        expect(stats30d.usage['anthropic']).toBeDefined();
-
-        newService.shutdown();
-        done();
-      }, 50);
+      newService.shutdown();
     });
 
-    it('should exclude future dates from stats', (done) => {
-      usageService.recordUsage('openai', 'gpt-4o', 100, 50, false, false);
+    it('should exclude future dates from stats', () => {
+      usageService.recordUsage('openai', 'gpt-4o', 100, 50);
+      usageService.shutdown();
 
-      setTimeout(() => {
-        usageService.shutdown();
+      // Add data for a future date (should be excluded, use local date)
+      const usageFile = join(tempDir, 'usage.json');
+      const data = JSON.parse(readFileSync(usageFile, 'utf-8'));
 
-        // Add data for a future date (should be excluded)
-        const usageFile = join(tempDir, 'usage.json');
-        const data = JSON.parse(readFileSync(usageFile, 'utf-8'));
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      const tomorrowKey = `${tomorrow.getFullYear()}-${String(tomorrow.getMonth() + 1).padStart(2, '0')}-${String(tomorrow.getDate()).padStart(2, '0')}`;
 
-        const tomorrow = new Date();
-        tomorrow.setDate(tomorrow.getDate() + 1);
-        const tomorrowKey = tomorrow.toISOString().split('T')[0];
+      data.daily[tomorrowKey] = {
+        future: {
+          'model': { requests: 999, promptTokens: 9999, completionTokens: 9999, errors: 0 },
+        },
+      };
 
-        data.daily[tomorrowKey] = {
-          future: {
-            'model': { requests: 999, promptTokens: 9999, completionTokens: 9999, cacheHits: 0, errors: 0 },
-          },
-        };
+      writeFileSync(usageFile, JSON.stringify(data, null, 2));
 
-        writeFileSync(usageFile, JSON.stringify(data, null, 2));
+      const newService = new UsageService(pricingService, {
+        dataDir: tempDir,
+        debounceMs: 0,
+      });
 
-        const newService = new UsageService(pricingService, {
-          dataDir: tempDir,
-          debounceMs: 0,
-        });
+      // Future data should be excluded from all periods
+      const statsAll = newService.getStats('all');
+      expect(statsAll.totals.requests).toBe(1); // Only today's data
+      expect(statsAll.usage['future']).toBeUndefined();
 
-        // Future data should be excluded from all periods
-        const statsAll = newService.getStats('all');
-        expect(statsAll.totals.requests).toBe(1); // Only today's data
-        expect(statsAll.usage['future']).toBeUndefined();
-
-        newService.shutdown();
-        done();
-      }, 50);
+      newService.shutdown();
     });
 
     it('should include cost data when pricing available', () => {
-      usageService.recordUsage('testprovider', 'test-model', 1000, 500, false, false);
+      usageService.recordUsage('testprovider', 'test-model', 1000, 500);
 
       const stats = usageService.getStats('today');
 
@@ -272,7 +249,7 @@ describe('UsageService', () => {
     });
 
     it('should omit cost data when pricing unavailable', () => {
-      usageService.recordUsage('unknown-provider', 'unknown-model', 1000, 500, false, false);
+      usageService.recordUsage('unknown-provider', 'unknown-model', 1000, 500);
 
       const stats = usageService.getStats('today');
 
@@ -282,9 +259,9 @@ describe('UsageService', () => {
 
     it('should handle mixed pricing availability', () => {
       // Provider with pricing
-      usageService.recordUsage('testprovider', 'test-model', 1000, 500, false, false);
+      usageService.recordUsage('testprovider', 'test-model', 1000, 500);
       // Provider without pricing
-      usageService.recordUsage('unknown-provider', 'unknown-model', 2000, 1000, false, false);
+      usageService.recordUsage('unknown-provider', 'unknown-model', 2000, 1000);
 
       const stats = usageService.getStats('today');
 
@@ -307,7 +284,7 @@ describe('UsageService', () => {
         debounceMs: 0,
       });
 
-      freeUsageService.recordUsage('freeprovider', 'free-model', 1000, 500, false, false);
+      freeUsageService.recordUsage('freeprovider', 'free-model', 1000, 500);
 
       const stats = freeUsageService.getStats('today');
 
@@ -321,7 +298,7 @@ describe('UsageService', () => {
 
   describe('persistence', () => {
     it('should create usage file after recording', (done) => {
-      usageService.recordUsage('openai', 'gpt-4o', 100, 50, false, false);
+      usageService.recordUsage('openai', 'gpt-4o', 100, 50);
 
       // Wait for debounced write
       setTimeout(() => {
@@ -332,7 +309,7 @@ describe('UsageService', () => {
     });
 
     it('should persist data that survives restart', (done) => {
-      usageService.recordUsage('openai', 'gpt-4o', 100, 50, false, false);
+      usageService.recordUsage('openai', 'gpt-4o', 100, 50);
 
       // Wait for write, then create new service
       setTimeout(() => {
@@ -359,7 +336,7 @@ describe('UsageService', () => {
         debounceMs: 10000, // 10 second debounce
       });
 
-      serviceWithDebounce.recordUsage('openai', 'gpt-4o', 100, 50, false, false);
+      serviceWithDebounce.recordUsage('openai', 'gpt-4o', 100, 50);
 
       // File shouldn't exist yet (debounce pending)
       const usageFile = join(tempDir, 'usage.json');
@@ -395,7 +372,7 @@ describe('UsageService', () => {
 
   describe('clearData', () => {
     it('should clear all usage data', (done) => {
-      usageService.recordUsage('openai', 'gpt-4o', 100, 50, false, false);
+      usageService.recordUsage('openai', 'gpt-4o', 100, 50);
 
       let stats = usageService.getStats('today');
       expect(stats.totals.requests).toBe(1);
@@ -411,7 +388,7 @@ describe('UsageService', () => {
 
   describe('getRawData', () => {
     it('should return raw usage data', () => {
-      usageService.recordUsage('openai', 'gpt-4o', 100, 50, false, false);
+      usageService.recordUsage('openai', 'gpt-4o', 100, 50);
 
       const rawData = usageService.getRawData();
 
@@ -427,7 +404,7 @@ describe('UsageService', () => {
     });
 
     it('should return a deep copy (mutations do not affect original)', () => {
-      usageService.recordUsage('openai', 'gpt-4o', 100, 50, false, false);
+      usageService.recordUsage('openai', 'gpt-4o', 100, 50);
 
       const rawData = usageService.getRawData();
       const today = Object.keys(rawData.daily)[0];
@@ -445,7 +422,7 @@ describe('UsageService', () => {
 
   describe('edge cases', () => {
     it('should handle zero token counts', () => {
-      usageService.recordUsage('openai', 'gpt-4o', 0, 0, false, false);
+      usageService.recordUsage('openai', 'gpt-4o', 0, 0);
 
       const stats = usageService.getStats('today');
       expect(stats.usage['openai']['gpt-4o'].requests).toBe(1);
@@ -453,7 +430,7 @@ describe('UsageService', () => {
     });
 
     it('should handle very large token counts', () => {
-      usageService.recordUsage('openai', 'gpt-4o', 10_000_000, 5_000_000, false, false);
+      usageService.recordUsage('openai', 'gpt-4o', 10_000_000, 5_000_000);
 
       const stats = usageService.getStats('today');
       expect(stats.usage['openai']['gpt-4o'].promptTokens).toBe(10_000_000);
@@ -461,14 +438,14 @@ describe('UsageService', () => {
     });
 
     it('should handle special characters in provider/model names', () => {
-      usageService.recordUsage('my-provider', 'model/v2:latest', 100, 50, false, false);
+      usageService.recordUsage('my-provider', 'model/v2:latest', 100, 50);
 
       const stats = usageService.getStats('today');
       expect(stats.usage['my-provider']['model/v2:latest'].requests).toBe(1);
     });
 
     it('should handle empty strings for provider/model names', () => {
-      usageService.recordUsage('', '', 100, 50, false, false);
+      usageService.recordUsage('', '', 100, 50);
 
       const stats = usageService.getStats('today');
       expect(stats.usage['']['']).toBeDefined();
@@ -512,7 +489,7 @@ describe('UsageService', () => {
     });
 
     it('should handle malformed date keys in data file', (done) => {
-      usageService.recordUsage('openai', 'gpt-4o', 100, 50, false, false);
+      usageService.recordUsage('openai', 'gpt-4o', 100, 50);
 
       setTimeout(() => {
         usageService.shutdown();
@@ -524,7 +501,7 @@ describe('UsageService', () => {
         // Add entry with invalid date key
         data.daily['not-a-date'] = {
           badprovider: {
-            'bad-model': { requests: 999, promptTokens: 9999, completionTokens: 9999, cacheHits: 0, errors: 0 },
+            'bad-model': { requests: 999, promptTokens: 9999, completionTokens: 9999, errors: 0 },
           },
         };
 
@@ -546,7 +523,7 @@ describe('UsageService', () => {
     });
 
     it('should include data exactly at period boundary (6 days ago for 7d)', (done) => {
-      usageService.recordUsage('openai', 'gpt-4o', 100, 50, false, false);
+      usageService.recordUsage('openai', 'gpt-4o', 100, 50);
 
       setTimeout(() => {
         usageService.shutdown();
@@ -561,7 +538,7 @@ describe('UsageService', () => {
 
         data.daily[sixDaysAgoKey] = {
           boundary: {
-            'model': { requests: 10, promptTokens: 1000, completionTokens: 500, cacheHits: 0, errors: 0 },
+            'model': { requests: 10, promptTokens: 1000, completionTokens: 500, errors: 0 },
           },
         };
 
@@ -572,7 +549,7 @@ describe('UsageService', () => {
 
         data.daily[sevenDaysAgoKey] = {
           outside: {
-            'model': { requests: 99, promptTokens: 9999, completionTokens: 9999, cacheHits: 0, errors: 0 },
+            'model': { requests: 99, promptTokens: 9999, completionTokens: 9999, errors: 0 },
           },
         };
 
@@ -599,7 +576,7 @@ describe('UsageService', () => {
 
     it('should accumulate costs correctly across multiple days', (done) => {
       // Use the test pricing service which has testprovider configured
-      usageService.recordUsage('testprovider', 'test-model', 1000, 500, false, false);
+      usageService.recordUsage('testprovider', 'test-model', 1000, 500);
 
       setTimeout(() => {
         usageService.shutdown();
@@ -614,7 +591,7 @@ describe('UsageService', () => {
 
         data.daily[yesterdayKey] = {
           testprovider: {
-            'test-model': { requests: 2, promptTokens: 2000, completionTokens: 1000, cacheHits: 0, errors: 0 },
+            'test-model': { requests: 2, promptTokens: 2000, completionTokens: 1000, errors: 0 },
           },
         };
 
@@ -646,7 +623,7 @@ describe('UsageService', () => {
     it('should handle rapid successive recordUsage calls', () => {
       // Record many usage entries in quick succession
       for (let i = 0; i < 100; i++) {
-        usageService.recordUsage('openai', 'gpt-4o', 10, 5, i % 10 === 0, i % 20 === 0);
+        usageService.recordUsage('openai', 'gpt-4o', 10, 5, i % 20 === 0);
       }
 
       const stats = usageService.getStats('today');
@@ -654,7 +631,6 @@ describe('UsageService', () => {
       expect(stats.totals.requests).toBe(100);
       expect(stats.totals.promptTokens).toBe(1000); // 100 * 10
       expect(stats.totals.completionTokens).toBe(500); // 100 * 5
-      expect(stats.totals.cacheHits).toBe(10); // every 10th
       expect(stats.totals.errors).toBe(5); // every 20th
     });
   });

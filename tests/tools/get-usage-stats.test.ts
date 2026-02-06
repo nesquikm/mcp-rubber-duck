@@ -81,7 +81,7 @@ describe('getUsageStatsTool', () => {
     });
 
     it('should include totals section', () => {
-      usageService.recordUsage('openai', 'gpt-4o', 100, 50, false, false);
+      usageService.recordUsage('openai', 'gpt-4o', 100, 50);
 
       const result = getUsageStatsTool(usageService, { period: 'today' });
       const text = result.content[0].text;
@@ -93,8 +93,8 @@ describe('getUsageStatsTool', () => {
     });
 
     it('should include per-provider breakdown', () => {
-      usageService.recordUsage('openai', 'gpt-4o', 100, 50, false, false);
-      usageService.recordUsage('anthropic', 'claude-3', 200, 100, false, false);
+      usageService.recordUsage('openai', 'gpt-4o', 100, 50);
+      usageService.recordUsage('anthropic', 'claude-3', 200, 100);
 
       const result = getUsageStatsTool(usageService, { period: 'today' });
       const text = result.content[0].text;
@@ -107,7 +107,7 @@ describe('getUsageStatsTool', () => {
     });
 
     it('should show cost when pricing available', () => {
-      usageService.recordUsage('testprovider', 'test-model', 1000, 500, false, false);
+      usageService.recordUsage('testprovider', 'test-model', 1000, 500);
 
       const result = getUsageStatsTool(usageService, { period: 'today' });
       const text = result.content[0].text;
@@ -118,7 +118,7 @@ describe('getUsageStatsTool', () => {
     });
 
     it('should show hint when cost unavailable', () => {
-      usageService.recordUsage('unknown-provider', 'unknown-model', 1000, 500, false, false);
+      usageService.recordUsage('unknown-provider', 'unknown-model', 1000, 500);
 
       const result = getUsageStatsTool(usageService, { period: 'today' });
       const text = result.content[0].text;
@@ -133,17 +133,8 @@ describe('getUsageStatsTool', () => {
       expect(text).toContain('No usage data');
     });
 
-    it('should show cache hits when present', () => {
-      usageService.recordUsage('openai', 'gpt-4o', 100, 50, true, false);
-
-      const result = getUsageStatsTool(usageService, { period: 'today' });
-      const text = result.content[0].text;
-
-      expect(text).toContain('Cache Hits:');
-    });
-
     it('should show errors when present', () => {
-      usageService.recordUsage('openai', 'gpt-4o', 0, 0, false, true);
+      usageService.recordUsage('openai', 'gpt-4o', 0, 0, true);
 
       const result = getUsageStatsTool(usageService, { period: 'today' });
       const text = result.content[0].text;
@@ -155,7 +146,7 @@ describe('getUsageStatsTool', () => {
   describe('period filtering', () => {
     it('should filter data by period', () => {
       // Record some usage for today
-      usageService.recordUsage('openai', 'gpt-4o', 100, 50, false, false);
+      usageService.recordUsage('openai', 'gpt-4o', 100, 50);
 
       // Today should have data
       const todayResult = getUsageStatsTool(usageService, { period: 'today' });
@@ -169,7 +160,7 @@ describe('getUsageStatsTool', () => {
 
   describe('formatting', () => {
     it('should format large numbers with commas', () => {
-      usageService.recordUsage('openai', 'gpt-4o', 1000000, 500000, false, false);
+      usageService.recordUsage('openai', 'gpt-4o', 1000000, 500000);
 
       const result = getUsageStatsTool(usageService, { period: 'today' });
       const text = result.content[0].text;
@@ -180,7 +171,7 @@ describe('getUsageStatsTool', () => {
 
     it('should format cost with appropriate precision', () => {
       // Small cost
-      usageService.recordUsage('testprovider', 'test-model', 100, 50, false, false);
+      usageService.recordUsage('testprovider', 'test-model', 100, 50);
 
       const result = getUsageStatsTool(usageService, { period: 'today' });
       const text = result.content[0].text;
@@ -191,7 +182,7 @@ describe('getUsageStatsTool', () => {
 
     it('should format very small costs with 6 decimal places', () => {
       // Very small cost (10 tokens at $5/M = $0.00005)
-      usageService.recordUsage('testprovider', 'test-model', 10, 0, false, false);
+      usageService.recordUsage('testprovider', 'test-model', 10, 0);
 
       const result = getUsageStatsTool(usageService, { period: 'today' });
       const text = result.content[0].text;
@@ -202,7 +193,7 @@ describe('getUsageStatsTool', () => {
 
     it('should format large costs with 2 decimal places', () => {
       // Large cost (10M tokens at $5/M = $50)
-      usageService.recordUsage('testprovider', 'test-model', 10000000, 0, false, false);
+      usageService.recordUsage('testprovider', 'test-model', 10000000, 0);
 
       const result = getUsageStatsTool(usageService, { period: 'today' });
       const text = result.content[0].text;
@@ -223,7 +214,7 @@ describe('getUsageStatsTool', () => {
         debounceMs: 0,
       });
 
-      freeUsageService.recordUsage('freeprovider', 'free-model', 1000000, 500000, false, false);
+      freeUsageService.recordUsage('freeprovider', 'free-model', 1000000, 500000);
 
       const result = getUsageStatsTool(freeUsageService, { period: 'today' });
       const text = result.content[0].text;

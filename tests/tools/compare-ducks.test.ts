@@ -16,7 +16,7 @@ describe('compareDucksTool', () => {
       content: 'OpenAI says: TypeScript is great!',
       model: 'gpt-4',
       latency: 150,
-      cached: false,
+
       usage: {
         prompt_tokens: 10,
         completion_tokens: 20,
@@ -29,7 +29,7 @@ describe('compareDucksTool', () => {
       content: 'Groq says: TypeScript rocks!',
       model: 'llama-3.1-70b',
       latency: 80,
-      cached: false,
+
       usage: {
         prompt_tokens: 10,
         completion_tokens: 15,
@@ -97,21 +97,6 @@ describe('compareDucksTool', () => {
     expect(result.content[0].text).toContain('80ms');
   });
 
-  it('should show cached indicator when response is cached', async () => {
-    mockProviderManager.compareDucks.mockResolvedValue([
-      {
-        ...mockResponses[0],
-        cached: true,
-      },
-    ]);
-
-    const result = await compareDucksTool(mockProviderManager, {
-      prompt: 'Test',
-    });
-
-    expect(result.content[0].text).toContain('Cached');
-  });
-
   it('should show success count in summary', async () => {
     const result = await compareDucksTool(mockProviderManager, {
       prompt: 'Test',
@@ -129,7 +114,7 @@ describe('compareDucksTool', () => {
         content: 'Error: API key invalid',
         model: '',
         latency: 0,
-        cached: false,
+  
       },
     ]);
 
@@ -217,7 +202,7 @@ describe('compareDucksTool', () => {
         content: 'CLI Claude response',
         model: 'cli',
         latency: 5000,
-        cached: false,
+  
         usage: {
           prompt_tokens: 5,
           completion_tokens: 10,
@@ -230,7 +215,7 @@ describe('compareDucksTool', () => {
         content: 'CLI Gemini response',
         model: 'cli',
         latency: 8000,
-        cached: false,
+  
       },
     ];
 
@@ -272,7 +257,7 @@ describe('compareDucksTool', () => {
           content: 'Response without usage',
           model: 'cli',
           latency: 8000,
-          cached: false,
+    
           // no usage field
         },
       ]);
@@ -296,7 +281,7 @@ describe('compareDucksTool', () => {
           content: 'HTTP response',
           model: 'gpt-4',
           latency: 500,
-          cached: false,
+    
           usage: { prompt_tokens: 100, completion_tokens: 50, total_tokens: 150 },
         },
         {
@@ -305,7 +290,7 @@ describe('compareDucksTool', () => {
           content: 'CLI response',
           model: 'cli',
           latency: 5000,
-          cached: false,
+    
           usage: { prompt_tokens: 5, completion_tokens: 10, total_tokens: 15 },
         },
       ]);

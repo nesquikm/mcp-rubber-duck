@@ -56,7 +56,7 @@ describe('getUsageStatsTool structured JSON', () => {
   });
 
   it('should include totals in JSON', () => {
-    usageService.recordUsage('openai', 'gpt-4o', 100, 50, false, false);
+    usageService.recordUsage('openai', 'gpt-4o', 100, 50);
 
     const result = getUsageStatsTool(usageService, { period: 'today' });
     const data = JSON.parse(result.content[1].text) as {
@@ -64,7 +64,6 @@ describe('getUsageStatsTool structured JSON', () => {
         requests: number;
         promptTokens: number;
         completionTokens: number;
-        cacheHits: number;
         errors: number;
       };
     };
@@ -72,13 +71,12 @@ describe('getUsageStatsTool structured JSON', () => {
     expect(data.totals.requests).toBe(1);
     expect(data.totals.promptTokens).toBe(100);
     expect(data.totals.completionTokens).toBe(50);
-    expect(data.totals.cacheHits).toBe(0);
     expect(data.totals.errors).toBe(0);
   });
 
   it('should include per-provider usage breakdown', () => {
-    usageService.recordUsage('openai', 'gpt-4o', 100, 50, false, false);
-    usageService.recordUsage('anthropic', 'claude-3', 200, 100, false, false);
+    usageService.recordUsage('openai', 'gpt-4o', 100, 50);
+    usageService.recordUsage('anthropic', 'claude-3', 200, 100);
 
     const result = getUsageStatsTool(usageService, { period: 'today' });
     const data = JSON.parse(result.content[1].text) as {
@@ -92,7 +90,7 @@ describe('getUsageStatsTool structured JSON', () => {
   });
 
   it('should include cost data when pricing is configured', () => {
-    usageService.recordUsage('testprovider', 'test-model', 1000, 500, false, false);
+    usageService.recordUsage('testprovider', 'test-model', 1000, 500);
 
     const result = getUsageStatsTool(usageService, { period: 'today' });
     const data = JSON.parse(result.content[1].text) as {
@@ -119,7 +117,7 @@ describe('getUsageStatsTool structured JSON', () => {
   });
 
   it('should preserve text content identical to before', () => {
-    usageService.recordUsage('openai', 'gpt-4o', 100, 50, false, false);
+    usageService.recordUsage('openai', 'gpt-4o', 100, 50);
 
     const result = getUsageStatsTool(usageService, { period: 'today' });
 

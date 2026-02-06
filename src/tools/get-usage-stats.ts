@@ -31,7 +31,6 @@ export function getUsageStatsTool(
   output += `Prompt Tokens: ${stats.totals.promptTokens.toLocaleString()}\n`;
   output += `Completion Tokens: ${stats.totals.completionTokens.toLocaleString()}\n`;
   output += `Total Tokens: ${(stats.totals.promptTokens + stats.totals.completionTokens).toLocaleString()}\n`;
-  output += `Cache Hits: ${stats.totals.cacheHits.toLocaleString()}\n`;
   output += `Errors: ${stats.totals.errors.toLocaleString()}\n`;
 
   if (stats.totals.estimatedCostUSD !== undefined) {
@@ -52,9 +51,6 @@ export function getUsageStatsTool(
         output += `  ${model}:\n`;
         output += `    Requests: ${modelStats.requests.toLocaleString()}\n`;
         output += `    Tokens: ${modelStats.promptTokens.toLocaleString()} in / ${modelStats.completionTokens.toLocaleString()} out\n`;
-        if (modelStats.cacheHits > 0) {
-          output += `    Cache Hits: ${modelStats.cacheHits.toLocaleString()}\n`;
-        }
         if (modelStats.errors > 0) {
           output += `    Errors: ${modelStats.errors.toLocaleString()}\n`;
         }

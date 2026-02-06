@@ -51,9 +51,6 @@ export async function compareDucksTool(
       if (duckResponse.latency > 0) {
         response += ` | ⏱️ ${duckResponse.latency}ms`;
       }
-      if (duckResponse.cached) {
-        response += ` | 💾 Cached`;
-      }
     }
     
     response += `\n\n`;
@@ -78,7 +75,6 @@ export async function compareDucksTool(
       completion: r.usage.completion_tokens,
       total: r.usage.total_tokens,
     } : null,
-    cached: r.cached,
     error: r.content.startsWith('Error:') ? r.content : undefined,
   }));
 
