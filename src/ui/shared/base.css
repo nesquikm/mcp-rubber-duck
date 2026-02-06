@@ -1,0 +1,123 @@
+/* Reset */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+/* Base */
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  line-height: 1.5;
+  color: var(--text);
+  min-width: 100vw;
+}
+#app {
+  background: var(--bg-app);
+  padding: 16px;
+  border-radius: 12px;
+}
+
+/* Color tokens */
+:root {
+  /* Backgrounds */
+  --bg-app: #f8f9fa;
+  --bg-card: #fff;
+  --bg-inset: #f5f5f5;
+  --bg-track: #e0e0e0;
+
+  /* Surface tints */
+  --bg-tint-blue: #e3f2fd;
+  --bg-tint-green: #e8f5e9;
+  --bg-tint-indigo: #e8eaf6;
+  --bg-tint-yellow: #fffde7;
+
+  /* Borders */
+  --border: #e0e0e0;
+  --border-muted: #ccc;
+  --border-faint: #eee;
+  --border-error: #ef5350;
+
+  /* Text */
+  --text: #1a1a2e;
+  --text-muted: #666;
+  --text-indigo: #3949ab;
+  --text-success: #2e7d32;
+
+  /* Accents */
+  --accent-blue: #1565c0;
+  --accent-blue-light: #42a5f5;
+  --accent-green: #4caf50;
+  --accent-green-light: #66bb6a;
+  --accent-red: #ef5350;
+  --accent-orange: #ff9800;
+  --accent-orange-deep: #e65100;
+  --accent-purple: #6a1b9a;
+  --accent-purple-light: #7e57c2;
+  --accent-yellow: #ffd54f;
+
+  /* Semantic */
+  --text-on-accent: #fff;
+  --error-bg: #ffebee;
+  --error-text: #c62828;
+
+  /* Debate format badges */
+  --debate-oxford-bg: #e8eaf6;
+  --debate-oxford-text: #283593;
+  --debate-socratic-bg: #f3e5f5;
+  --debate-adversarial-bg: #fbe9e7;
+  --debate-adversarial-text: #bf360c;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    /* Backgrounds */
+    --bg-app: #1a1a2e;
+    --bg-card: #16213e;
+    --bg-inset: #0d1b2a;
+    --bg-track: #0d1b2a;
+
+    /* Surface tints */
+    --bg-tint-blue: #0f3460;
+    --bg-tint-green: #1b3a4b;
+    --bg-tint-indigo: #0f3460;
+    --bg-tint-yellow: #1b3a4b;
+
+    /* Borders */
+    --border: #0f3460;
+    --border-muted: #333;
+    --border-faint: #0f3460;
+    --border-error: #8b3a3a;
+
+    /* Text */
+    --text: #e0e0e0;
+    --text-muted: #a0a0a0;
+    --text-indigo: #a0c4ff;
+    --text-success: #81c784;
+
+    /* Accents */
+    --accent-blue: #64b5f6;
+    --accent-blue-light: #42a5f5;
+    --accent-green: #81c784;
+    --accent-green-light: #66bb6a;
+    --accent-orange-deep: #ffb74d;
+    --accent-purple: #ce93d8;
+
+    /* Semantic */
+    --error-bg: #5c1a1a;
+    --error-text: #ff8a80;
+
+    /* Debate format badges */
+    --debate-oxford-bg: #1a237e;
+    --debate-oxford-text: #9fa8da;
+    --debate-socratic-bg: #4a148c;
+    --debate-adversarial-bg: #4e1a00;
+    --debate-adversarial-text: #ffab91;
+  }
+}
+
+/* Shared components */
+.error-banner {
+  background: var(--error-bg);
+  color: var(--error-text);
+  padding: 12px;
+  border-radius: 8px;
+  text-align: center;
+  font-weight: 600;
+}

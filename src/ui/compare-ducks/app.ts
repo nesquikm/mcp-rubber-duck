@@ -1,3 +1,4 @@
+import '../shared/base.css';
 import { App } from '@modelcontextprotocol/ext-apps';
 
 interface CompareResponse {
