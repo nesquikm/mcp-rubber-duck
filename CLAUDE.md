@@ -17,6 +17,7 @@ npm test -- --testNamePattern="should load config"  # Specific test
 npm run lint           # ESLint
 npm run format         # Prettier
 npm run typecheck      # Type check without emit
+/setup [tool]          # Configure mcp-rubber-duck in an AI coding tool
 ```
 
 ## Architecture
@@ -99,6 +100,10 @@ Config uses Zod schemas in `src/config/types.ts`. When adding config options:
 ### MCP Terminology
 - `MCP_SERVER=true` - This server runs AS an MCP server (for Claude Desktop)
 - `MCP_BRIDGE_ENABLED=true` - Ducks can ACCESS external MCP servers as clients
+
+## Roadmap
+
+When completing features, closing issues, or working on items that appear in `docs/roadmap.md`, check if the roadmap should be updated (e.g., marking items as done, adjusting phases, adding new items). Don't update it for unrelated commits.
 
 ## Environment Variables
 
