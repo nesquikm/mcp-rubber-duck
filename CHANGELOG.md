@@ -1,3 +1,10 @@
+# [1.14.0](https://github.com/nesquikm/mcp-rubber-duck/compare/v1.13.1...v1.14.0) (2026-02-08)
+
+
+### Features
+
+* **docs:** split README into focused documentation site with setup skill ([#61](https://github.com/nesquikm/mcp-rubber-duck/issues/61)) ([a8e7b2a](https://github.com/nesquikm/mcp-rubber-duck/commit/a8e7b2a4ae5e1864a82a23e08da9751f45f7e0e5))
+
 ## [1.13.1](https://github.com/nesquikm/mcp-rubber-duck/compare/v1.13.0...v1.13.1) (2026-02-06)
 
 # [1.13.0](https://github.com/nesquikm/mcp-rubber-duck/compare/v1.12.0...v1.13.0) (2026-02-05)
