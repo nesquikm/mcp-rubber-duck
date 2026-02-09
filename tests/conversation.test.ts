@@ -383,7 +383,8 @@ describe('ConversationManager', () => {
       const conv = conversationManager.getConversation('test-1')!;
       // Set to exactly maxAge ago (should NOT be deleted as condition is >)
       const maxAge = 60 * 60 * 1000;
-      conv.updatedAt = new Date(Date.now() - maxAge);
+      // Use a slight buffer to avoid flakiness from ms elapsed between Date.now() calls
+      conv.updatedAt = new Date(Date.now() - maxAge + 50);
 
       conversationManager.clearOldConversations(maxAge);
 
