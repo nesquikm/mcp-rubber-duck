@@ -378,18 +378,24 @@ describe('ConversationManager', () => {
     });
 
     it('should not delete conversations exactly at maxAge boundary', () => {
-      conversationManager.createConversation('test-1', 'openai');
+      // Freeze time to eliminate flakiness from elapsed ms between Date.now() calls
+      const now = Date.now();
+      jest.useFakeTimers({ now });
 
-      const conv = conversationManager.getConversation('test-1')!;
-      // Set to exactly maxAge ago (should NOT be deleted as condition is >)
+      const freshManager = new ConversationManager();
+      freshManager.createConversation('test-1', 'openai');
+
+      const conv = freshManager.getConversation('test-1')!;
+      // Set to just under maxAge ago (should NOT be deleted as condition is >)
       const maxAge = 60 * 60 * 1000;
-      // Use a slight buffer to avoid flakiness from ms elapsed between Date.now() calls
-      conv.updatedAt = new Date(Date.now() - maxAge + 50);
+      conv.updatedAt = new Date(now - maxAge + 1);
 
-      conversationManager.clearOldConversations(maxAge);
+      freshManager.clearOldConversations(maxAge);
 
-      // Should still exist (edge case: equal time is not "older than")
-      expect(conversationManager.getConversation('test-1')).toBeDefined();
+      // Should still exist (edge case: not yet older than maxAge)
+      expect(freshManager.getConversation('test-1')).toBeDefined();
+
+      jest.useRealTimers();
     });
   });
 });

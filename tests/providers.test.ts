@@ -77,20 +77,26 @@ describe('DuckProvider', () => {
   });
 
   it('should send chat request', async () => {
-    console.log('Starting chat request test');
-    console.log('Mock create has been called:', mockCreate.mock.calls.length, 'times');
-    
     const response = await provider.chat({
       messages: [
         { role: 'user', content: 'Hello', timestamp: new Date() },
       ],
     });
 
-    console.log('Chat response received:', response);
     expect(response).toBeDefined();
     expect(response.content).toBe('Mocked response');
     expect(response.usage).toBeDefined();
     expect(response.model).toBe('test-model');
+
+    // Verify the mock was called with correct parameters
+    expect(mockCreate).toHaveBeenCalledTimes(1);
+    const callArgs = (mockCreate as any).mock.calls[0][0];
+    expect(callArgs.model).toBe('test-model');
+    expect(callArgs.messages).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ role: 'user', content: 'Hello' }),
+      ])
+    );
   });
 
   it('should use correct parameters for o1 models', async () => {
@@ -111,12 +117,17 @@ describe('DuckProvider', () => {
     });
 
     expect(mockCreate).toHaveBeenCalledTimes(1);
-    const calls = (mockCreate as any).mock.calls;
-    expect(calls.length).toBeGreaterThan(0);
-    const callParams = calls[0][0];
-    
+    const callParams = (mockCreate as any).mock.calls[0][0];
+
     // o1 models should NOT have temperature or token limits
     expect(callParams).not.toHaveProperty('temperature');
+    // But SHOULD have the correct model and messages
+    expect(callParams.model).toBe('o1');
+    expect(callParams.messages).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ role: 'user', content: 'Hello' }),
+      ])
+    );
   });
 
   it('should use correct parameters for GPT-5 models', async () => {
@@ -137,12 +148,17 @@ describe('DuckProvider', () => {
     });
 
     expect(mockCreate).toHaveBeenCalledTimes(1);
-    const calls = (mockCreate as any).mock.calls;
-    expect(calls.length).toBeGreaterThan(0);
-    const callParams = calls[0][0];
-    
+    const callParams = (mockCreate as any).mock.calls[0][0];
+
     // GPT-5 models should NOT have temperature or token limits
     expect(callParams).not.toHaveProperty('temperature');
+    // But SHOULD have the correct model and messages
+    expect(callParams.model).toBe('gpt-5');
+    expect(callParams.messages).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ role: 'user', content: 'Hello' }),
+      ])
+    );
   });
 
   it('should use correct parameters for non-o1 models', async () => {
@@ -163,12 +179,17 @@ describe('DuckProvider', () => {
     });
 
     expect(mockCreate).toHaveBeenCalledTimes(1);
-    const calls = (mockCreate as any).mock.calls;
-    expect(calls.length).toBeGreaterThan(0);
-    const callParams = calls[0][0];
-    
-    // non-o1 models should have temperature but no token limits
+    const callParams = (mockCreate as any).mock.calls[0][0];
+
+    // non-o1 models SHOULD have temperature
     expect(callParams).toHaveProperty('temperature');
+    // And SHOULD have the correct model and messages
+    expect(callParams.model).toBe('gpt-4');
+    expect(callParams.messages).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ role: 'user', content: 'Hello' }),
+      ])
+    );
   });
 });
 

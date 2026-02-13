@@ -213,9 +213,12 @@ describe('PricingService', () => {
         },
       });
 
+      // Use non-zero token counts to verify the calculation actually runs
       const cost = serviceWithFree.calculateCost('test', 'free-model', 10000, 5000);
 
       expect(cost).not.toBeNull();
+      expect(cost?.inputCost).toBe(0);
+      expect(cost?.outputCost).toBe(0);
       expect(cost?.totalCost).toBe(0);
     });
   });

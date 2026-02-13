@@ -201,17 +201,19 @@ describe('duckIterateTool', () => {
   });
 
   it('should detect convergence and stop early', async () => {
-    // Return very similar responses to trigger convergence
-    const similarResponse = 'This is the exact same response content that will be repeated to trigger convergence detection.';
+    // Use similar but not identical responses to test the actual similarity algorithm
+    // Convergence threshold is 80% Jaccard word similarity + 0.8 length ratio
+    const response1 = 'The quicksort algorithm works by selecting a pivot element and partitioning the array into two sub-arrays. Elements less than the pivot go left, elements greater go right. This process repeats recursively until the array is fully sorted.';
+    const response2 = 'The quicksort algorithm works by selecting a pivot element and partitioning the array into two sub-arrays. Elements smaller than the pivot go left, elements larger go right. This process repeats recursively until the array is completely sorted.';
 
     mockCreate
       .mockResolvedValueOnce({
-        choices: [{ message: { content: similarResponse }, finish_reason: 'stop' }],
+        choices: [{ message: { content: response1 }, finish_reason: 'stop' }],
         usage: { prompt_tokens: 10, completion_tokens: 20, total_tokens: 30 },
         model: 'gpt-4',
       })
       .mockResolvedValueOnce({
-        choices: [{ message: { content: similarResponse }, finish_reason: 'stop' }],
+        choices: [{ message: { content: response2 }, finish_reason: 'stop' }],
         usage: { prompt_tokens: 10, completion_tokens: 20, total_tokens: 30 },
         model: 'gemini-pro',
       });

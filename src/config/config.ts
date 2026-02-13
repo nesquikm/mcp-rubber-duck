@@ -14,6 +14,16 @@ import { logger } from '../utils/logger.js';
 
 dotenv.config();
 
+function safeParseInt(value: string): number | undefined {
+  const parsed = parseInt(value, 10);
+  return isNaN(parsed) ? undefined : parsed;
+}
+
+function safeParseFloat(value: string): number | undefined {
+  const parsed = parseFloat(value);
+  return isNaN(parsed) ? undefined : parsed;
+}
+
 export class ConfigManager {
   private config: Config;
   private configPath: string;
@@ -97,7 +107,8 @@ export class ConfigManager {
       merged.default_provider = process.env.DEFAULT_PROVIDER;
     }
     if (process.env.DEFAULT_TEMPERATURE) {
-      merged.default_temperature = parseFloat(process.env.DEFAULT_TEMPERATURE);
+      const temp = safeParseFloat(process.env.DEFAULT_TEMPERATURE);
+      if (temp !== undefined) merged.default_temperature = temp;
     }
     if (process.env.LOG_LEVEL) {
       merged.log_level = process.env.LOG_LEVEL;
@@ -197,7 +208,8 @@ export class ConfigManager {
       }
     }
     if (process.env.MCP_APPROVAL_TIMEOUT) {
-      mcpConfig.approval_timeout = parseInt(process.env.MCP_APPROVAL_TIMEOUT);
+      const timeout = safeParseInt(process.env.MCP_APPROVAL_TIMEOUT);
+      if (timeout !== undefined) mcpConfig.approval_timeout = timeout;
     }
     if (process.env.MCP_TRUSTED_TOOLS) {
       mcpConfig.trusted_tools = process.env.MCP_TRUSTED_TOOLS.split(',').map(t => t.trim());
@@ -354,8 +366,8 @@ export class ConfigManager {
           ...(cliArgsStr && {
             cli_args: cliArgsStr.split(',').map(a => a.trim()),
           }),
-          ...(process.env[`${prefix}PROCESS_TIMEOUT`] && {
-            process_timeout: parseInt(process.env[`${prefix}PROCESS_TIMEOUT`]!),
+          ...(process.env[`${prefix}PROCESS_TIMEOUT`] && safeParseInt(process.env[`${prefix}PROCESS_TIMEOUT`]!) !== undefined && {
+            process_timeout: safeParseInt(process.env[`${prefix}PROCESS_TIMEOUT`]!)!,
           }),
           ...(process.env[`${prefix}WORKING_DIRECTORY`] && {
             working_directory: process.env[`${prefix}WORKING_DIRECTORY`],
@@ -419,11 +431,13 @@ export class ConfigManager {
         // Retry configuration
         const retryAttemptsEnv = process.env[`${prefix}RETRY_ATTEMPTS`];
         if (retryAttemptsEnv) {
-          server.retryAttempts = parseInt(retryAttemptsEnv);
+          const val = safeParseInt(retryAttemptsEnv);
+          if (val !== undefined) server.retryAttempts = val;
         }
         const retryDelayEnv = process.env[`${prefix}RETRY_DELAY`];
         if (retryDelayEnv) {
-          server.retryDelay = parseInt(retryDelayEnv);
+          const val = safeParseInt(retryDelayEnv);
+          if (val !== undefined) server.retryDelay = val;
         }
 
         servers.push(server as MCPServerConfig);
@@ -492,17 +506,17 @@ export class ConfigManager {
         ...(process.env.GUARDRAILS_RATE_LIMITER_ENABLED !== undefined && {
           enabled: process.env.GUARDRAILS_RATE_LIMITER_ENABLED === 'true',
         }),
-        ...(process.env.GUARDRAILS_RATE_LIMITER_REQUESTS_PER_MINUTE && {
-          requests_per_minute: parseInt(process.env.GUARDRAILS_RATE_LIMITER_REQUESTS_PER_MINUTE),
+        ...(process.env.GUARDRAILS_RATE_LIMITER_REQUESTS_PER_MINUTE && safeParseInt(process.env.GUARDRAILS_RATE_LIMITER_REQUESTS_PER_MINUTE) !== undefined && {
+          requests_per_minute: safeParseInt(process.env.GUARDRAILS_RATE_LIMITER_REQUESTS_PER_MINUTE)!,
         }),
-        ...(process.env.GUARDRAILS_RATE_LIMITER_REQUESTS_PER_HOUR && {
-          requests_per_hour: parseInt(process.env.GUARDRAILS_RATE_LIMITER_REQUESTS_PER_HOUR),
+        ...(process.env.GUARDRAILS_RATE_LIMITER_REQUESTS_PER_HOUR && safeParseInt(process.env.GUARDRAILS_RATE_LIMITER_REQUESTS_PER_HOUR) !== undefined && {
+          requests_per_hour: safeParseInt(process.env.GUARDRAILS_RATE_LIMITER_REQUESTS_PER_HOUR)!,
         }),
         ...(process.env.GUARDRAILS_RATE_LIMITER_PER_PROVIDER !== undefined && {
           per_provider: process.env.GUARDRAILS_RATE_LIMITER_PER_PROVIDER === 'true',
         }),
-        ...(process.env.GUARDRAILS_RATE_LIMITER_BURST_ALLOWANCE && {
-          burst_allowance: parseInt(process.env.GUARDRAILS_RATE_LIMITER_BURST_ALLOWANCE),
+        ...(process.env.GUARDRAILS_RATE_LIMITER_BURST_ALLOWANCE && safeParseInt(process.env.GUARDRAILS_RATE_LIMITER_BURST_ALLOWANCE) !== undefined && {
+          burst_allowance: safeParseInt(process.env.GUARDRAILS_RATE_LIMITER_BURST_ALLOWANCE)!,
         }),
       };
     }
@@ -517,14 +531,14 @@ export class ConfigManager {
         ...(process.env.GUARDRAILS_TOKEN_LIMITER_ENABLED !== undefined && {
           enabled: process.env.GUARDRAILS_TOKEN_LIMITER_ENABLED === 'true',
         }),
-        ...(process.env.GUARDRAILS_TOKEN_LIMITER_MAX_INPUT_TOKENS && {
-          max_input_tokens: parseInt(process.env.GUARDRAILS_TOKEN_LIMITER_MAX_INPUT_TOKENS),
+        ...(process.env.GUARDRAILS_TOKEN_LIMITER_MAX_INPUT_TOKENS && safeParseInt(process.env.GUARDRAILS_TOKEN_LIMITER_MAX_INPUT_TOKENS) !== undefined && {
+          max_input_tokens: safeParseInt(process.env.GUARDRAILS_TOKEN_LIMITER_MAX_INPUT_TOKENS)!,
         }),
-        ...(process.env.GUARDRAILS_TOKEN_LIMITER_MAX_OUTPUT_TOKENS && {
-          max_output_tokens: parseInt(process.env.GUARDRAILS_TOKEN_LIMITER_MAX_OUTPUT_TOKENS),
+        ...(process.env.GUARDRAILS_TOKEN_LIMITER_MAX_OUTPUT_TOKENS && safeParseInt(process.env.GUARDRAILS_TOKEN_LIMITER_MAX_OUTPUT_TOKENS) !== undefined && {
+          max_output_tokens: safeParseInt(process.env.GUARDRAILS_TOKEN_LIMITER_MAX_OUTPUT_TOKENS)!,
         }),
-        ...(process.env.GUARDRAILS_TOKEN_LIMITER_WARN_AT_PERCENTAGE && {
-          warn_at_percentage: parseInt(process.env.GUARDRAILS_TOKEN_LIMITER_WARN_AT_PERCENTAGE),
+        ...(process.env.GUARDRAILS_TOKEN_LIMITER_WARN_AT_PERCENTAGE && safeParseInt(process.env.GUARDRAILS_TOKEN_LIMITER_WARN_AT_PERCENTAGE) !== undefined && {
+          warn_at_percentage: safeParseInt(process.env.GUARDRAILS_TOKEN_LIMITER_WARN_AT_PERCENTAGE)!,
         }),
       };
     }
