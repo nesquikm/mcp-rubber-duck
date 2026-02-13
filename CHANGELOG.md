@@ -1,3 +1,10 @@
+## [1.14.1](https://github.com/nesquikm/mcp-rubber-duck/compare/v1.14.0...v1.14.1) (2026-02-13)
+
+
+### Bug Fixes
+
+* NaN-safe env parsing, stale MCP client cache, and test quality ([#62](https://github.com/nesquikm/mcp-rubber-duck/issues/62)) ([7cdbb76](https://github.com/nesquikm/mcp-rubber-duck/commit/7cdbb767f9e8e828d11468e0425d6c2d9a911c07))
+
 # [1.14.0](https://github.com/nesquikm/mcp-rubber-duck/compare/v1.13.1...v1.14.0) (2026-02-08)
 
 
