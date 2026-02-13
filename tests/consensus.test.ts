@@ -212,9 +212,16 @@ describe('ConsensusService', () => {
 
       const result = service.aggregateVotes(question, options, votes);
 
+      // Verify averages are computed correctly (not just sum or count)
       expect(result.confidenceByOption['React']).toBe(70); // (80+60)/2
-      expect(result.confidenceByOption['Vue']).toBe(90);
+      expect(result.confidenceByOption['Vue']).toBe(90);   // 90/1
+      // All options from the original list should be tracked, even with 0 votes
+      expect(Object.keys(result.confidenceByOption)).toEqual(expect.arrayContaining(options));
       expect(result.confidenceByOption['Angular']).toBe(0);
+      // Verify tally matches
+      expect(result.tally['React']).toBe(2);
+      expect(result.tally['Vue']).toBe(1);
+      expect(result.tally['Angular']).toBe(0);
     });
 
     it('should detect plurality consensus', () => {

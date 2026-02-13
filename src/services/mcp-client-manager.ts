@@ -62,8 +62,15 @@ export class MCPClientManager {
     const initialDelay = config.retryDelay ?? 1000;
     
     if (this.clients.has(name)) {
-      logger.warn(`MCP server ${name} already connected`);
-      return this.clients.get(name)!;
+      const status = this.connectionStatus.get(name);
+      if (status === 'connected') {
+        logger.warn(`MCP server ${name} already connected`);
+        return this.clients.get(name)!;
+      }
+      // Clean up stale client before reconnecting
+      const staleClient = this.clients.get(name)!;
+      try { await staleClient.close(); } catch { /* ignore close errors */ }
+      this.clients.delete(name);
     }
     
     for (let attempt = 0; attempt <= maxRetries; attempt++) {
