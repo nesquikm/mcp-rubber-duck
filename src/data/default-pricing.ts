@@ -14,14 +14,16 @@ import { PricingConfig } from '../config/types.js';
  * Users can override these defaults in their config.json file.
  */
 export const DEFAULT_PRICING_VERSION = 2;
-export const DEFAULT_PRICING_LAST_UPDATED = '2026-02-05';
+export const DEFAULT_PRICING_LAST_UPDATED = '2026-02-18';
 
 export const DEFAULT_PRICING: PricingConfig = {
   openai: {
     // GPT-5 models (released 2025)
     'gpt-5': { inputPricePerMillion: 1.25, outputPricePerMillion: 10 },
     'gpt-5.1': { inputPricePerMillion: 1.25, outputPricePerMillion: 10 },
-    'gpt-5.2': { inputPricePerMillion: 1.25, outputPricePerMillion: 10 },
+    'gpt-5.2': { inputPricePerMillion: 1.75, outputPricePerMillion: 14 },
+    'gpt-5.2-pro': { inputPricePerMillion: 21, outputPricePerMillion: 168 },
+    'gpt-5-pro': { inputPricePerMillion: 15, outputPricePerMillion: 120 },
     'gpt-5-mini': { inputPricePerMillion: 0.25, outputPricePerMillion: 2 },
     'gpt-5-nano': { inputPricePerMillion: 0.05, outputPricePerMillion: 0.4 },
 
@@ -53,22 +55,30 @@ export const DEFAULT_PRICING: PricingConfig = {
 
     // o4 reasoning models
     'o4-mini': { inputPricePerMillion: 1.1, outputPricePerMillion: 4.4 },
+    'o4-mini-deep-research': { inputPricePerMillion: 2, outputPricePerMillion: 8 },
 
     // o3 reasoning models
-    'o3': { inputPricePerMillion: 0.4, outputPricePerMillion: 1.6 },
+    'o3': { inputPricePerMillion: 2, outputPricePerMillion: 8 },
+    'o3-pro': { inputPricePerMillion: 20, outputPricePerMillion: 80 },
+    'o3-deep-research': { inputPricePerMillion: 10, outputPricePerMillion: 40 },
     'o3-mini': { inputPricePerMillion: 1.1, outputPricePerMillion: 4.4 },
 
     // o1 reasoning models
     'o1': { inputPricePerMillion: 15, outputPricePerMillion: 60 },
+    'o1-pro': { inputPricePerMillion: 150, outputPricePerMillion: 600 },
     'o1-2024-12-17': { inputPricePerMillion: 15, outputPricePerMillion: 60 },
     'o1-preview': { inputPricePerMillion: 15, outputPricePerMillion: 60 },
     'o1-preview-2024-09-12': { inputPricePerMillion: 15, outputPricePerMillion: 60 },
-    'o1-mini': { inputPricePerMillion: 3, outputPricePerMillion: 12 },
-    'o1-mini-2024-09-12': { inputPricePerMillion: 3, outputPricePerMillion: 12 },
+    'o1-mini': { inputPricePerMillion: 1.1, outputPricePerMillion: 4.4 },
+    'o1-mini-2024-09-12': { inputPricePerMillion: 1.1, outputPricePerMillion: 4.4 },
   },
 
   anthropic: {
-    // Claude 4.5 models (current generation)
+    // Claude 4.6 models
+    'claude-opus-4-6': { inputPricePerMillion: 5, outputPricePerMillion: 25 },
+    'claude-sonnet-4-6': { inputPricePerMillion: 3, outputPricePerMillion: 15 },
+
+    // Claude 4.5 models
     'claude-opus-4-5-20251101': { inputPricePerMillion: 5, outputPricePerMillion: 25 },
     'claude-opus-4-5': { inputPricePerMillion: 5, outputPricePerMillion: 25 },
     'claude-sonnet-4-5-20250929': { inputPricePerMillion: 3, outputPricePerMillion: 15 },
@@ -155,7 +165,7 @@ export const DEFAULT_PRICING: PricingConfig = {
   groq: {
     // Llama 4
     'llama-4-scout-17b-128k': { inputPricePerMillion: 0.11, outputPricePerMillion: 0.34 },
-    'llama-4-maverick-17b-128k': { inputPricePerMillion: 0.5, outputPricePerMillion: 0.77 },
+    'llama-4-maverick-17b-128k': { inputPricePerMillion: 0.2, outputPricePerMillion: 0.6 },
     'llama-guard-4-12b': { inputPricePerMillion: 0.2, outputPricePerMillion: 0.2 },
 
     // Llama 3.3
@@ -322,7 +332,7 @@ export const DEFAULT_PRICING: PricingConfig = {
 
     // Mistral
     'mistralai/Mistral-7B-Instruct-v0.2': { inputPricePerMillion: 0.2, outputPricePerMillion: 0.2 },
-    'mistralai/Mistral-Small-3': { inputPricePerMillion: 0.8, outputPricePerMillion: 0.8 },
+    'mistralai/Mistral-Small-3': { inputPricePerMillion: 0.1, outputPricePerMillion: 0.3 },
     'mistralai/Mixtral-8x7B-Instruct-v0.1': { inputPricePerMillion: 0.6, outputPricePerMillion: 0.6 },
 
     // Cogito
