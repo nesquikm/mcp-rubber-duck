@@ -1,3 +1,10 @@
+## [1.14.2](https://github.com/nesquikm/mcp-rubber-duck/compare/v1.14.1...v1.14.2) (2026-02-18)
+
+
+### Bug Fixes
+
+* update pricing data and allowlist new dev-only advisories ([#65](https://github.com/nesquikm/mcp-rubber-duck/issues/65)) ([c0a66bd](https://github.com/nesquikm/mcp-rubber-duck/commit/c0a66bd9160aef9e8fe730390b7f527fd75bb0f5))
+
 ## [1.14.1](https://github.com/nesquikm/mcp-rubber-duck/compare/v1.14.0...v1.14.1) (2026-02-13)
 
 
