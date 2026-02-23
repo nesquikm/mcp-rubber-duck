@@ -1,3 +1,10 @@
+## [1.14.3](https://github.com/nesquikm/mcp-rubber-duck/compare/v1.14.2...v1.14.3) (2026-02-23)
+
+
+### Bug Fixes
+
+* **deps:** update dependencies and migrate to ESLint 9 ([#67](https://github.com/nesquikm/mcp-rubber-duck/issues/67)) ([c67f6c2](https://github.com/nesquikm/mcp-rubber-duck/commit/c67f6c2a216b37086499efd74f6487b48d4009e8))
+
 ## [1.14.2](https://github.com/nesquikm/mcp-rubber-duck/compare/v1.14.1...v1.14.2) (2026-02-18)
 
 
