@@ -376,7 +376,7 @@ export class EnhancedProviderManager extends ProviderManager {
     try {
       const provider = this.getEnhancedProvider(providerName);
       return await provider.getMCPFunctionCount();
-    } catch (error) {
+    } catch (_error) {
       return 0;
     }
   }
