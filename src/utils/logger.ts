@@ -25,7 +25,7 @@ function getLogsDirectory(): string {
     if (existsSync(projectRoot)) {
       return projectLogsDir;
     }
-  } catch (error) {
+  } catch (_error) {
     // Fall through to user directory if project root detection fails
   }
 

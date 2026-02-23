@@ -403,7 +403,7 @@ export class ConfigManager {
       if (type && ((type === 'stdio' && command) || (type === 'http' && url))) {
         const server: Partial<MCPServerConfig> = {
           name: serverName.toLowerCase().replace(/_/g, '-'),
-          type: type as 'stdio' | 'http',
+          type: type,
           enabled: process.env[`${prefix}ENABLED`] !== 'false',
         };
 

@@ -36,7 +36,7 @@ export class PatternBlockerPlugin extends BaseGuardrailPlugin {
       try {
         const flags = this.caseSensitive ? 'g' : 'gi';
         this.blockedPatternsRegex.push(new RegExp(pattern, flags));
-      } catch (error) {
+      } catch (_error) {
         // Invalid regex, skip it
       }
     }

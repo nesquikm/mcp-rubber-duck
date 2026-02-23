@@ -337,7 +337,7 @@ export class EnhancedDuckProvider extends DuckProvider {
     try {
       const functions = await this.functionBridge.getFunctionDefinitions();
       return functions.length;
-    } catch (error) {
+    } catch (_error) {
       return 0;
     }
   }

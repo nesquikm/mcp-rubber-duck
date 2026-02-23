@@ -42,7 +42,6 @@ export class FunctionBridge {
     this.mcpManager = mcpManager;
     this.approvalService = approvalService;
     this.trustedTools = new Set(trustedTools);
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call
     this.ajv = new (Ajv as unknown as new (options: unknown) => unknown)({ allErrors: true, removeAdditional: 'all' });
     this.approvalMode = approvalMode;
     this.guardrailsService = guardrailsService;
@@ -113,7 +112,6 @@ export class FunctionBridge {
     }
 
     try {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
       const validate: ValidateFunction = (this.ajv as { compile: (schema: unknown) => ValidateFunction }).compile(schema);
       const valid = validate(args);
       
@@ -323,7 +321,7 @@ export class FunctionBridge {
     try {
       const tools = await this.mcpManager.listServerTools(serverName);
       return tools.some(tool => tool.name === toolName);
-    } catch (error) {
+    } catch (_error) {
       return false;
     }
   }
