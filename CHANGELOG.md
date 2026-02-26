@@ -1,3 +1,10 @@
+# [1.15.0](https://github.com/nesquikm/mcp-rubber-duck/compare/v1.14.3...v1.15.0) (2026-02-26)
+
+
+### Features
+
+* multi-round tool calling loop ([#69](https://github.com/nesquikm/mcp-rubber-duck/issues/69)) ([#71](https://github.com/nesquikm/mcp-rubber-duck/issues/71)) ([3650ac2](https://github.com/nesquikm/mcp-rubber-duck/commit/3650ac225d09f7b1fc4096869dec6c4a101fd185))
+
 ## [1.14.3](https://github.com/nesquikm/mcp-rubber-duck/compare/v1.14.2...v1.14.3) (2026-02-23)
 
 
