@@ -63,6 +63,7 @@ export const MCPBridgeConfigSchema = z.object({
   trusted_tools: z.array(z.string()).default([]), // Global fallback trusted tools
   trusted_tools_by_server: z.record(z.string(), z.array(z.string())).optional(), // Per-server trusted tools
   mcp_servers: z.array(MCPServerConfigSchema).default([]),
+  max_tool_rounds: z.number().min(1).max(50).default(10), // Max rounds of tool calling per request
 });
 
 export const ModelPricingSchema = z.object({

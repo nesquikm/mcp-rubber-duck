@@ -13,11 +13,13 @@ export interface EnhancedChatResponse extends ChatResponse {
     message: string;
   }[];
   mcpResults?: MCPResult[];
+  toolRoundsUsed?: number;
 }
 
 export class EnhancedDuckProvider extends DuckProvider {
   private functionBridge: FunctionBridge;
   private mcpEnabled: boolean;
+  private maxToolRounds: number;
 
   constructor(
     name: string,
@@ -25,11 +27,13 @@ export class EnhancedDuckProvider extends DuckProvider {
     options: ProviderOptions,
     functionBridge: FunctionBridge,
     mcpEnabled: boolean = true,
-    guardrailsService?: GuardrailsService
+    guardrailsService?: GuardrailsService,
+    maxToolRounds: number = 10
   ) {
     super(name, nickname, options, guardrailsService);
     this.functionBridge = functionBridge;
     this.mcpEnabled = mcpEnabled;
+    this.maxToolRounds = maxToolRounds;
   }
 
   async chat(options: ChatOptions): Promise<EnhancedChatResponse> {
@@ -109,7 +113,8 @@ export class EnhancedDuckProvider extends DuckProvider {
           messages as OpenAIMessage[],
           baseParams,
           modelToUse,
-          guardrailContext
+          guardrailContext,
+          response.usage
         );
 
         // Execute post_response guardrails on final result
@@ -175,126 +180,224 @@ export class EnhancedDuckProvider extends DuckProvider {
     messages: OpenAIMessage[],
     baseParams: Partial<OpenAIChatParams>,
     modelToUse: string,
-    _guardrailContext?: import('../guardrails/types.js').GuardrailContext
+    _guardrailContext?: import('../guardrails/types.js').GuardrailContext,
+    initialUsage?: { prompt_tokens: number; completion_tokens: number; total_tokens: number }
   ): Promise<EnhancedChatResponse> {
-    const pendingApprovals: { id: string; message: string }[] = [];
-    const toolMessages: OpenAIMessage[] = [];
-    let hasExecutedTools = false;
+    // Accumulate usage across all rounds
+    let accumulatedUsage = initialUsage
+      ? { promptTokens: initialUsage.prompt_tokens, completionTokens: initialUsage.completion_tokens, totalTokens: initialUsage.total_tokens }
+      : undefined;
 
-    // Add the assistant message with tool calls
-    const assistantMessage: OpenAIMessage = {
-      role: 'assistant' as const,
-      content: null,
-      tool_calls: toolCalls,
-    };
-    messages.push(assistantMessage);
+    const allMcpResults: MCPResult[] = [];
+    let currentToolCalls = toolCalls;
+    let round = 0;
 
-    // Process each tool call
-    for (const toolCall of toolCalls) {
-      try {
-        const functionName = toolCall.function.name;
-        const args = JSON.parse(toolCall.function.arguments) as Record<string, unknown>;
+    while (round < this.maxToolRounds) {
+      round++;
+      const pendingApprovals: { id: string; message: string }[] = [];
+      const toolMessages: OpenAIMessage[] = [];
 
-        logger.info(`${this.nickname} wants to call function: ${functionName}`);
-        SafeLogger.debug(`Function call arguments for ${functionName}:`, args);
+      // Add the assistant message with tool calls
+      const assistantMessage: OpenAIMessage = {
+        role: 'assistant' as const,
+        content: null,
+        tool_calls: currentToolCalls,
+      };
+      messages.push(assistantMessage);
 
-        const result = await this.functionBridge.handleFunctionCall(
-          this.nickname,
-          functionName,
-          args
-        );
+      // Process each tool call
+      for (const toolCall of currentToolCalls) {
+        try {
+          const functionName = toolCall.function.name;
+          const args = JSON.parse(toolCall.function.arguments) as Record<string, unknown>;
 
-        if (result.needsApproval && result.approvalId) {
-          // Function needs approval
-          pendingApprovals.push({
-            id: result.approvalId,
-            message: result.message || `Approval needed for ${functionName}`,
-          });
+          logger.info(`${this.nickname} calling function (round ${round}): ${functionName}`);
+          SafeLogger.debug(`Function call arguments for ${functionName}:`, args);
 
-          // Add a tool message indicating approval is needed
-          toolMessages.push({
-            role: 'tool',
-            tool_call_id: toolCall.id,
-            content: JSON.stringify({
-              status: 'approval_needed',
-              approval_id: result.approvalId,
-              message: result.message,
-            }),
-          });
+          const result = await this.functionBridge.handleFunctionCall(
+            this.nickname,
+            functionName,
+            args
+          );
 
-        } else if (result.success && result.data) {
-          // Function executed successfully
-          hasExecutedTools = true;
-          toolMessages.push({
-            role: 'tool',
-            tool_call_id: toolCall.id,
-            content: typeof result.data === 'string' 
-              ? result.data 
-              : JSON.stringify(result.data),
-          });
+          if (result.needsApproval && result.approvalId) {
+            pendingApprovals.push({
+              id: result.approvalId,
+              message: result.message || `Approval needed for ${functionName}`,
+            });
 
-        } else {
-          // Function failed
-          toolMessages.push({
-            role: 'tool',
-            tool_call_id: toolCall.id,
-            content: JSON.stringify({
+            toolMessages.push({
+              role: 'tool',
+              tool_call_id: toolCall.id,
+              content: JSON.stringify({
+                status: 'approval_needed',
+                approval_id: result.approvalId,
+                message: result.message,
+              }),
+            });
+
+            allMcpResults.push({
+              id: toolCall.id,
+              success: false,
+              error: `Approval needed: ${result.message || functionName}`,
+            });
+
+          } else if (result.success) {
+            toolMessages.push({
+              role: 'tool',
+              tool_call_id: toolCall.id,
+              content: result.data != null
+                ? (typeof result.data === 'string' ? result.data : JSON.stringify(result.data))
+                : 'Success',
+            });
+
+            allMcpResults.push({
+              id: toolCall.id,
+              success: true,
+              data: result.data,
+            });
+
+          } else {
+            toolMessages.push({
+              role: 'tool',
+              tool_call_id: toolCall.id,
+              content: JSON.stringify({
+                error: result.error || 'Unknown error',
+              }),
+            });
+
+            allMcpResults.push({
+              id: toolCall.id,
+              success: false,
               error: result.error || 'Unknown error',
+            });
+          }
+
+        } catch (error: unknown) {
+          logger.error(`Error processing tool call ${toolCall.id}:`, error);
+          const errorMessage = error instanceof Error ? error.message : String(error);
+          toolMessages.push({
+            role: 'tool',
+            tool_call_id: toolCall.id,
+            content: JSON.stringify({
+              error: `Tool execution failed: ${errorMessage}`,
             }),
+          });
+
+          allMcpResults.push({
+            id: toolCall.id,
+            success: false,
+            error: `Tool execution failed: ${errorMessage}`,
           });
         }
-
-      } catch (error: unknown) {
-        logger.error(`Error processing tool call ${toolCall.id}:`, error);
-        const errorMessage = error instanceof Error ? error.message : String(error);
-        toolMessages.push({
-          role: 'tool',
-          tool_call_id: toolCall.id,
-          content: JSON.stringify({
-            error: `Tool execution failed: ${errorMessage}`,
-          }),
-        });
       }
-    }
 
-    // If we have pending approvals, return them without calling the model again
-    if (pendingApprovals.length > 0) {
-      const approvalMessage = pendingApprovals.length === 1
-        ? pendingApprovals[0].message
-        : `Multiple approvals needed: ${pendingApprovals.map(a => a.id).join(', ')}`;
+      // Always add tool messages to keep messages array consistent
+      messages.push(...toolMessages);
 
-      return {
-        content: `⏳ ${approvalMessage}`,
-        model: modelToUse,
-        pendingApprovals,
-        finishReason: 'tool_calls',
+      // If we have pending approvals, return immediately
+      if (pendingApprovals.length > 0) {
+        const approvalMessage = pendingApprovals.length === 1
+          ? pendingApprovals[0].message
+          : `Multiple approvals needed: ${pendingApprovals.map(a => a.id).join(', ')}`;
+
+        return {
+          content: `⏳ ${approvalMessage}`,
+          model: modelToUse,
+          usage: accumulatedUsage,
+          pendingApprovals,
+          finishReason: 'tool_calls',
+          mcpResults: allMcpResults.length > 0 ? allMcpResults : undefined,
+          toolRoundsUsed: round,
+        };
+      }
+
+      // Make follow-up call WITH tools still available
+      const followUpParams = {
+        ...baseParams,
+        messages,
       };
+
+      const followUpResponse = await this.createChatCompletion(followUpParams);
+      const followUpChoice = followUpResponse.choices[0];
+
+      if (!followUpChoice) {
+        throw new Error(`API returned empty choices array during tool calling round ${round}`);
+      }
+
+      // Accumulate usage
+      if (followUpResponse.usage) {
+        if (accumulatedUsage) {
+          accumulatedUsage.promptTokens += followUpResponse.usage.prompt_tokens;
+          accumulatedUsage.completionTokens += followUpResponse.usage.completion_tokens;
+          accumulatedUsage.totalTokens += followUpResponse.usage.total_tokens;
+        } else {
+          accumulatedUsage = {
+            promptTokens: followUpResponse.usage.prompt_tokens,
+            completionTokens: followUpResponse.usage.completion_tokens,
+            totalTokens: followUpResponse.usage.total_tokens,
+          };
+        }
+      }
+
+      // Warn about growing message count that could overflow context window
+      if (messages.length > 40) {
+        logger.warn(`${this.nickname} message count is ${messages.length} at round ${round} — risk of context window overflow`);
+      }
+
+      // If no more tool calls, return the text response
+      if (!followUpChoice.message?.tool_calls || followUpChoice.message.tool_calls.length === 0) {
+        return {
+          content: followUpChoice.message?.content || '',
+          usage: accumulatedUsage,
+          model: modelToUse,
+          finishReason: followUpChoice.finish_reason || undefined,
+          mcpResults: allMcpResults.length > 0 ? allMcpResults : undefined,
+          toolRoundsUsed: round,
+        };
+      }
+
+      // LLM wants more tool calls — continue loop
+      currentToolCalls = followUpChoice.message.tool_calls;
     }
 
-    // Add tool messages and call model again for final response
-    messages.push(...toolMessages);
-
-    // Remove tools from the follow-up call to get a natural language response
-    const followUpParams = {
+    // Max rounds reached — force a text-only response
+    logger.warn(`${this.nickname} hit max tool rounds (${this.maxToolRounds}), forcing text response`);
+    const finalParams = {
       ...baseParams,
       messages,
     };
-    delete followUpParams.tools;
-    delete followUpParams.tool_choice;
+    delete finalParams.tools;
+    delete finalParams.tool_choice;
 
-    const finalResponse = await this.createChatCompletion(followUpParams);
+    const finalResponse = await this.createChatCompletion(finalParams);
     const finalChoice = finalResponse.choices[0];
+
+    if (!finalChoice) {
+      throw new Error('API returned empty choices array during forced text response');
+    }
+
+    if (finalResponse.usage) {
+      if (accumulatedUsage) {
+        accumulatedUsage.promptTokens += finalResponse.usage.prompt_tokens;
+        accumulatedUsage.completionTokens += finalResponse.usage.completion_tokens;
+        accumulatedUsage.totalTokens += finalResponse.usage.total_tokens;
+      } else {
+        accumulatedUsage = {
+          promptTokens: finalResponse.usage.prompt_tokens,
+          completionTokens: finalResponse.usage.completion_tokens,
+          totalTokens: finalResponse.usage.total_tokens,
+        };
+      }
+    }
 
     return {
       content: finalChoice.message?.content || '',
-      usage: finalResponse.usage ? {
-        promptTokens: finalResponse.usage.prompt_tokens,
-        completionTokens: finalResponse.usage.completion_tokens,
-        totalTokens: finalResponse.usage.total_tokens,
-      } : undefined,
+      usage: accumulatedUsage,
       model: modelToUse,
       finishReason: finalChoice.finish_reason || undefined,
-      mcpResults: hasExecutedTools ? (toolMessages as unknown as MCPResult[]) : undefined,
+      mcpResults: allMcpResults.length > 0 ? allMcpResults : undefined,
+      toolRoundsUsed: round,
     };
   }
 

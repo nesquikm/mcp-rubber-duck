@@ -214,6 +214,10 @@ export class ConfigManager {
     if (process.env.MCP_TRUSTED_TOOLS) {
       mcpConfig.trusted_tools = process.env.MCP_TRUSTED_TOOLS.split(',').map(t => t.trim());
     }
+    if (process.env.MCP_MAX_TOOL_ROUNDS) {
+      const maxRounds = safeParseInt(process.env.MCP_MAX_TOOL_ROUNDS);
+      if (maxRounds !== undefined) mcpConfig.max_tool_rounds = maxRounds;
+    }
 
     // Parse per-server trusted tools from environment
     mcpConfig.trusted_tools_by_server = this.getTrustedToolsByServerFromEnv();

@@ -32,6 +32,7 @@ export class EnhancedProviderManager extends ProviderManager {
 
     const config = this.configManager.getConfig();
     const allProviders = config.providers;
+    const maxToolRounds = config.mcp_bridge?.max_tool_rounds ?? 10;
 
     for (const [name, providerConfig] of Object.entries(allProviders)) {
       try {
@@ -59,7 +60,8 @@ export class EnhancedProviderManager extends ProviderManager {
           },
           this.functionBridge,
           this.mcpEnabled,
-          this.guardrailsService
+          this.guardrailsService,
+          maxToolRounds
         );
 
         this.enhancedProviders.set(name, enhancedProvider);
@@ -94,7 +96,7 @@ export class EnhancedProviderManager extends ProviderManager {
     providerName: string | undefined,
     prompt: string,
     options?: Partial<ChatOptions>
-  ): Promise<DuckResponse & { pendingApprovals?: { id: string; message: string }[]; mcpResults?: MCPResult[] }> {
+  ): Promise<DuckResponse & { pendingApprovals?: { id: string; message: string }[]; mcpResults?: MCPResult[]; toolRoundsUsed?: number }> {
     if (!this.mcpEnabled) {
       // Fall back to regular provider
       return this.askDuck(providerName, prompt, options);
@@ -147,6 +149,7 @@ export class EnhancedProviderManager extends ProviderManager {
         latency: Date.now() - startTime,
         pendingApprovals: response.pendingApprovals,
         mcpResults: response.mcpResults,
+        toolRoundsUsed: response.toolRoundsUsed,
       };
     } catch (error: unknown) {
       // Record error
@@ -168,7 +171,7 @@ export class EnhancedProviderManager extends ProviderManager {
     prompt: string,
     options: Partial<ChatOptions> | undefined,
     failedProvider: string
-  ): Promise<DuckResponse & { pendingApprovals?: { id: string; message: string }[]; mcpResults?: MCPResult[] }> {
+  ): Promise<DuckResponse & { pendingApprovals?: { id: string; message: string }[]; mcpResults?: MCPResult[]; toolRoundsUsed?: number }> {
     const availableProviders = Array.from(this.enhancedProviders.keys()).filter(
       name => name !== failedProvider
     );
@@ -190,7 +193,7 @@ export class EnhancedProviderManager extends ProviderManager {
     prompt: string,
     providerNames?: string[],
     options?: Partial<ChatOptions>
-  ): Promise<Array<DuckResponse & { pendingApprovals?: { id: string; message: string }[]; mcpResults?: MCPResult[] }>> {
+  ): Promise<Array<DuckResponse & { pendingApprovals?: { id: string; message: string }[]; mcpResults?: MCPResult[]; toolRoundsUsed?: number }>> {
     if (!this.mcpEnabled) {
       // Fall back to regular comparison
       return this.compareDucks(prompt, providerNames, options);
@@ -226,7 +229,7 @@ export class EnhancedProviderManager extends ProviderManager {
     providerNames: string[] | undefined,
     options: Partial<ChatOptions> | undefined,
     onProviderComplete: (providerName: string, completed: number, total: number) => void
-  ): Promise<Array<DuckResponse & { pendingApprovals?: { id: string; message: string }[]; mcpResults?: MCPResult[] }>> {
+  ): Promise<Array<DuckResponse & { pendingApprovals?: { id: string; message: string }[]; mcpResults?: MCPResult[]; toolRoundsUsed?: number }>> {
     if (!this.mcpEnabled) {
       return this.compareDucksWithProgress(prompt, providerNames, options, onProviderComplete);
     }
@@ -268,7 +271,7 @@ export class EnhancedProviderManager extends ProviderManager {
   async duckCouncilWithMCP(
     prompt: string,
     options?: Partial<ChatOptions>
-  ): Promise<Array<DuckResponse & { pendingApprovals?: { id: string; message: string }[]; mcpResults?: MCPResult[] }>> {
+  ): Promise<Array<DuckResponse & { pendingApprovals?: { id: string; message: string }[]; mcpResults?: MCPResult[]; toolRoundsUsed?: number }>> {
     return this.compareDucksWithMCP(prompt, undefined, options);
   }
 
@@ -278,7 +281,7 @@ export class EnhancedProviderManager extends ProviderManager {
     providerName: string | undefined,
     prompt: string,
     options?: Partial<ChatOptions>
-  ): Promise<DuckResponse & { pendingApprovals?: { id: string; message: string }[]; mcpResults?: MCPResult[] }> {
+  ): Promise<DuckResponse & { pendingApprovals?: { id: string; message: string }[]; mcpResults?: MCPResult[]; toolRoundsUsed?: number }> {
     if (!this.mcpEnabled) {
       throw new Error('MCP bridge is not enabled');
     }
@@ -324,6 +327,7 @@ export class EnhancedProviderManager extends ProviderManager {
         latency: Date.now() - startTime,
         pendingApprovals: response.pendingApprovals,
         mcpResults: response.mcpResults,
+        toolRoundsUsed: response.toolRoundsUsed,
       };
     } catch (error: unknown) {
       // Record error
