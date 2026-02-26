@@ -13,7 +13,7 @@
 | # | Feature | Issue | Impact | Effort |
 |---|---------|-------|--------|--------|
 | 1 | outputSchema for voting/consensus tools | [#53](https://github.com/nesquikm/mcp-rubber-duck/issues/53) | High | Low-Medium |
-| 2 | Multi-round tool calling loop | [#69](https://github.com/nesquikm/mcp-rubber-duck/issues/69) | High | Medium |
+| 2 | ~~Multi-round tool calling loop~~ ✅ | [#69](https://github.com/nesquikm/mcp-rubber-duck/issues/69) | High | Medium |
 | 3 | Streamable HTTP transport + Streaming responses | [#57](https://github.com/nesquikm/mcp-rubber-duck/issues/57), [#47](https://github.com/nesquikm/mcp-rubber-duck/issues/47) | High | Medium |
 | 4 | MCP Resources + resource_link | [#48](https://github.com/nesquikm/mcp-rubber-duck/issues/48), [#56](https://github.com/nesquikm/mcp-rubber-duck/issues/56) | Medium-High | Medium |
 

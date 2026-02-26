@@ -835,6 +835,7 @@ export class RubberDuckServer {
     response: DuckResponse & {
       pendingApprovals?: { id: string; message: string }[];
       mcpResults?: unknown[];
+      toolRoundsUsed?: number;
     }
   ): string {
     let formatted = `🦆 **${response.nickname}** (${response.provider})\n─────────────────────────────────────\n${response.content}`;
@@ -851,7 +852,10 @@ export class RubberDuckServer {
 
     // Add MCP results indicator
     if (response.mcpResults && response.mcpResults.length > 0) {
-      formatted += '\n\n🔧 **Used MCP Tools:** ' + response.mcpResults.length + ' tool call(s)';
+      const roundInfo = response.toolRoundsUsed
+        ? ` across ${response.toolRoundsUsed} round(s)`
+        : '';
+      formatted += `\n\n🔧 **Used MCP Tools:** ${response.mcpResults.length} tool call(s)${roundInfo}`;
     }
 
     // Add model and performance info
