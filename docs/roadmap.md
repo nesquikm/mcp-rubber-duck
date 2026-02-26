@@ -13,24 +13,25 @@
 | # | Feature | Issue | Impact | Effort |
 |---|---------|-------|--------|--------|
 | 1 | outputSchema for voting/consensus tools | [#53](https://github.com/nesquikm/mcp-rubber-duck/issues/53) | High | Low-Medium |
-| 2 | Streamable HTTP transport + Streaming responses | [#57](https://github.com/nesquikm/mcp-rubber-duck/issues/57), [#47](https://github.com/nesquikm/mcp-rubber-duck/issues/47) | High | Medium |
-| 3 | MCP Resources + resource_link | [#48](https://github.com/nesquikm/mcp-rubber-duck/issues/48), [#56](https://github.com/nesquikm/mcp-rubber-duck/issues/56) | Medium-High | Medium |
+| 2 | Multi-round tool calling loop | [#69](https://github.com/nesquikm/mcp-rubber-duck/issues/69) | High | Medium |
+| 3 | Streamable HTTP transport + Streaming responses | [#57](https://github.com/nesquikm/mcp-rubber-duck/issues/57), [#47](https://github.com/nesquikm/mcp-rubber-duck/issues/47) | High | Medium |
+| 4 | MCP Resources + resource_link | [#48](https://github.com/nesquikm/mcp-rubber-duck/issues/48), [#56](https://github.com/nesquikm/mcp-rubber-duck/issues/56) | Medium-High | Medium |
 
 ### Tier 2 - Differentiation
 
 | # | Feature | Issue | Impact | Effort |
 |---|---------|-------|--------|--------|
-| 4 | Duck Deliberate - Tree-of-Thoughts | [#35](https://github.com/nesquikm/mcp-rubber-duck/issues/35) | High | High |
-| 5 | Duck Hypothesis - Scientific debugging | [#45](https://github.com/nesquikm/mcp-rubber-duck/issues/45) | High | Medium |
-| 6 | Duck Calibrate - Uncertainty quantification | [#40](https://github.com/nesquikm/mcp-rubber-duck/issues/40) | Medium | Low |
+| 5 | Duck Deliberate - Tree-of-Thoughts | [#35](https://github.com/nesquikm/mcp-rubber-duck/issues/35) | High | High |
+| 6 | Duck Hypothesis - Scientific debugging | [#45](https://github.com/nesquikm/mcp-rubber-duck/issues/45) | High | Medium |
+| 7 | Duck Calibrate - Uncertainty quantification | [#40](https://github.com/nesquikm/mcp-rubber-duck/issues/40) | Medium | Low |
 
 ### Tier 3 - Advanced Orchestration
 
 | # | Feature | Issue | Impact | Effort |
 |---|---------|-------|--------|--------|
-| 7 | Smart Router + Fallback Chains | [#10](https://github.com/nesquikm/mcp-rubber-duck/issues/10), [#20](https://github.com/nesquikm/mcp-rubber-duck/issues/20) | Medium-High | Medium-High |
-| 8 | Duck Autopilot | [#12](https://github.com/nesquikm/mcp-rubber-duck/issues/12) | High | High |
-| 9 | Duck Ecosystem - Specialized personas | [#44](https://github.com/nesquikm/mcp-rubber-duck/issues/44) | Medium | Medium |
+| 8 | Smart Router + Fallback Chains | [#10](https://github.com/nesquikm/mcp-rubber-duck/issues/10), [#20](https://github.com/nesquikm/mcp-rubber-duck/issues/20) | Medium-High | Medium-High |
+| 9 | Duck Autopilot | [#12](https://github.com/nesquikm/mcp-rubber-duck/issues/12) | High | High |
+| 10 | Duck Ecosystem - Specialized personas | [#44](https://github.com/nesquikm/mcp-rubber-duck/issues/44) | Medium | Medium |
 
 ### Cross-cutting
 
@@ -40,7 +41,7 @@
 
 ## Suggested Phases
 
-- **Phase 1** (Foundation): outputSchema (#53) → Streamable HTTP (#57) + Streaming (#47)
+- **Phase 1** (Foundation): outputSchema (#53) → Multi-round tool calling (#69) → Streamable HTTP (#57) + Streaming (#47)
 - **Phase 2** (Differentiation): Duck Hypothesis (#45) + Duck Calibrate (#40) + Duck Deliberate (#35)
 - **Phase 3** (Platform): Resources (#48) + Smart Router (#10) + Fallback Chains (#20)
 - **Phase 4** (Agentic): Duck Autopilot (#12)
@@ -58,12 +59,12 @@
 
 | Feature | Claude Desktop | Claude Code | Cursor | VS Code/Copilot | Zed |
 |---------|---------------|-------------|--------|-----------------|-----|
-| outputSchema | - | - | Yes | Yes | Yes |
+| outputSchema | - | - | Yes | Yes | ? |
 | Elicitation | - | - | Yes | Yes | - |
 | Async Tasks | - | - | - | Partial | - |
 | Streaming Progress | - | - | Partial | Yes | - |
-| resource_link | Partial | Partial | Yes | Yes | Yes |
-| listChanged | - | - | Yes | Yes | Yes |
+| resource_link | Partial | Partial | Yes | Yes | ? |
+| listChanged | - | Yes | Yes | Yes | Yes |
 
 ## Research References
 

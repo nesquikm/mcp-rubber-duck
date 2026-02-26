@@ -103,7 +103,7 @@ Config uses Zod schemas in `src/config/types.ts`. When adding config options:
 
 ## Roadmap
 
-When completing features, closing issues, or working on items that appear in `docs/roadmap.md`, check if the roadmap should be updated (e.g., marking items as done, adjusting phases, adding new items). Don't update it for unrelated commits.
+When completing features, closing issues, creating new issues, or working on items that appear in `docs/roadmap.md`, check if the roadmap should be updated (e.g., marking items as done, adding new items, adjusting phases or priorities). Don't update it for unrelated commits.
 
 ## Environment Variables
 
