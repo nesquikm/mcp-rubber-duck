@@ -1,3 +1,10 @@
+## [1.15.1](https://github.com/nesquikm/mcp-rubber-duck/compare/v1.15.0...v1.15.1) (2026-03-02)
+
+
+### Bug Fixes
+
+* update audit-ci allowlist for minimatch ReDoS advisories ([#72](https://github.com/nesquikm/mcp-rubber-duck/issues/72)) ([9d95593](https://github.com/nesquikm/mcp-rubber-duck/commit/9d9559333e73ed5949fd630f35f59c2001a39a98))
+
 # [1.15.0](https://github.com/nesquikm/mcp-rubber-duck/compare/v1.14.3...v1.15.0) (2026-02-26)
 
 
