@@ -6,6 +6,7 @@
   "report-type": "summary",
   "allowlist": [
     "GHSA-23c5-xmqv-rm74",
-    "GHSA-7r86-cg39-jmmj"
+    "GHSA-7r86-cg39-jmmj",
+    "GHSA-qffp-2rhf-9h96"
   ]
 }
