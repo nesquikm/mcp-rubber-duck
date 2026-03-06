@@ -7,24 +7,30 @@
 ## Basic Tools
 
 ### ask_duck
-Ask a single question to a specific LLM provider. When MCP Bridge is enabled, ducks can automatically access tools from connected MCP servers.
+Ask a single question to a specific LLM provider. When MCP Bridge is enabled, ducks can automatically access tools from connected MCP servers. Supports [vision input](#vision-input) via the optional `images` parameter.
 
 ```typescript
 {
   "prompt": "What is rubber duck debugging?",
   "provider": "openai",  // Optional, uses default if not specified
-  "temperature": 0.7     // Optional
+  "temperature": 0.7,    // Optional
+  "images": [            // Optional, for vision-capable models
+    { "data": "<base64>", "mimeType": "image/png" }
+  ]
 }
 ```
 
 ### chat_with_duck
-Have a conversation with context maintained across messages.
+Have a conversation with context maintained across messages. Supports [vision input](#vision-input) via the optional `images` parameter.
 
 ```typescript
 {
   "conversation_id": "debug-session-1",
   "message": "Can you help me debug this code?",
-  "provider": "groq"  // Optional, can switch providers mid-conversation
+  "provider": "groq",  // Optional, can switch providers mid-conversation
+  "images": [           // Optional
+    { "data": "<base64>", "mimeType": "image/png" }
+  ]
 }
 ```
 
@@ -57,21 +63,27 @@ List available models for LLM providers.
 ```
 
 ### compare_ducks
-Ask the same question to multiple providers simultaneously. Renders an [interactive UI](../README.md#interactive-uis-mcp-apps) in supported clients.
+Ask the same question to multiple providers simultaneously. Renders an [interactive UI](../README.md#interactive-uis-mcp-apps) in supported clients. Supports [vision input](#vision-input) via the optional `images` parameter.
 
 ```typescript
 {
   "prompt": "What's the best programming language?",
-  "providers": ["openai", "groq", "ollama"]  // Optional, uses all if not specified
+  "providers": ["openai", "groq", "ollama"],  // Optional, uses all if not specified
+  "images": [                                   // Optional
+    { "data": "<base64>", "mimeType": "image/png" }
+  ]
 }
 ```
 
 ### duck_council
-Get responses from all configured ducks - like a panel discussion!
+Get responses from all configured ducks - like a panel discussion! Supports [vision input](#vision-input) via the optional `images` parameter.
 
 ```typescript
 {
-  "prompt": "How should I architect a microservices application?"
+  "prompt": "How should I architect a microservices application?",
+  "images": [  // Optional
+    { "data": "<base64>", "mimeType": "image/png" }
+  ]
 }
 ```
 
@@ -151,6 +163,29 @@ Formats:
 - **oxford**: Structured pro/con arguments
 - **socratic**: Question-based philosophical exploration
 - **adversarial**: One defends, others attack weaknesses
+
+## Vision Input
+
+Four tools support sending images alongside text prompts: `ask_duck`, `chat_with_duck`, `compare_ducks`, and `duck_council`. Pass images as base64-encoded data in the optional `images` array:
+
+```typescript
+{
+  "prompt": "What's wrong with this UI layout?",
+  "images": [
+    {
+      "data": "iVBORw0KGgo...",   // Base64-encoded image data
+      "mimeType": "image/png"     // MIME type: image/png, image/jpeg, image/webp, image/gif
+    }
+  ]
+}
+```
+
+Multiple images can be included in a single request. Images are passed to the LLM provider as inline data URIs using the OpenAI vision API format.
+
+**Notes:**
+- The target model must support vision (e.g., GPT-4o, Gemini 2.5, Claude 3.5). Non-vision models will return an API error.
+- There is no enforced size limit on image data — large base64 payloads are passed through as-is.
+- Multi-round tools (`duck_iterate`, `duck_debate`, `duck_vote`, `duck_judge`) are text-only since their intermediate prompts are generated internally.
 
 ## MCP Bridge Tools
 

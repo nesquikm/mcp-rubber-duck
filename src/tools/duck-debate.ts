@@ -54,9 +54,7 @@ export async function duckDebateTool(
     throw new Error('At least 2 providers are required for a debate');
   }
 
-  const debateProviders = providers && providers.length >= 2
-    ? providers
-    : allProviders;
+  const debateProviders = providers && providers.length >= 2 ? providers : allProviders;
 
   if (debateProviders.length < 2) {
     throw new Error('At least 2 providers are required for a debate');
@@ -69,7 +67,9 @@ export async function duckDebateTool(
     }
   }
 
-  logger.info(`Starting ${format} debate with ${debateProviders.length} participants for ${rounds} rounds`);
+  logger.info(
+    `Starting ${format} debate with ${debateProviders.length} participants for ${rounds} rounds`
+  );
 
   // Assign positions based on format
   const participants = assignPositions(debateProviders, format, providerManager);
@@ -159,13 +159,13 @@ export async function duckDebateTool(
     topic: result.topic,
     format: result.format,
     totalRounds: result.totalRounds,
-    participants: result.participants.map(p => ({
+    participants: result.participants.map((p) => ({
       provider: p.provider,
       nickname: p.nickname,
       position: p.position,
     })),
-    rounds: result.rounds.map(roundArgs =>
-      roundArgs.map(arg => ({
+    rounds: result.rounds.map((roundArgs) =>
+      roundArgs.map((arg) => ({
         round: arg.round,
         provider: arg.provider,
         nickname: arg.nickname,
@@ -252,8 +252,8 @@ function buildPreviousContext(previousRounds: DebateArgument[][]): string {
   let context = '\n\nPREVIOUS ARGUMENTS:\n';
   for (const round of previousRounds) {
     for (const arg of round) {
-      const posLabel = arg.position === 'pro' ? '[PRO]' :
-                       arg.position === 'con' ? '[CON]' : '[NEUTRAL]';
+      const posLabel =
+        arg.position === 'pro' ? '[PRO]' : arg.position === 'con' ? '[CON]' : '[NEUTRAL]';
       context += `\n--- Round ${arg.round} - ${arg.nickname} ${posLabel} ---\n`;
       context += `${arg.content}\n`;
     }
@@ -297,8 +297,8 @@ function buildSocraticPrompt(
   allParticipants: DebateParticipant[]
 ): string {
   const otherParticipants = allParticipants
-    .filter(p => p.provider !== participant.provider)
-    .map(p => p.nickname)
+    .filter((p) => p.provider !== participant.provider)
+    .map((p) => p.nickname)
     .join(', ');
 
   return `You are participating in a Socratic dialogue.
@@ -328,9 +328,10 @@ function buildAdversarialPrompt(
   previousContext: string
 ): string {
   const role = participant.position === 'pro' ? 'DEFENDER' : 'CHALLENGER';
-  const instruction = participant.position === 'pro'
-    ? 'Defend the proposition and address all critiques raised'
-    : 'Attack weaknesses in the arguments, find flaws, and present counter-examples';
+  const instruction =
+    participant.position === 'pro'
+      ? 'Defend the proposition and address all critiques raised'
+      : 'Attack weaknesses in the arguments, find flaws, and present counter-examples';
 
   return `You are participating in an adversarial debate.
 
@@ -360,16 +361,14 @@ function buildSynthesisPrompt(
   let transcript = '';
   for (const round of rounds) {
     for (const arg of round) {
-      const posLabel = arg.position === 'pro' ? '[PRO]' :
-                       arg.position === 'con' ? '[CON]' : '[NEUTRAL]';
+      const posLabel =
+        arg.position === 'pro' ? '[PRO]' : arg.position === 'con' ? '[CON]' : '[NEUTRAL]';
       transcript += `\n--- Round ${arg.round} - ${arg.nickname} ${posLabel} ---\n`;
       transcript += `${arg.content}\n`;
     }
   }
 
-  const participantList = participants
-    .map(p => `${p.nickname} (${p.position})`)
-    .join(', ');
+  const participantList = participants.map((p) => `${p.nickname} (${p.position})`).join(', ');
 
   return `You are the moderator synthesizing a ${format} debate.
 
@@ -391,8 +390,8 @@ Provide your synthesis:`;
 }
 
 function formatDebateResult(result: DebateResult): string {
-  const formatEmoji = result.format === 'oxford' ? '🎓' :
-                      result.format === 'socratic' ? '🏛️' : '⚔️';
+  const formatEmoji =
+    result.format === 'oxford' ? '🎓' : result.format === 'socratic' ? '🏛️' : '⚔️';
 
   let output = `${formatEmoji} **${result.format.charAt(0).toUpperCase() + result.format.slice(1)} Debate**\n`;
   output += `═══════════════════════════════════════\n\n`;
@@ -420,9 +419,8 @@ function formatDebateResult(result: DebateResult): string {
       output += `\n${posEmoji} **${arg.nickname}** [${arg.position.toUpperCase()}]:\n`;
 
       // Truncate long arguments
-      const displayContent = arg.content.length > 800
-        ? arg.content.substring(0, 800) + '...[truncated]'
-        : arg.content;
+      const displayContent =
+        arg.content.length > 800 ? arg.content.substring(0, 800) + '...[truncated]' : arg.content;
       output += `${displayContent}\n`;
     }
   }

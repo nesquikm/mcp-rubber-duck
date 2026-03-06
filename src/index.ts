@@ -41,12 +41,12 @@ async function main() {
       MCP_SERVER: process.env.MCP_SERVER,
       MCP_BRIDGE_ENABLED: process.env.MCP_BRIDGE_ENABLED,
       MCP_APPROVAL_MODE: process.env.MCP_APPROVAL_MODE,
-    }
+    },
   });
 
   try {
     const server = new RubberDuckServer();
-    
+
     // Handle graceful shutdown
     process.on('SIGINT', () => {
       void (async () => {

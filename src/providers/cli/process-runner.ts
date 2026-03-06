@@ -22,9 +22,7 @@ export function runCLIProcess(options: CLIRunOptions): Promise<CLIRunResult> {
   const { command, args, stdin, timeout = 120000, cwd, env } = options;
 
   return new Promise((resolve, reject) => {
-    const processEnv = env
-      ? { ...process.env, ...env }
-      : process.env;
+    const processEnv = env ? { ...process.env, ...env } : process.env;
 
     const child = spawn(command, args, {
       cwd,

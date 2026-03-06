@@ -20,8 +20,7 @@ export const architecturePrompt: PromptDefinition = {
     },
     {
       name: 'priorities',
-      description:
-        'Non-functional priorities (e.g., "latency, cost, simplicity, observability")',
+      description: 'Non-functional priorities (e.g., "latency, cost, simplicity, observability")',
       required: true,
     },
     {

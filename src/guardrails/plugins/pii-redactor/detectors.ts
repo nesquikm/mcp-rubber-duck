@@ -42,10 +42,7 @@ export class PIIDetector {
 
     // Initialize built-in patterns
     if (config.detectEmails) {
-      this.patterns.set(
-        'email',
-        /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b/g
-      );
+      this.patterns.set('email', /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b/g);
     }
 
     if (config.detectPhones) {
@@ -58,10 +55,7 @@ export class PIIDetector {
 
     if (config.detectSSN) {
       // US SSN format: XXX-XX-XXXX or XXXXXXXXX
-      this.patterns.set(
-        'ssn',
-        /\b[0-9]{3}[-\s]?[0-9]{2}[-\s]?[0-9]{4}\b/g
-      );
+      this.patterns.set('ssn', /\b[0-9]{3}[-\s]?[0-9]{2}[-\s]?[0-9]{4}\b/g);
     }
 
     if (config.detectAPIKeys) {

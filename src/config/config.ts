@@ -76,7 +76,7 @@ export class ConfigManager {
     // Validate and parse config
     try {
       const config = ConfigSchema.parse(rawConfig);
-      
+
       // Set default provider if not specified
       if (!config.default_provider && Object.keys(config.providers).length > 0) {
         config.default_provider = Object.keys(config.providers)[0];
@@ -99,7 +99,7 @@ export class ConfigManager {
       }
       return value || match;
     });
-    
+
     const merged = JSON.parse(replaced) as Record<string, unknown>;
 
     // Apply environment overrides
@@ -156,7 +156,11 @@ export class ConfigManager {
         type: 'http' as const,
         api_key: process.env.GROQ_API_KEY,
         base_url: 'https://api.groq.com/openai/v1',
-        models: ['meta-llama/llama-4-scout-17b-16e-instruct', 'meta-llama/llama-4-maverick-17b-128e-instruct', 'llama-3.3-70b-versatile'],
+        models: [
+          'meta-llama/llama-4-scout-17b-16e-instruct',
+          'meta-llama/llama-4-maverick-17b-128e-instruct',
+          'llama-3.3-70b-versatile',
+        ],
         default_model: process.env.GROQ_DEFAULT_MODEL || 'llama-3.3-70b-versatile',
         nickname: process.env.GROQ_NICKNAME || 'Groq Duck',
       };
@@ -185,7 +189,9 @@ export class ConfigManager {
     return providers;
   }
 
-  private getMCPBridgeConfig(existingConfig: Partial<MCPBridgeConfig> = {}): Partial<MCPBridgeConfig> {
+  private getMCPBridgeConfig(
+    existingConfig: Partial<MCPBridgeConfig> = {}
+  ): Partial<MCPBridgeConfig> {
     // Don't override if MCP is explicitly disabled
     if (existingConfig?.enabled === false) {
       return existingConfig;
@@ -212,7 +218,7 @@ export class ConfigManager {
       if (timeout !== undefined) mcpConfig.approval_timeout = timeout;
     }
     if (process.env.MCP_TRUSTED_TOOLS) {
-      mcpConfig.trusted_tools = process.env.MCP_TRUSTED_TOOLS.split(',').map(t => t.trim());
+      mcpConfig.trusted_tools = process.env.MCP_TRUSTED_TOOLS.split(',').map((t) => t.trim());
     }
     if (process.env.MCP_MAX_TOOL_ROUNDS) {
       const maxRounds = safeParseInt(process.env.MCP_MAX_TOOL_ROUNDS);
@@ -230,33 +236,35 @@ export class ConfigManager {
 
   private hasMCPServerConfig(): boolean {
     // Check if any MCP server environment variables are present
-    return Object.keys(process.env).some(key => key.startsWith('MCP_SERVER_'));
+    return Object.keys(process.env).some((key) => key.startsWith('MCP_SERVER_'));
   }
 
   private getTrustedToolsByServerFromEnv(): Record<string, string[]> {
     const trustedToolsByServer: Record<string, string[]> = {};
-    
+
     // Look for environment variables matching MCP_TRUSTED_TOOLS_{SERVER_NAME}
-    Object.keys(process.env).forEach(key => {
+    Object.keys(process.env).forEach((key) => {
       const match = key.match(/^MCP_TRUSTED_TOOLS_(.+)$/);
       if (match) {
         const serverName = match[1].toLowerCase().replace(/_/g, '-');
         const toolsStr = process.env[key];
-        
+
         if (toolsStr) {
           if (toolsStr.trim() === '*') {
             // Wildcard: trust all tools from this server
             trustedToolsByServer[serverName] = ['*'];
           } else {
             // Parse comma-separated list of tools
-            trustedToolsByServer[serverName] = toolsStr.split(',').map(tool => tool.trim());
+            trustedToolsByServer[serverName] = toolsStr.split(',').map((tool) => tool.trim());
           }
-          
-          logger.info(`Found trusted tools for server ${serverName}: ${JSON.stringify(trustedToolsByServer[serverName])}`);
+
+          logger.info(
+            `Found trusted tools for server ${serverName}: ${JSON.stringify(trustedToolsByServer[serverName])}`
+          );
         }
       }
     });
-    
+
     return trustedToolsByServer;
   }
 
@@ -265,7 +273,7 @@ export class ConfigManager {
     const providerNames = new Set<string>();
 
     // Find all custom provider configurations
-    Object.keys(process.env).forEach(key => {
+    Object.keys(process.env).forEach((key) => {
       const match = key.match(/^CUSTOM_(.+)_(API_KEY|BASE_URL|MODELS|DEFAULT_MODEL|NICKNAME)$/);
       if (match) {
         const providerName = match[1];
@@ -274,19 +282,23 @@ export class ConfigManager {
     });
 
     // Build provider configurations
-    providerNames.forEach(providerName => {
+    providerNames.forEach((providerName) => {
       const prefix = `CUSTOM_${providerName}_`;
       const apiKey = process.env[`${prefix}API_KEY`];
       const baseUrl = process.env[`${prefix}BASE_URL`];
-      
+
       // Both API_KEY and BASE_URL are required
       if (apiKey && baseUrl) {
         const providerKey = providerName.toLowerCase();
-        
+
         const modelsStr = process.env[`${prefix}MODELS`];
-        const models = modelsStr && modelsStr.trim() ? 
-          modelsStr.split(',').map(m => m.trim()).filter(m => m.length > 0) : 
-          ['custom-model'];
+        const models =
+          modelsStr && modelsStr.trim()
+            ? modelsStr
+                .split(',')
+                .map((m) => m.trim())
+                .filter((m) => m.length > 0)
+            : ['custom-model'];
 
         customProviders[providerKey] = {
           type: 'http' as const,
@@ -306,7 +318,10 @@ export class ConfigManager {
     const providers: Record<string, ProviderConfig> = {};
 
     // Known CLI presets: CLI_CLAUDE_ENABLED, CLI_CODEX_ENABLED, etc.
-    const presets: Record<string, { cli_type: CLIProviderConfig['cli_type']; defaultNickname: string }> = {
+    const presets: Record<
+      string,
+      { cli_type: CLIProviderConfig['cli_type']; defaultNickname: string }
+    > = {
       CLAUDE: { cli_type: 'claude', defaultNickname: 'Claude Agent' },
       CODEX: { cli_type: 'codex', defaultNickname: 'Codex Agent' },
       GEMINI: { cli_type: 'gemini', defaultNickname: 'Gemini Agent' },
@@ -330,7 +345,7 @@ export class ConfigManager {
             system_prompt: process.env[`${prefix}SYSTEM_PROMPT`],
           }),
           ...(cliArgsStr && {
-            cli_args: cliArgsStr.split(',').map(a => a.trim()),
+            cli_args: cliArgsStr.split(',').map((a) => a.trim()),
           }),
         };
       }
@@ -338,21 +353,31 @@ export class ConfigManager {
 
     // Custom CLI providers: CLI_CUSTOM_{NAME}_COMMAND
     const customNames = new Set<string>();
-    Object.keys(process.env).forEach(key => {
-      const match = key.match(/^CLI_CUSTOM_(.+)_(COMMAND|PROMPT_DELIVERY|PROMPT_FLAG|OUTPUT_FORMAT|NICKNAME|DEFAULT_MODEL|CLI_ARGS|PROCESS_TIMEOUT|WORKING_DIRECTORY)$/);
+    Object.keys(process.env).forEach((key) => {
+      const match = key.match(
+        /^CLI_CUSTOM_(.+)_(COMMAND|PROMPT_DELIVERY|PROMPT_FLAG|OUTPUT_FORMAT|NICKNAME|DEFAULT_MODEL|CLI_ARGS|PROCESS_TIMEOUT|WORKING_DIRECTORY)$/
+      );
       if (match) {
         customNames.add(match[1]);
       }
     });
 
-    customNames.forEach(name => {
+    customNames.forEach((name) => {
       const prefix = `CLI_CUSTOM_${name}_`;
       const command = process.env[`${prefix}COMMAND`];
 
       if (command) {
         const cliArgsStr = process.env[`${prefix}CLI_ARGS`];
-        const promptDelivery = process.env[`${prefix}PROMPT_DELIVERY`] as 'flag' | 'positional' | 'stdin' | undefined;
-        const outputFormat = process.env[`${prefix}OUTPUT_FORMAT`] as 'text' | 'json' | 'jsonl' | undefined;
+        const promptDelivery = process.env[`${prefix}PROMPT_DELIVERY`] as
+          | 'flag'
+          | 'positional'
+          | 'stdin'
+          | undefined;
+        const outputFormat = process.env[`${prefix}OUTPUT_FORMAT`] as
+          | 'text'
+          | 'json'
+          | 'jsonl'
+          | undefined;
 
         providers[`cli-${name.toLowerCase()}`] = {
           type: 'cli' as const,
@@ -368,11 +393,12 @@ export class ConfigManager {
             default_model: process.env[`${prefix}DEFAULT_MODEL`],
           }),
           ...(cliArgsStr && {
-            cli_args: cliArgsStr.split(',').map(a => a.trim()),
+            cli_args: cliArgsStr.split(',').map((a) => a.trim()),
           }),
-          ...(process.env[`${prefix}PROCESS_TIMEOUT`] && safeParseInt(process.env[`${prefix}PROCESS_TIMEOUT`]!) !== undefined && {
-            process_timeout: safeParseInt(process.env[`${prefix}PROCESS_TIMEOUT`]!)!,
-          }),
+          ...(process.env[`${prefix}PROCESS_TIMEOUT`] &&
+            safeParseInt(process.env[`${prefix}PROCESS_TIMEOUT`]!) !== undefined && {
+              process_timeout: safeParseInt(process.env[`${prefix}PROCESS_TIMEOUT`]!)!,
+            }),
           ...(process.env[`${prefix}WORKING_DIRECTORY`] && {
             working_directory: process.env[`${prefix}WORKING_DIRECTORY`],
           }),
@@ -388,7 +414,7 @@ export class ConfigManager {
     const serverNames = new Set<string>();
 
     // Find all MCP server configurations
-    Object.keys(process.env).forEach(key => {
+    Object.keys(process.env).forEach((key) => {
       const match = key.match(/^MCP_SERVER_(.+)_(.+)$/);
       if (match) {
         serverNames.add(match[1]);
@@ -396,12 +422,12 @@ export class ConfigManager {
     });
 
     // Build server configurations
-    serverNames.forEach(serverName => {
+    serverNames.forEach((serverName) => {
       const prefix = `MCP_SERVER_${serverName}_`;
       const type = process.env[`${prefix}TYPE`];
       const command = process.env[`${prefix}COMMAND`];
       const url = process.env[`${prefix}URL`];
-      
+
       // For stdio servers, we need type and command
       // For http servers, we need type and url
       if (type && ((type === 'stdio' && command) || (type === 'http' && url))) {
@@ -419,7 +445,7 @@ export class ConfigManager {
         // Optional arguments
         const argsEnv = process.env[`${prefix}ARGS`];
         if (argsEnv) {
-          server.args = argsEnv.split(',').map(arg => arg.trim());
+          server.args = argsEnv.split(',').map((arg) => arg.trim());
         }
 
         // Add URL for http servers (required) and stdio servers (optional)
@@ -484,7 +510,11 @@ export class ConfigManager {
       // Auto-enable guardrails if any plugin is enabled
       if (!guardrailsConfig.enabled) {
         const anyEnabled = Object.values(plugins).some(
-          (p) => p && typeof p === 'object' && 'enabled' in p && (p as { enabled?: boolean }).enabled === true
+          (p) =>
+            p &&
+            typeof p === 'object' &&
+            'enabled' in p &&
+            (p as { enabled?: boolean }).enabled === true
         );
         if (anyEnabled) {
           guardrailsConfig.enabled = true;
@@ -501,27 +531,29 @@ export class ConfigManager {
     const plugins: Record<string, unknown> = { ...existingPlugins };
 
     // Rate Limiter
-    if (
-      process.env.GUARDRAILS_RATE_LIMITER_ENABLED !== undefined ||
-      existingPlugins.rate_limiter
-    ) {
+    if (process.env.GUARDRAILS_RATE_LIMITER_ENABLED !== undefined || existingPlugins.rate_limiter) {
       plugins.rate_limiter = {
         ...(existingPlugins.rate_limiter as object),
         ...(process.env.GUARDRAILS_RATE_LIMITER_ENABLED !== undefined && {
           enabled: process.env.GUARDRAILS_RATE_LIMITER_ENABLED === 'true',
         }),
-        ...(process.env.GUARDRAILS_RATE_LIMITER_REQUESTS_PER_MINUTE && safeParseInt(process.env.GUARDRAILS_RATE_LIMITER_REQUESTS_PER_MINUTE) !== undefined && {
-          requests_per_minute: safeParseInt(process.env.GUARDRAILS_RATE_LIMITER_REQUESTS_PER_MINUTE)!,
-        }),
-        ...(process.env.GUARDRAILS_RATE_LIMITER_REQUESTS_PER_HOUR && safeParseInt(process.env.GUARDRAILS_RATE_LIMITER_REQUESTS_PER_HOUR) !== undefined && {
-          requests_per_hour: safeParseInt(process.env.GUARDRAILS_RATE_LIMITER_REQUESTS_PER_HOUR)!,
-        }),
+        ...(process.env.GUARDRAILS_RATE_LIMITER_REQUESTS_PER_MINUTE &&
+          safeParseInt(process.env.GUARDRAILS_RATE_LIMITER_REQUESTS_PER_MINUTE) !== undefined && {
+            requests_per_minute: safeParseInt(
+              process.env.GUARDRAILS_RATE_LIMITER_REQUESTS_PER_MINUTE
+            )!,
+          }),
+        ...(process.env.GUARDRAILS_RATE_LIMITER_REQUESTS_PER_HOUR &&
+          safeParseInt(process.env.GUARDRAILS_RATE_LIMITER_REQUESTS_PER_HOUR) !== undefined && {
+            requests_per_hour: safeParseInt(process.env.GUARDRAILS_RATE_LIMITER_REQUESTS_PER_HOUR)!,
+          }),
         ...(process.env.GUARDRAILS_RATE_LIMITER_PER_PROVIDER !== undefined && {
           per_provider: process.env.GUARDRAILS_RATE_LIMITER_PER_PROVIDER === 'true',
         }),
-        ...(process.env.GUARDRAILS_RATE_LIMITER_BURST_ALLOWANCE && safeParseInt(process.env.GUARDRAILS_RATE_LIMITER_BURST_ALLOWANCE) !== undefined && {
-          burst_allowance: safeParseInt(process.env.GUARDRAILS_RATE_LIMITER_BURST_ALLOWANCE)!,
-        }),
+        ...(process.env.GUARDRAILS_RATE_LIMITER_BURST_ALLOWANCE &&
+          safeParseInt(process.env.GUARDRAILS_RATE_LIMITER_BURST_ALLOWANCE) !== undefined && {
+            burst_allowance: safeParseInt(process.env.GUARDRAILS_RATE_LIMITER_BURST_ALLOWANCE)!,
+          }),
       };
     }
 
@@ -535,15 +567,22 @@ export class ConfigManager {
         ...(process.env.GUARDRAILS_TOKEN_LIMITER_ENABLED !== undefined && {
           enabled: process.env.GUARDRAILS_TOKEN_LIMITER_ENABLED === 'true',
         }),
-        ...(process.env.GUARDRAILS_TOKEN_LIMITER_MAX_INPUT_TOKENS && safeParseInt(process.env.GUARDRAILS_TOKEN_LIMITER_MAX_INPUT_TOKENS) !== undefined && {
-          max_input_tokens: safeParseInt(process.env.GUARDRAILS_TOKEN_LIMITER_MAX_INPUT_TOKENS)!,
-        }),
-        ...(process.env.GUARDRAILS_TOKEN_LIMITER_MAX_OUTPUT_TOKENS && safeParseInt(process.env.GUARDRAILS_TOKEN_LIMITER_MAX_OUTPUT_TOKENS) !== undefined && {
-          max_output_tokens: safeParseInt(process.env.GUARDRAILS_TOKEN_LIMITER_MAX_OUTPUT_TOKENS)!,
-        }),
-        ...(process.env.GUARDRAILS_TOKEN_LIMITER_WARN_AT_PERCENTAGE && safeParseInt(process.env.GUARDRAILS_TOKEN_LIMITER_WARN_AT_PERCENTAGE) !== undefined && {
-          warn_at_percentage: safeParseInt(process.env.GUARDRAILS_TOKEN_LIMITER_WARN_AT_PERCENTAGE)!,
-        }),
+        ...(process.env.GUARDRAILS_TOKEN_LIMITER_MAX_INPUT_TOKENS &&
+          safeParseInt(process.env.GUARDRAILS_TOKEN_LIMITER_MAX_INPUT_TOKENS) !== undefined && {
+            max_input_tokens: safeParseInt(process.env.GUARDRAILS_TOKEN_LIMITER_MAX_INPUT_TOKENS)!,
+          }),
+        ...(process.env.GUARDRAILS_TOKEN_LIMITER_MAX_OUTPUT_TOKENS &&
+          safeParseInt(process.env.GUARDRAILS_TOKEN_LIMITER_MAX_OUTPUT_TOKENS) !== undefined && {
+            max_output_tokens: safeParseInt(
+              process.env.GUARDRAILS_TOKEN_LIMITER_MAX_OUTPUT_TOKENS
+            )!,
+          }),
+        ...(process.env.GUARDRAILS_TOKEN_LIMITER_WARN_AT_PERCENTAGE &&
+          safeParseInt(process.env.GUARDRAILS_TOKEN_LIMITER_WARN_AT_PERCENTAGE) !== undefined && {
+            warn_at_percentage: safeParseInt(
+              process.env.GUARDRAILS_TOKEN_LIMITER_WARN_AT_PERCENTAGE
+            )!,
+          }),
       };
     }
 
@@ -580,10 +619,7 @@ export class ConfigManager {
     }
 
     // PII Redactor
-    if (
-      process.env.GUARDRAILS_PII_REDACTOR_ENABLED !== undefined ||
-      existingPlugins.pii_redactor
-    ) {
+    if (process.env.GUARDRAILS_PII_REDACTOR_ENABLED !== undefined || existingPlugins.pii_redactor) {
       plugins.pii_redactor = {
         ...(existingPlugins.pii_redactor as object),
         ...(process.env.GUARDRAILS_PII_REDACTOR_ENABLED !== undefined && {

@@ -58,14 +58,15 @@ function sanitizeObject(obj: unknown, maxDepth = 5, currentDepth = 0): unknown {
 
   if (typeof obj === 'object') {
     const sanitized: Record<string, unknown> = {};
-    
+
     for (const [key, value] of Object.entries(obj as Record<string, unknown>)) {
       const keyLower = key.toLowerCase();
-      
+
       // Check if the field name is sensitive
-      const isSensitive = SENSITIVE_FIELDS.includes(keyLower) ||
-        SENSITIVE_PATTERNS.some(pattern => pattern.test(key));
-      
+      const isSensitive =
+        SENSITIVE_FIELDS.includes(keyLower) ||
+        SENSITIVE_PATTERNS.some((pattern) => pattern.test(key));
+
       if (isSensitive) {
         if (typeof value === 'string' && value.length > 0) {
           sanitized[key] = `[REDACTED:${value.length}chars]`;
@@ -76,7 +77,7 @@ function sanitizeObject(obj: unknown, maxDepth = 5, currentDepth = 0): unknown {
         sanitized[key] = sanitizeObject(value, maxDepth, currentDepth + 1);
       }
     }
-    
+
     return sanitized;
   }
 
@@ -128,16 +129,19 @@ export class SafeLogger {
    */
   static sanitizeToolArgs(args: unknown): unknown {
     const sanitized = sanitizeObject(args);
-    
+
     // Additional sanitization for common patterns in tool arguments
     if (typeof sanitized === 'object' && sanitized !== null) {
       const objSanitized = sanitized as Record<string, unknown>;
       // Sanitize file paths that might contain usernames
       if (objSanitized.path && typeof objSanitized.path === 'string') {
         objSanitized.path = objSanitized.path.replace(/\/Users\/[^/]+/, '/Users/[USER]');
-        objSanitized.path = (objSanitized.path as string).replace(/\\Users\\[^\\]+/, '\\Users\\[USER]');
+        objSanitized.path = (objSanitized.path as string).replace(
+          /\\Users\\[^\\]+/,
+          '\\Users\\[USER]'
+        );
       }
-      
+
       // Sanitize URLs that might contain credentials
       if (objSanitized.url && typeof objSanitized.url === 'string') {
         objSanitized.url = objSanitized.url.replace(
@@ -146,17 +150,22 @@ export class SafeLogger {
         );
       }
     }
-    
+
     return sanitized;
   }
 
   /**
    * Create a safe message for approval requests
    */
-  static createApprovalMessage(duckName: string, server: string, tool: string, args: unknown): string {
+  static createApprovalMessage(
+    duckName: string,
+    server: string,
+    tool: string,
+    args: unknown
+  ): string {
     const sanitizedArgs = this.sanitizeToolArgs(args);
     const argsStr = JSON.stringify(sanitizedArgs, null, 2);
-    
+
     return `Duck "${duckName}" wants to call ${server}:${tool} with arguments:\n${argsStr}`;
   }
 }

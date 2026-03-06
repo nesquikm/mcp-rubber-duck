@@ -28,9 +28,7 @@ app.ontoolresult = (params) => {
   }
 
   try {
-    const data: CompareResponse[] = JSON.parse(
-      (content[1] as { type: string; text: string }).text
-    );
+    const data: CompareResponse[] = JSON.parse((content[1] as { type: string; text: string }).text);
     render(data);
   } catch {
     container.innerHTML = `<div class="error-banner">Failed to parse response data</div>`;
@@ -46,8 +44,7 @@ function render(responses: CompareResponse[]) {
 
   for (const r of responses) {
     const isError = !!r.error;
-    const latencyClass =
-      r.latency < 2000 ? 'fast' : r.latency < 5000 ? 'medium' : 'slow';
+    const latencyClass = r.latency < 2000 ? 'fast' : r.latency < 5000 ? 'medium' : 'slow';
 
     html += `<div class="card${isError ? ' card-error' : ''}">`;
     html += `<div class="card-header">`;

@@ -5,10 +5,7 @@ import { logger } from '../utils/logger.js';
 
 const VALID_PERIODS: UsageTimePeriod[] = ['today', '7d', '30d', 'all'];
 
-export function getUsageStatsTool(
-  usageService: UsageService,
-  args: Record<string, unknown>
-) {
+export function getUsageStatsTool(usageService: UsageService, args: Record<string, unknown>) {
   const { period = 'today' } = args as { period?: string };
 
   // Validate period

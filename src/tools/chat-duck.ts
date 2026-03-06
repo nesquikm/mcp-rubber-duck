@@ -1,5 +1,6 @@
 import { ProviderManager } from '../providers/manager.js';
 import { ConversationManager } from '../services/conversation.js';
+import { ImageInput, buildContent } from '../config/types.js';
 import { formatDuckResponse } from '../utils/ascii-art.js';
 import { logger } from '../utils/logger.js';
 
@@ -8,11 +9,12 @@ export async function chatDuckTool(
   conversationManager: ConversationManager,
   args: Record<string, unknown>
 ) {
-  const { conversation_id, message, provider, model } = args as {
+  const { conversation_id, message, provider, model, images } = args as {
     conversation_id?: string;
     message?: string;
     provider?: string;
     model?: string;
+    images?: ImageInput[];
   };
 
   if (!conversation_id || !message) {
@@ -21,7 +23,7 @@ export async function chatDuckTool(
 
   // Get or create conversation
   let conversation = conversationManager.getConversation(conversation_id);
-  
+
   if (!conversation) {
     // Create new conversation with specified or default provider
     const providerName = provider || providerManager.getProviderNames()[0];
@@ -34,9 +36,10 @@ export async function chatDuckTool(
   }
 
   // Add user message to conversation
+  const userContent = buildContent(message, images);
   conversationManager.addMessage(conversation_id, {
     role: 'user',
-    content: message,
+    content: userContent,
     timestamp: new Date(),
   });
 
@@ -59,11 +62,7 @@ export async function chatDuckTool(
   });
 
   // Format response
-  const formattedResponse = formatDuckResponse(
-    response.nickname,
-    response.content,
-    response.model
-  );
+  const formattedResponse = formatDuckResponse(response.nickname, response.content, response.model);
 
   // Add conversation info
   const conversationInfo = `\n\n💬 Conversation: ${conversation_id} | Messages: ${messages.length + 1}`;

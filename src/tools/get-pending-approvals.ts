@@ -13,7 +13,7 @@ export function getPendingApprovalsTool(
 
     // Filter by duck if specified
     if (duck) {
-      approvals = approvals.filter(approval => approval.duckName === duck);
+      approvals = approvals.filter((approval) => approval.duckName === duck);
     }
 
     if (approvals.length === 0) {
@@ -28,10 +28,10 @@ export function getPendingApprovalsTool(
     }
 
     // Format approvals for display
-    const formattedApprovals = approvals.map(approval => {
+    const formattedApprovals = approvals.map((approval) => {
       const timeAgo = Math.round((Date.now() - approval.timestamp) / 1000);
       const expiresIn = Math.round((approval.expiresAt - Date.now()) / 1000);
-      
+
       return {
         id: approval.id,
         duck: approval.duckName,
@@ -50,9 +50,11 @@ export function getPendingApprovalsTool(
     ];
 
     formattedApprovals.forEach((approval, index) => {
-      summaryLines.push(`${index + 1}. **${approval.duck}** wants to call \`${approval.server}:${approval.tool}\``);
+      summaryLines.push(
+        `${index + 1}. **${approval.duck}** wants to call \`${approval.server}:${approval.tool}\``
+      );
       summaryLines.push(`   ID: \`${approval.id}\``);
-      
+
       // Show arguments if they exist and are reasonably sized
       const argsStr = JSON.stringify(approval.arguments);
       if (argsStr.length < 100) {
@@ -60,7 +62,7 @@ export function getPendingApprovalsTool(
       } else {
         summaryLines.push(`   Args: [${Object.keys(approval.arguments).length} parameters]`);
       }
-      
+
       summaryLines.push(`   Requested: ${approval.requestedAgo}, Expires: ${approval.expiresIn}`);
       summaryLines.push('');
     });
@@ -75,7 +77,6 @@ export function getPendingApprovalsTool(
         },
       ],
     };
-
   } catch (error: unknown) {
     return {
       content: [

@@ -77,10 +77,12 @@ export class RateLimiterPlugin extends BaseGuardrailPlugin {
         `Rate limit exceeded: ${requestsLastMinute} requests in the last minute (limit: ${this.requestsPerMinute})`,
         { requestsLastMinute, limit: this.requestsPerMinute }
       );
-      return Promise.resolve(this.block(
-        context,
-        `Rate limit exceeded: ${requestsLastMinute}/${this.requestsPerMinute} requests per minute`
-      ));
+      return Promise.resolve(
+        this.block(
+          context,
+          `Rate limit exceeded: ${requestsLastMinute}/${this.requestsPerMinute} requests per minute`
+        )
+      );
     }
 
     if (requestsLastHour >= effectiveHourLimit) {
@@ -92,10 +94,12 @@ export class RateLimiterPlugin extends BaseGuardrailPlugin {
         `Rate limit exceeded: ${requestsLastHour} requests in the last hour (limit: ${this.requestsPerHour})`,
         { requestsLastHour, limit: this.requestsPerHour }
       );
-      return Promise.resolve(this.block(
-        context,
-        `Rate limit exceeded: ${requestsLastHour}/${this.requestsPerHour} requests per hour`
-      ));
+      return Promise.resolve(
+        this.block(
+          context,
+          `Rate limit exceeded: ${requestsLastHour}/${this.requestsPerHour} requests per hour`
+        )
+      );
     }
 
     // Log warning if approaching limit

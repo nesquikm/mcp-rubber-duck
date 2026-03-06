@@ -6,12 +6,13 @@ export function clearConversationsTool(
   _args: Record<string, unknown>
 ) {
   const result = conversationManager.clearAll();
-  
+
   logger.info(`User cleared ${result.conversationsCleared} conversations`);
-  
-  const message = result.conversationsCleared === 0 
-    ? '🧹 No conversations to clear - memory is already empty!'
-    : `🧹 Cleared ${result.conversationsCleared} conversation${result.conversationsCleared === 1 ? '' : 's'} (${result.messagesCleared} message${result.messagesCleared === 1 ? '' : 's'})`;
+
+  const message =
+    result.conversationsCleared === 0
+      ? '🧹 No conversations to clear - memory is already empty!'
+      : `🧹 Cleared ${result.conversationsCleared} conversation${result.conversationsCleared === 1 ? '' : 's'} (${result.messagesCleared} message${result.messagesCleared === 1 ? '' : 's'})`;
 
   return {
     content: [

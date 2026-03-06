@@ -22,6 +22,7 @@ An MCP (Model Context Protocol) server that acts as a bridge to query multiple L
 - **Iterative Refinement** -- Two ducks collaboratively improve responses
 - **Structured Debates** -- Oxford, Socratic, and adversarial debate formats
 - **MCP Prompts** -- 8 reusable prompt templates for multi-LLM workflows
+- **Vision Input** -- Send images alongside prompts to vision-capable models ([docs](./docs/tools.md#vision-input))
 - **Automatic Failover** -- Falls back to other providers if primary fails
 - **Health Monitoring** -- Real-time health checks for all providers
 - **Usage Tracking** -- Track requests, tokens, and estimated costs per provider

@@ -4,7 +4,7 @@ import { ConfigManager } from '../config/config.js';
 import { FunctionBridge } from '../services/function-bridge.js';
 import { UsageService } from '../services/usage.js';
 import { GuardrailsService } from '../guardrails/service.js';
-import { DuckResponse } from '../config/types.js';
+import { DuckResponse, MessageContent } from '../config/types.js';
 import { ChatOptions, MCPResult } from './types.js';
 import { logger } from '../utils/logger.js';
 
@@ -13,11 +13,15 @@ export class EnhancedProviderManager extends ProviderManager {
   private functionBridge?: FunctionBridge;
   private mcpEnabled: boolean = false;
 
-  constructor(configManager: ConfigManager, functionBridge?: FunctionBridge, usageService?: UsageService, guardrailsService?: GuardrailsService) {
+  constructor(
+    configManager: ConfigManager,
+    functionBridge?: FunctionBridge,
+    usageService?: UsageService,
+    guardrailsService?: GuardrailsService
+  ) {
     super(configManager, usageService, guardrailsService);
     this.functionBridge = functionBridge;
-    this.mcpEnabled = !!functionBridge &&
-      (configManager.getConfig().mcp_bridge?.enabled || false);
+    this.mcpEnabled = !!functionBridge && (configManager.getConfig().mcp_bridge?.enabled || false);
 
     if (this.mcpEnabled) {
       this.initializeEnhancedProviders();
@@ -40,7 +44,9 @@ export class EnhancedProviderManager extends ProviderManager {
         // CLI tools like claude/gemini have their own native tool systems
         // that conflict with MCP tool injection
         if (providerConfig.type === 'cli') {
-          logger.debug(`Skipping CLI provider ${name} for MCP bridge (CLI tools have native tool systems)`);
+          logger.debug(
+            `Skipping CLI provider ${name} for MCP bridge (CLI tools have native tool systems)`
+          );
           continue;
         }
 
@@ -65,7 +71,9 @@ export class EnhancedProviderManager extends ProviderManager {
         );
 
         this.enhancedProviders.set(name, enhancedProvider);
-        logger.info(`Initialized enhanced provider: ${name} (${providerConfig.nickname}) with MCP support`);
+        logger.info(
+          `Initialized enhanced provider: ${name} (${providerConfig.nickname}) with MCP support`
+        );
       } catch (error) {
         logger.error(`Failed to initialize enhanced provider ${name}:`, error);
       }
@@ -78,13 +86,13 @@ export class EnhancedProviderManager extends ProviderManager {
     }
 
     const providerName = name || this.configManager.getConfig().default_provider;
-    
+
     if (!providerName) {
       throw new Error('No provider specified and no default provider configured');
     }
 
     const provider = this.enhancedProviders.get(providerName);
-    
+
     if (!provider) {
       throw new Error(`Enhanced duck "${providerName}" not found in the pond`);
     }
@@ -94,9 +102,15 @@ export class EnhancedProviderManager extends ProviderManager {
 
   async askDuckWithMCP(
     providerName: string | undefined,
-    prompt: string,
+    prompt: MessageContent,
     options?: Partial<ChatOptions>
-  ): Promise<DuckResponse & { pendingApprovals?: { id: string; message: string }[]; mcpResults?: MCPResult[]; toolRoundsUsed?: number }> {
+  ): Promise<
+    DuckResponse & {
+      pendingApprovals?: { id: string; message: string }[];
+      mcpResults?: MCPResult[];
+      toolRoundsUsed?: number;
+    }
+  > {
     if (!this.mcpEnabled) {
       // Fall back to regular provider
       return this.askDuck(providerName, prompt, options);
@@ -108,7 +122,9 @@ export class EnhancedProviderManager extends ProviderManager {
     // Check if this is a CLI provider (not in enhanced providers map)
     // CLI providers don't support MCP bridge, fall back to regular askDuck
     if (resolvedName && !this.enhancedProviders.has(resolvedName)) {
-      logger.debug(`Provider ${resolvedName} is not MCP-enhanced (likely CLI), using regular askDuck`);
+      logger.debug(
+        `Provider ${resolvedName} is not MCP-enhanced (likely CLI), using regular askDuck`
+      );
       return this.askDuck(providerName, prompt, options);
     }
 
@@ -138,14 +154,16 @@ export class EnhancedProviderManager extends ProviderManager {
         nickname: provider.nickname,
         model: response.model,
         content: response.content,
-        usage: response.usage ? {
-          prompt_tokens: response.usage.promptTokens,
-          completion_tokens: response.usage.completionTokens,
-          total_tokens: response.usage.totalTokens,
-          promptTokens: response.usage.promptTokens,
-          completionTokens: response.usage.completionTokens,
-          totalTokens: response.usage.totalTokens,
-        } : undefined,
+        usage: response.usage
+          ? {
+              prompt_tokens: response.usage.promptTokens,
+              completion_tokens: response.usage.completionTokens,
+              total_tokens: response.usage.totalTokens,
+              promptTokens: response.usage.promptTokens,
+              completionTokens: response.usage.completionTokens,
+              totalTokens: response.usage.totalTokens,
+            }
+          : undefined,
         latency: Date.now() - startTime,
         pendingApprovals: response.pendingApprovals,
         mcpResults: response.mcpResults,
@@ -168,12 +186,18 @@ export class EnhancedProviderManager extends ProviderManager {
   }
 
   private async askDuckWithMCPFailover(
-    prompt: string,
+    prompt: MessageContent,
     options: Partial<ChatOptions> | undefined,
     failedProvider: string
-  ): Promise<DuckResponse & { pendingApprovals?: { id: string; message: string }[]; mcpResults?: MCPResult[]; toolRoundsUsed?: number }> {
+  ): Promise<
+    DuckResponse & {
+      pendingApprovals?: { id: string; message: string }[];
+      mcpResults?: MCPResult[];
+      toolRoundsUsed?: number;
+    }
+  > {
     const availableProviders = Array.from(this.enhancedProviders.keys()).filter(
-      name => name !== failedProvider
+      (name) => name !== failedProvider
     );
 
     for (const providerName of availableProviders) {
@@ -190,10 +214,18 @@ export class EnhancedProviderManager extends ProviderManager {
   }
 
   async compareDucksWithMCP(
-    prompt: string,
+    prompt: MessageContent,
     providerNames?: string[],
     options?: Partial<ChatOptions>
-  ): Promise<Array<DuckResponse & { pendingApprovals?: { id: string; message: string }[]; mcpResults?: MCPResult[]; toolRoundsUsed?: number }>> {
+  ): Promise<
+    Array<
+      DuckResponse & {
+        pendingApprovals?: { id: string; message: string }[];
+        mcpResults?: MCPResult[];
+        toolRoundsUsed?: number;
+      }
+    >
+  > {
     if (!this.mcpEnabled) {
       // Fall back to regular comparison
       return this.compareDucks(prompt, providerNames, options);
@@ -207,8 +239,8 @@ export class EnhancedProviderManager extends ProviderManager {
     }
 
     // askDuckWithMCP already handles CLI providers by falling back to regular askDuck
-    const promises = allProviderNames.map(name => {
-      return this.askDuckWithMCP(name, prompt, options).catch(error => {
+    const promises = allProviderNames.map((name) => {
+      return this.askDuckWithMCP(name, prompt, options).catch((error) => {
         const provider = this.enhancedProviders.get(name);
         const baseProvider = this.getProvider(name);
         return {
@@ -225,11 +257,19 @@ export class EnhancedProviderManager extends ProviderManager {
   }
 
   async compareDucksWithProgressMCP(
-    prompt: string,
+    prompt: MessageContent,
     providerNames: string[] | undefined,
     options: Partial<ChatOptions> | undefined,
     onProviderComplete: (providerName: string, completed: number, total: number) => void
-  ): Promise<Array<DuckResponse & { pendingApprovals?: { id: string; message: string }[]; mcpResults?: MCPResult[]; toolRoundsUsed?: number }>> {
+  ): Promise<
+    Array<
+      DuckResponse & {
+        pendingApprovals?: { id: string; message: string }[];
+        mcpResults?: MCPResult[];
+        toolRoundsUsed?: number;
+      }
+    >
+  > {
     if (!this.mcpEnabled) {
       return this.compareDucksWithProgress(prompt, providerNames, options, onProviderComplete);
     }
@@ -245,9 +285,9 @@ export class EnhancedProviderManager extends ProviderManager {
     let completed = 0;
 
     // askDuckWithMCP already handles CLI providers by falling back to regular askDuck
-    const promises = allProviderNames.map(name => {
+    const promises = allProviderNames.map((name) => {
       return this.askDuckWithMCP(name, prompt, options)
-        .catch(error => {
+        .catch((error) => {
           const provider = this.enhancedProviders.get(name);
           const baseProvider = this.getProvider(name);
           return {
@@ -258,7 +298,7 @@ export class EnhancedProviderManager extends ProviderManager {
             latency: 0,
           };
         })
-        .then(result => {
+        .then((result) => {
           completed++;
           onProviderComplete(name, completed, total);
           return result;
@@ -269,9 +309,17 @@ export class EnhancedProviderManager extends ProviderManager {
   }
 
   async duckCouncilWithMCP(
-    prompt: string,
+    prompt: MessageContent,
     options?: Partial<ChatOptions>
-  ): Promise<Array<DuckResponse & { pendingApprovals?: { id: string; message: string }[]; mcpResults?: MCPResult[]; toolRoundsUsed?: number }>> {
+  ): Promise<
+    Array<
+      DuckResponse & {
+        pendingApprovals?: { id: string; message: string }[];
+        mcpResults?: MCPResult[];
+        toolRoundsUsed?: number;
+      }
+    >
+  > {
     return this.compareDucksWithMCP(prompt, undefined, options);
   }
 
@@ -279,9 +327,15 @@ export class EnhancedProviderManager extends ProviderManager {
   async retryWithApproval(
     approvalId: string,
     providerName: string | undefined,
-    prompt: string,
+    prompt: MessageContent,
     options?: Partial<ChatOptions>
-  ): Promise<DuckResponse & { pendingApprovals?: { id: string; message: string }[]; mcpResults?: MCPResult[]; toolRoundsUsed?: number }> {
+  ): Promise<
+    DuckResponse & {
+      pendingApprovals?: { id: string; message: string }[];
+      mcpResults?: MCPResult[];
+      toolRoundsUsed?: number;
+    }
+  > {
     if (!this.mcpEnabled) {
       throw new Error('MCP bridge is not enabled');
     }
@@ -316,14 +370,16 @@ export class EnhancedProviderManager extends ProviderManager {
         nickname: provider.nickname,
         model: response.model,
         content: response.content,
-        usage: response.usage ? {
-          prompt_tokens: response.usage.promptTokens,
-          completion_tokens: response.usage.completionTokens,
-          total_tokens: response.usage.totalTokens,
-          promptTokens: response.usage.promptTokens,
-          completionTokens: response.usage.completionTokens,
-          totalTokens: response.usage.totalTokens,
-        } : undefined,
+        usage: response.usage
+          ? {
+              prompt_tokens: response.usage.promptTokens,
+              completion_tokens: response.usage.completionTokens,
+              total_tokens: response.usage.totalTokens,
+              promptTokens: response.usage.promptTokens,
+              completionTokens: response.usage.completionTokens,
+              totalTokens: response.usage.totalTokens,
+            }
+          : undefined,
         latency: Date.now() - startTime,
         pendingApprovals: response.pendingApprovals,
         mcpResults: response.mcpResults,

@@ -1,4 +1,10 @@
-import { GuardrailPlugin, GuardrailPhase, GuardrailContext, GuardrailResult, CreateContextOptions } from './types.js';
+import {
+  GuardrailPlugin,
+  GuardrailPhase,
+  GuardrailContext,
+  GuardrailResult,
+  CreateContextOptions,
+} from './types.js';
 import { createGuardrailContext } from './context.js';
 import { GuardrailsConfig, GuardrailsPluginsConfig } from '../config/types.js';
 import { logger } from '../utils/logger.js';
@@ -44,7 +50,9 @@ export class GuardrailsService {
     logger.info(`Guardrails initialized with ${this.plugins.length} plugins`);
   }
 
-  private async loadPluginsFromConfig(pluginConfigs: Partial<GuardrailsPluginsConfig>): Promise<void> {
+  private async loadPluginsFromConfig(
+    pluginConfigs: Partial<GuardrailsPluginsConfig>
+  ): Promise<void> {
     const pluginOrder: Array<[string, unknown]> = [
       ['rate_limiter', pluginConfigs.rate_limiter],
       ['token_limiter', pluginConfigs.token_limiter],
@@ -117,9 +125,7 @@ export class GuardrailsService {
       return { action: 'allow', context };
     }
 
-    const relevantPlugins = this.plugins.filter(
-      (p) => p.enabled && p.phases.includes(phase)
-    );
+    const relevantPlugins = this.plugins.filter((p) => p.enabled && p.phases.includes(phase));
 
     // Track logged items to avoid duplicates
     let lastViolationCount = 0;

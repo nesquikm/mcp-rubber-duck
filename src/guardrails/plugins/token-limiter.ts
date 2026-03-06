@@ -1,6 +1,6 @@
 import { BaseGuardrailPlugin } from './base-plugin.js';
 import { GuardrailPhase, GuardrailContext, GuardrailResult } from '../types.js';
-import { TokenLimiterConfig } from '../../config/types.js';
+import { TokenLimiterConfig, getTextContent } from '../../config/types.js';
 
 /**
  * Token limiter plugin - limits input/output token counts
@@ -43,7 +43,7 @@ export class TokenLimiterPlugin extends BaseGuardrailPlugin {
     // Also count messages if present
     let totalTokens = estimatedTokens;
     for (const msg of context.messages) {
-      totalTokens += this.estimateTokenCount(msg.content);
+      totalTokens += this.estimateTokenCount(getTextContent(msg.content));
     }
 
     // Check if over limit

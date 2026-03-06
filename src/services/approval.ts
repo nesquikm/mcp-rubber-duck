@@ -36,7 +36,7 @@ export class ApprovalService {
   ): ApprovalRequest {
     const id = randomUUID();
     const now = Date.now();
-    
+
     const request: ApprovalRequest = {
       id,
       timestamp: now,
@@ -49,23 +49,29 @@ export class ApprovalService {
     };
 
     this.pendingApprovals.set(id, request);
-    
+
     const safeMessage = SafeLogger.createApprovalMessage(duckName, mcpServer, toolName, args);
     logger.info(`Created approval request ${id} for ${duckName} to call ${mcpServer}:${toolName}`);
-    SafeLogger.debug(`Approval request details:`, { id, duckName, mcpServer, toolName, safeMessage });
-    
+    SafeLogger.debug(`Approval request details:`, {
+      id,
+      duckName,
+      mcpServer,
+      toolName,
+      safeMessage,
+    });
+
     return request;
   }
 
   getApprovalRequest(id: string): ApprovalRequest | undefined {
     const request = this.pendingApprovals.get(id);
-    
+
     // Check if expired
     if (request && Date.now() > request.expiresAt && request.status === 'pending') {
       request.status = 'expired';
       logger.info(`Approval request ${id} has expired`);
     }
-    
+
     return request;
   }
 
@@ -76,50 +82,52 @@ export class ApprovalService {
 
   approveRequest(id: string, approvedBy: string = 'user'): boolean {
     const request = this.getApprovalRequest(id);
-    
+
     if (!request) {
       logger.warn(`Approval request ${id} not found`);
       return false;
     }
-    
+
     if (request.status !== 'pending') {
       logger.warn(`Approval request ${id} is not pending (status: ${request.status})`);
       return false;
     }
-    
+
     if (Date.now() > request.expiresAt) {
       request.status = 'expired';
       logger.warn(`Approval request ${id} has expired`);
       return false;
     }
-    
+
     request.status = 'approved';
     request.approvedBy = approvedBy;
-    
+
     // Mark tool as approved for this session
     const sessionKey = this.createSessionKey(request.duckName, request.mcpServer, request.toolName);
     this.approvedToolsForSession.add(sessionKey);
-    
-    logger.info(`Approval request ${id} approved by ${approvedBy} - tool ${sessionKey} now approved for session`);
+
+    logger.info(
+      `Approval request ${id} approved by ${approvedBy} - tool ${sessionKey} now approved for session`
+    );
     return true;
   }
 
   denyRequest(id: string, reason?: string): boolean {
     const request = this.getApprovalRequest(id);
-    
+
     if (!request) {
       logger.warn(`Approval request ${id} not found`);
       return false;
     }
-    
+
     if (request.status !== 'pending') {
       logger.warn(`Approval request ${id} is not pending (status: ${request.status})`);
       return false;
     }
-    
+
     request.status = 'denied';
     request.deniedReason = reason;
-    
+
     logger.info(`Approval request ${id} denied${reason ? `: ${reason}` : ''}`);
     return true;
   }
@@ -127,27 +135,29 @@ export class ApprovalService {
   getPendingApprovals(): ApprovalRequest[] {
     // Clean up expired requests first
     this.cleanupExpired();
-    
-    return Array.from(this.pendingApprovals.values())
-      .filter(request => request.status === 'pending');
+
+    return Array.from(this.pendingApprovals.values()).filter(
+      (request) => request.status === 'pending'
+    );
   }
 
   getAllApprovals(): ApprovalRequest[] {
     // Clean up expired requests first
     this.cleanupExpired();
-    
+
     return Array.from(this.pendingApprovals.values());
   }
 
   getApprovalsByDuck(duckName: string): ApprovalRequest[] {
-    return Array.from(this.pendingApprovals.values())
-      .filter(request => request.duckName === duckName);
+    return Array.from(this.pendingApprovals.values()).filter(
+      (request) => request.duckName === duckName
+    );
   }
 
   cleanupExpired(): number {
     const now = Date.now();
     let cleanedUp = 0;
-    
+
     for (const [id, request] of this.pendingApprovals.entries()) {
       if (now > request.expiresAt && request.status === 'pending') {
         request.status = 'expired';
@@ -155,7 +165,7 @@ export class ApprovalService {
         cleanedUp++;
       }
     }
-    
+
     return cleanedUp;
   }
 
@@ -211,15 +221,15 @@ export class ApprovalService {
     expired: number;
   } {
     this.cleanupExpired();
-    
+
     const all = Array.from(this.pendingApprovals.values());
-    
+
     return {
       total: all.length,
-      pending: all.filter(r => r.status === 'pending').length,
-      approved: all.filter(r => r.status === 'approved').length,
-      denied: all.filter(r => r.status === 'denied').length,
-      expired: all.filter(r => r.status === 'expired').length,
+      pending: all.filter((r) => r.status === 'pending').length,
+      approved: all.filter((r) => r.status === 'approved').length,
+      denied: all.filter((r) => r.status === 'denied').length,
+      expired: all.filter((r) => r.status === 'expired').length,
     };
   }
 }

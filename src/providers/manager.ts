@@ -1,6 +1,6 @@
 import { DuckProvider } from './provider.js';
 import { ConfigManager } from '../config/config.js';
-import { ProviderHealth, DuckResponse } from '../config/types.js';
+import { ProviderHealth, DuckResponse, MessageContent } from '../config/types.js';
 import { ChatOptions, ModelInfo, IDuckProvider } from './types.js';
 import { CLIDuckProvider, resolvePreset } from './cli/index.js';
 import { UsageService } from '../services/usage.js';
@@ -16,7 +16,11 @@ export class ProviderManager {
   protected guardrailsService?: GuardrailsService;
   private defaultProvider?: string;
 
-  constructor(configManager: ConfigManager, usageService?: UsageService, guardrailsService?: GuardrailsService) {
+  constructor(
+    configManager: ConfigManager,
+    usageService?: UsageService,
+    guardrailsService?: GuardrailsService
+  ) {
     this.configManager = configManager;
     this.usageService = usageService;
     this.guardrailsService = guardrailsService;
@@ -34,18 +38,25 @@ export class ProviderManager {
         if (providerConfig.type === 'cli') {
           const resolved = resolvePreset(providerConfig);
           provider = new CLIDuckProvider(name, resolved);
-          logger.info(`Initialized CLI provider: ${name} (${providerConfig.nickname}) [${providerConfig.cli_type}]`);
+          logger.info(
+            `Initialized CLI provider: ${name} (${providerConfig.nickname}) [${providerConfig.cli_type}]`
+          );
         } else {
-          provider = new DuckProvider(name, providerConfig.nickname, {
-            apiKey: providerConfig.api_key,
-            baseURL: providerConfig.base_url,
-            model: providerConfig.default_model,
-            availableModels: providerConfig.models,
-            temperature: providerConfig.temperature,
-            timeout: providerConfig.timeout,
-            maxRetries: providerConfig.max_retries,
-            systemPrompt: providerConfig.system_prompt,
-          }, this.guardrailsService);
+          provider = new DuckProvider(
+            name,
+            providerConfig.nickname,
+            {
+              apiKey: providerConfig.api_key,
+              baseURL: providerConfig.base_url,
+              model: providerConfig.default_model,
+              availableModels: providerConfig.models,
+              temperature: providerConfig.temperature,
+              timeout: providerConfig.timeout,
+              maxRetries: providerConfig.max_retries,
+              systemPrompt: providerConfig.system_prompt,
+            },
+            this.guardrailsService
+          );
           logger.info(`Initialized provider: ${name} (${providerConfig.nickname})`);
         }
 
@@ -64,13 +75,13 @@ export class ProviderManager {
 
   async checkHealth(providerName?: string): Promise<ProviderHealth[]> {
     const results: ProviderHealth[] = [];
-    const providersToCheck = providerName 
+    const providersToCheck = providerName
       ? [this.providers.get(providerName)].filter(Boolean)
       : Array.from(this.providers.values());
 
     for (const provider of providersToCheck) {
       if (!provider) continue;
-      
+
       const startTime = Date.now();
       try {
         const healthy = await provider.healthCheck();
@@ -80,7 +91,7 @@ export class ProviderManager {
           latency: Date.now() - startTime,
           lastCheck: new Date(),
         };
-        
+
         this.healthStatus.set(provider.name, health);
         results.push(health);
       } catch (error: unknown) {
@@ -90,7 +101,7 @@ export class ProviderManager {
           lastCheck: new Date(),
           error: error instanceof Error ? error.message : String(error),
         };
-        
+
         this.healthStatus.set(provider.name, health);
         results.push(health);
       }
@@ -101,7 +112,7 @@ export class ProviderManager {
 
   async askDuck(
     providerName: string | undefined,
-    prompt: string,
+    prompt: MessageContent,
     options?: Partial<ChatOptions>
   ): Promise<DuckResponse> {
     const provider = this.getProvider(providerName);
@@ -130,14 +141,16 @@ export class ProviderManager {
         nickname: provider.nickname,
         model: response.model,
         content: response.content,
-        usage: response.usage ? {
-          prompt_tokens: response.usage.promptTokens,
-          completion_tokens: response.usage.completionTokens,
-          total_tokens: response.usage.totalTokens,
-          promptTokens: response.usage.promptTokens,
-          completionTokens: response.usage.completionTokens,
-          totalTokens: response.usage.totalTokens,
-        } : undefined,
+        usage: response.usage
+          ? {
+              prompt_tokens: response.usage.promptTokens,
+              completion_tokens: response.usage.completionTokens,
+              total_tokens: response.usage.totalTokens,
+              promptTokens: response.usage.promptTokens,
+              completionTokens: response.usage.completionTokens,
+              totalTokens: response.usage.totalTokens,
+            }
+          : undefined,
         latency: Date.now() - startTime,
       };
     } catch (error: unknown) {
@@ -157,45 +170,47 @@ export class ProviderManager {
   }
 
   async compareDucks(
-    prompt: string,
+    prompt: MessageContent,
     providerNames?: string[],
     options?: Partial<ChatOptions>
   ): Promise<DuckResponse[]> {
-    const providersToUse = providerNames 
-      ? providerNames.map(name => this.providers.get(name)).filter(Boolean)
+    const providersToUse = providerNames
+      ? providerNames.map((name) => this.providers.get(name)).filter(Boolean)
       : Array.from(this.providers.values());
 
     if (providersToUse.length === 0) {
       throw new Error('No valid providers specified');
     }
 
-    const promises = providersToUse.map(provider => 
-      provider ? this.askDuck(provider.name, prompt, options).catch(error => ({
-        provider: provider.name,
-        nickname: provider.nickname,
-        model: '',
-        content: `Error: ${error instanceof Error ? error.message : String(error)}`,
-        latency: 0,
-      })) : Promise.resolve({
-        provider: 'unknown',
-        nickname: 'Unknown',
-        model: '',
-        content: 'Error: Invalid provider',
-        latency: 0,
-      })
+    const promises = providersToUse.map((provider) =>
+      provider
+        ? this.askDuck(provider.name, prompt, options).catch((error) => ({
+            provider: provider.name,
+            nickname: provider.nickname,
+            model: '',
+            content: `Error: ${error instanceof Error ? error.message : String(error)}`,
+            latency: 0,
+          }))
+        : Promise.resolve({
+            provider: 'unknown',
+            nickname: 'Unknown',
+            model: '',
+            content: 'Error: Invalid provider',
+            latency: 0,
+          })
     );
 
     return Promise.all(promises);
   }
 
   async compareDucksWithProgress(
-    prompt: string,
+    prompt: MessageContent,
     providerNames: string[] | undefined,
     options: Partial<ChatOptions> | undefined,
     onProviderComplete: (providerName: string, completed: number, total: number) => void
   ): Promise<DuckResponse[]> {
     const providersToUse = providerNames
-      ? providerNames.map(name => this.providers.get(name)).filter(Boolean)
+      ? providerNames.map((name) => this.providers.get(name)).filter(Boolean)
       : Array.from(this.providers.values());
 
     if (providersToUse.length === 0) {
@@ -205,46 +220,47 @@ export class ProviderManager {
     const total = providersToUse.length;
     let completed = 0;
 
-    const promises = providersToUse.map(provider =>
-      provider ? this.askDuck(provider.name, prompt, options)
-        .catch(error => ({
-          provider: provider.name,
-          nickname: provider.nickname,
-          model: '',
-          content: `Error: ${error instanceof Error ? error.message : String(error)}`,
-          latency: 0,
-        }))
-        .then(result => {
-          completed++;
-          onProviderComplete(provider.name, completed, total);
-          return result;
-        })
-      : Promise.resolve({
-          provider: 'unknown',
-          nickname: 'Unknown',
-          model: '',
-          content: 'Error: Invalid provider',
-          latency: 0,
-        })
+    const promises = providersToUse.map((provider) =>
+      provider
+        ? this.askDuck(provider.name, prompt, options)
+            .catch((error) => ({
+              provider: provider.name,
+              nickname: provider.nickname,
+              model: '',
+              content: `Error: ${error instanceof Error ? error.message : String(error)}`,
+              latency: 0,
+            }))
+            .then((result) => {
+              completed++;
+              onProviderComplete(provider.name, completed, total);
+              return result;
+            })
+        : Promise.resolve({
+            provider: 'unknown',
+            nickname: 'Unknown',
+            model: '',
+            content: 'Error: Invalid provider',
+            latency: 0,
+          })
     );
 
     return Promise.all(promises);
   }
 
   async duckCouncil(
-    prompt: string,
+    prompt: MessageContent,
     options?: Partial<ChatOptions>
   ): Promise<DuckResponse[]> {
     return this.compareDucks(prompt, undefined, options);
   }
 
   private async askWithFailover(
-    prompt: string,
+    prompt: MessageContent,
     options: Partial<ChatOptions> | undefined,
     failedProvider: string
   ): Promise<DuckResponse> {
     const availableProviders = Array.from(this.providers.keys()).filter(
-      name => name !== failedProvider
+      (name) => name !== failedProvider
     );
 
     for (const providerName of availableProviders) {
@@ -276,7 +292,11 @@ export class ProviderManager {
     return provider;
   }
 
-  getAllProviders(): Array<{ name: string; info: ReturnType<IDuckProvider['getInfo']>; health?: ProviderHealth }> {
+  getAllProviders(): Array<{
+    name: string;
+    info: ReturnType<IDuckProvider['getInfo']>;
+    health?: ProviderHealth;
+  }> {
     return Array.from(this.providers.entries()).map(([name, provider]) => ({
       name,
       info: provider.getInfo(),
@@ -298,7 +318,7 @@ export class ProviderManager {
 
   async getAllModels(): Promise<Map<string, ModelInfo[]>> {
     const allModels = new Map<string, ModelInfo[]>();
-    
+
     for (const [name, provider] of this.providers) {
       try {
         const models = await provider.listModels();
@@ -308,7 +328,7 @@ export class ProviderManager {
         allModels.set(name, []);
       }
     }
-    
+
     return allModels;
   }
 
@@ -317,12 +337,12 @@ export class ProviderManager {
     if (!provider) {
       return false;
     }
-    
+
     const info = provider.getInfo();
     if (info.availableModels) {
       return info.availableModels.includes(modelId);
     }
-    
+
     // If no models list, accept any model (let the API validate)
     return true;
   }

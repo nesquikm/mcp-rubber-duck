@@ -44,9 +44,7 @@ app.ontoolresult = (params) => {
   }
 
   try {
-    const data: VoteData = JSON.parse(
-      (content[1] as { type: string; text: string }).text
-    );
+    const data: VoteData = JSON.parse((content[1] as { type: string; text: string }).text);
     render(data);
   } catch {
     container.innerHTML = `<div class="error-banner">Failed to parse vote data</div>`;

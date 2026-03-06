@@ -16,12 +16,7 @@ export async function duckVoteTool(
   args: Record<string, unknown>,
   progress?: ProgressReporter
 ) {
-  const {
-    question,
-    options,
-    voters,
-    require_reasoning = true,
-  } = args as unknown as DuckVoteArgs;
+  const { question, options, voters, require_reasoning = true } = args as unknown as DuckVoteArgs;
 
   // Validate inputs
   if (!question || typeof question !== 'string') {
@@ -37,9 +32,7 @@ export async function duckVoteTool(
   }
 
   // Get voters (all providers if not specified)
-  const voterNames = voters && voters.length > 0
-    ? voters
-    : providerManager.getProviderNames();
+  const voterNames = voters && voters.length > 0 ? voters : providerManager.getProviderNames();
 
   if (voterNames.length === 0) {
     throw new Error('No voters available');
@@ -48,11 +41,7 @@ export async function duckVoteTool(
   logger.info(`Starting vote with ${voterNames.length} voters on: "${question}"`);
 
   const consensusService = new ConsensusService();
-  const votePrompt = consensusService.buildVotePrompt(
-    question,
-    options,
-    require_reasoning
-  );
+  const votePrompt = consensusService.buildVotePrompt(question, options, require_reasoning);
 
   // Get votes from all ducks in parallel, reporting progress as each votes
   const responses = progress
@@ -67,7 +56,7 @@ export async function duckVoteTool(
     : await providerManager.compareDucks(votePrompt, voterNames);
 
   // Parse votes
-  const votes: VoteResult[] = responses.map(response => {
+  const votes: VoteResult[] = responses.map((response) => {
     return consensusService.parseVote(
       response.content,
       response.provider,
@@ -84,7 +73,7 @@ export async function duckVoteTool(
 
   logger.info(
     `Vote completed: ${aggregatedResult.consensusLevel} consensus, ` +
-    `winner: ${aggregatedResult.winner || 'none'}`
+      `winner: ${aggregatedResult.winner || 'none'}`
   );
 
   // Build structured data for UI consumption
@@ -95,7 +84,7 @@ export async function duckVoteTool(
     isTie: aggregatedResult.isTie,
     tally: aggregatedResult.tally,
     confidenceByOption: aggregatedResult.confidenceByOption,
-    votes: aggregatedResult.votes.map(v => ({
+    votes: aggregatedResult.votes.map((v) => ({
       voter: v.voter,
       nickname: v.nickname,
       choice: v.choice,

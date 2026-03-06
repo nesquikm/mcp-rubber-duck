@@ -12,10 +12,11 @@
 
 | # | Feature | Issue | Impact | Effort |
 |---|---------|-------|--------|--------|
-| 1 | outputSchema for voting/consensus tools | [#53](https://github.com/nesquikm/mcp-rubber-duck/issues/53) | High | Low-Medium |
-| 2 | ~~Multi-round tool calling loop~~ ✅ | [#69](https://github.com/nesquikm/mcp-rubber-duck/issues/69) | High | Medium |
-| 3 | Streamable HTTP transport + Streaming responses | [#57](https://github.com/nesquikm/mcp-rubber-duck/issues/57), [#47](https://github.com/nesquikm/mcp-rubber-duck/issues/47) | High | Medium |
-| 4 | MCP Resources + resource_link | [#48](https://github.com/nesquikm/mcp-rubber-duck/issues/48), [#56](https://github.com/nesquikm/mcp-rubber-duck/issues/56) | Medium-High | Medium |
+| 1 | Multimodal - Vision input and image/audio responses | [#76](https://github.com/nesquikm/mcp-rubber-duck/issues/76) | Medium-High | Medium |
+| 2 | outputSchema for voting/consensus tools | [#53](https://github.com/nesquikm/mcp-rubber-duck/issues/53) | High | Low-Medium |
+| 3 | ~~Multi-round tool calling loop~~ ✅ | [#69](https://github.com/nesquikm/mcp-rubber-duck/issues/69) | High | Medium |
+| 4 | Streamable HTTP transport + Streaming responses | [#57](https://github.com/nesquikm/mcp-rubber-duck/issues/57), [#47](https://github.com/nesquikm/mcp-rubber-duck/issues/47) | High | Medium |
+| 5 | MCP Resources + resource_link | [#48](https://github.com/nesquikm/mcp-rubber-duck/issues/48), [#56](https://github.com/nesquikm/mcp-rubber-duck/issues/56) | Medium-High | Medium |
 
 ### Tier 2 - Differentiation
 

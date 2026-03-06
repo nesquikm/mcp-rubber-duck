@@ -12,7 +12,7 @@ export function extractJsonPath(obj: unknown, path: string): unknown {
   }
 
   // Split on dots and bracket notation
-  const segments = normalized.split(/\.|\[(\d+)\]/).filter(s => s !== '' && s !== undefined);
+  const segments = normalized.split(/\.|\[(\d+)\]/).filter((s) => s !== '' && s !== undefined);
 
   let current: unknown = obj;
   for (const segment of segments) {
@@ -84,11 +84,16 @@ export function parseJsonOutput(
   } else if (typeof parsed === 'object' && parsed !== null) {
     // Try common fields
     const obj = parsed as Record<string, unknown>;
-    content = typeof obj.result === 'string' ? obj.result
-      : typeof obj.response === 'string' ? obj.response
-      : typeof obj.content === 'string' ? obj.content
-      : typeof obj.message === 'string' ? obj.message
-      : JSON.stringify(parsed);
+    content =
+      typeof obj.result === 'string'
+        ? obj.result
+        : typeof obj.response === 'string'
+          ? obj.response
+          : typeof obj.content === 'string'
+            ? obj.content
+            : typeof obj.message === 'string'
+              ? obj.message
+              : JSON.stringify(parsed);
   } else {
     content = String(parsed);
   }
@@ -99,7 +104,9 @@ export function parseJsonOutput(
     if (usageData && typeof usageData === 'object') {
       const u = usageData as Record<string, unknown>;
       const promptTokens = Number(u.prompt_tokens ?? u.promptTokens ?? u.input_tokens ?? 0);
-      const completionTokens = Number(u.completion_tokens ?? u.completionTokens ?? u.output_tokens ?? 0);
+      const completionTokens = Number(
+        u.completion_tokens ?? u.completionTokens ?? u.output_tokens ?? 0
+      );
       usage = {
         promptTokens,
         completionTokens,
@@ -115,16 +122,13 @@ export function parseJsonOutput(
  * Parse JSONL (newline-delimited JSON) output.
  * Finds the last line containing a result/message event.
  */
-export function parseJsonlOutput(
-  stdout: string,
-  responsePath?: string
-): ParsedOutput {
+export function parseJsonlOutput(stdout: string, responsePath?: string): ParsedOutput {
   const trimmed = stdout.trim();
   if (!trimmed) {
     return { content: '' };
   }
 
-  const lines = trimmed.split('\n').filter(line => line.trim());
+  const lines = trimmed.split('\n').filter((line) => line.trim());
 
   // Try to parse each line as JSON, collect successfully parsed objects
   const parsed: unknown[] = [];

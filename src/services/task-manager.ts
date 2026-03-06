@@ -10,10 +10,7 @@ import {
   InMemoryTaskStore,
   InMemoryTaskMessageQueue,
 } from '@modelcontextprotocol/sdk/experimental';
-import type {
-  TaskStore,
-  TaskMessageQueue,
-} from '@modelcontextprotocol/sdk/experimental';
+import type { TaskStore, TaskMessageQueue } from '@modelcontextprotocol/sdk/experimental';
 import type { CallToolResult, Result } from '@modelcontextprotocol/sdk/types.js';
 import { logger } from '../utils/logger.js';
 
@@ -29,10 +26,10 @@ export interface TaskManagerConfig {
 }
 
 const DEFAULT_CONFIG: TaskManagerConfig = {
-  defaultTtl: 300_000,       // 5 minutes
-  pollInterval: 2_000,       // 2 seconds
+  defaultTtl: 300_000, // 5 minutes
+  pollInterval: 2_000, // 2 seconds
   maxQueueSize: 100,
-  cleanupInterval: 60_000,   // 1 minute
+  cleanupInterval: 60_000, // 1 minute
 };
 
 /**
@@ -70,10 +67,7 @@ export class TaskManager {
    * @param taskId    ID of the task (from `taskStore.createTask`)
    * @param work      Async function receiving an `AbortSignal` and returning a `CallToolResult`
    */
-  startBackground(
-    taskId: string,
-    work: (signal: AbortSignal) => Promise<CallToolResult>
-  ): void {
+  startBackground(taskId: string, work: (signal: AbortSignal) => Promise<CallToolResult>): void {
     const controller = new AbortController();
     this.activeControllers.set(taskId, controller);
 
@@ -138,7 +132,11 @@ export class TaskManager {
       logger.debug(`Active background tasks: ${this.activeControllers.size}`);
     }, this.config.cleanupInterval);
     // Allow the process to exit even if the timer is still running
-    if (this.cleanupTimer && typeof this.cleanupTimer === 'object' && 'unref' in this.cleanupTimer) {
+    if (
+      this.cleanupTimer &&
+      typeof this.cleanupTimer === 'object' &&
+      'unref' in this.cleanupTimer
+    ) {
       this.cleanupTimer.unref();
     }
   }

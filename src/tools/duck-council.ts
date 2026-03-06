@@ -1,4 +1,5 @@
 import { ProviderManager } from '../providers/manager.js';
+import { ImageInput, buildContent } from '../config/types.js';
 import { duckArt, getRandomDuckMessage } from '../utils/ascii-art.js';
 import { logger } from '../utils/logger.js';
 import type { ProgressReporter } from '../services/progress.js';
@@ -8,9 +9,10 @@ export async function duckCouncilTool(
   args: Record<string, unknown>,
   progress?: ProgressReporter
 ) {
-  const { prompt, model } = args as {
+  const { prompt, model, images } = args as {
     prompt?: string;
     model?: string;
+    images?: ImageInput[];
   };
 
   if (!prompt) {
@@ -26,17 +28,23 @@ export async function duckCouncilTool(
     throw new Error('No ducks available for the council!');
   }
 
+  const content = buildContent(prompt, images);
+
   // Get responses from all ducks, reporting progress as each completes
   const responses = progress
     ? await providerManager.compareDucksWithProgress(
-        prompt,
+        content,
         undefined,
         { model },
         (providerName, completed, total) => {
-          void progress.report(completed, total, `${providerName} responded (${completed}/${total})`);
+          void progress.report(
+            completed,
+            total,
+            `${providerName} responded (${completed}/${total})`
+          );
         }
       )
-    : await providerManager.duckCouncil(prompt, { model });
+    : await providerManager.duckCouncil(content, { model });
 
   // Build council response with a panel discussion format
   let response = `${duckArt.panel}\n\n`;
@@ -48,15 +56,15 @@ export async function duckCouncilTool(
   for (let i = 0; i < responses.length; i++) {
     const duckResponse = responses[i];
     const duckNumber = i + 1;
-    
+
     response += `**Duck #${duckNumber}: ${duckResponse.nickname}**\n`;
     response += `─────────────────────────────────────\n`;
-    
+
     if (duckResponse.content.startsWith('Error:')) {
       response += `🦆💬 *[Duck had to leave early: ${duckResponse.content}]*\n`;
     } else {
       response += `🦆💬 "${duckResponse.content}"\n`;
-      
+
       // Add metadata in a subtle way
       response += `\n`;
       response += `*[${duckResponse.model}`;
@@ -68,16 +76,16 @@ export async function duckCouncilTool(
       }
       response += `]*\n`;
     }
-    
+
     response += `\n`;
   }
 
   // Add council summary
-  const successCount = responses.filter(r => !r.content.startsWith('Error:')).length;
+  const successCount = responses.filter((r) => !r.content.startsWith('Error:')).length;
   response += `═══════════════════════════════════════\n`;
   response += `🏛️ **Council Summary**\n`;
   response += `• ${successCount}/${responses.length} ducks provided their wisdom\n`;
-  
+
   if (successCount === responses.length) {
     response += `• ${getRandomDuckMessage('success')}\n`;
   } else if (successCount > 0) {

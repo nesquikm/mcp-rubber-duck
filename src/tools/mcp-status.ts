@@ -12,20 +12,23 @@ export async function mcpStatusTool(
     // Get MCP server status
     const serverStatus = mcpManager.getStatus();
     const connectedServers = mcpManager.getConnectedServers();
-    
+
     // Get available tools
     const allTools = await mcpManager.listAllTools();
-    const toolsByServer = allTools.reduce((acc, tool) => {
-      if (!acc[tool.serverName]) {
-        acc[tool.serverName] = [];
-      }
-      acc[tool.serverName].push(tool);
-      return acc;
-    }, {} as Record<string, Array<{name: string; serverName: string}>>);
+    const toolsByServer = allTools.reduce(
+      (acc, tool) => {
+        if (!acc[tool.serverName]) {
+          acc[tool.serverName] = [];
+        }
+        acc[tool.serverName].push(tool);
+        return acc;
+      },
+      {} as Record<string, Array<{ name: string; serverName: string }>>
+    );
 
     // Get approval statistics
     const approvalStats = approvalService.getStats();
-    
+
     // Get function bridge statistics
     const bridgeStats = functionBridge.getStats();
 
@@ -45,20 +48,25 @@ export async function mcpStatusTool(
       statusLines.push('🖥️ **MCP Servers:**');
       for (const [serverName, status] of Object.entries(serverStatus)) {
         const toolCount = toolsByServer[serverName]?.length || 0;
-        const statusIcon = status.status === 'connected' ? '🟢' : 
-                          status.status === 'connecting' ? '🟡' : '🔴';
-        
+        const statusIcon =
+          status.status === 'connected' ? '🟢' : status.status === 'connecting' ? '🟡' : '🔴';
+
         statusLines.push(`${statusIcon} **${serverName}** (${status.type})`);
         statusLines.push(`   Status: ${status.status}`);
         if (toolCount > 0) {
           statusLines.push(`   Tools: ${toolCount}`);
-          
+
           // Show first few tools as examples
           const tools = toolsByServer[serverName];
           if (tools && tools.length <= 3) {
-            statusLines.push(`   Available: ${tools.map(t => t.name).join(', ')}`);
+            statusLines.push(`   Available: ${tools.map((t) => t.name).join(', ')}`);
           } else if (tools && tools.length > 3) {
-            statusLines.push(`   Available: ${tools.slice(0, 3).map(t => t.name).join(', ')} +${tools.length - 3} more`);
+            statusLines.push(
+              `   Available: ${tools
+                .slice(0, 3)
+                .map((t) => t.name)
+                .join(', ')} +${tools.length - 3} more`
+            );
           }
         }
         statusLines.push('');
@@ -81,9 +89,11 @@ export async function mcpStatusTool(
       const pendingApprovals = approvalService.getPendingApprovals();
       statusLines.push('');
       statusLines.push('⏳ **Pending Approvals:**');
-      pendingApprovals.forEach(approval => {
+      pendingApprovals.forEach((approval) => {
         const timeAgo = Math.round((Date.now() - approval.timestamp) / 1000);
-        statusLines.push(`- ${approval.duckName} → ${approval.mcpServer}:${approval.toolName} (${timeAgo}s ago)`);
+        statusLines.push(
+          `- ${approval.duckName} → ${approval.mcpServer}:${approval.toolName} (${timeAgo}s ago)`
+        );
       });
     }
 
@@ -102,7 +112,6 @@ export async function mcpStatusTool(
         },
       ],
     };
-
   } catch (error: unknown) {
     return {
       content: [

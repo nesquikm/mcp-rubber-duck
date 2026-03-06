@@ -81,20 +81,14 @@ export async function duckJudgeTool(
   };
 }
 
-function buildJudgePrompt(
-  responses: DuckResponse[],
-  criteria: string[],
-  persona?: string
-): string {
+function buildJudgePrompt(responses: DuckResponse[], criteria: string[], persona?: string): string {
   const criteriaList = criteria.map((c, i) => `${i + 1}. ${c}`).join('\n');
 
-  const responsesText = responses.map((r, i) =>
-    `--- Response ${i + 1} (${r.nickname} / ${r.provider}) ---\n${r.content}\n`
-  ).join('\n');
+  const responsesText = responses
+    .map((r, i) => `--- Response ${i + 1} (${r.nickname} / ${r.provider}) ---\n${r.content}\n`)
+    .join('\n');
 
-  const personaText = persona
-    ? `You are a ${persona} evaluating these responses.\n\n`
-    : '';
+  const personaText = persona ? `You are a ${persona} evaluating these responses.\n\n` : '';
 
   return `${personaText}You are a judge evaluating ${responses.length} responses to the same prompt.
 
@@ -118,7 +112,7 @@ Respond with ONLY a JSON object in this exact format:
     {"provider": "<provider name>", "score": <0-100>, "justification": "<brief explanation>"}
   ],
   "criteria_scores": {
-    "<provider>": {${criteria.map(c => `"${c}": <0-100>`).join(', ')}}
+    "<provider>": {${criteria.map((c) => `"${c}": <0-100>`).join(', ')}}
   },
   "summary": "<overall assessment and recommendation>"
 }
@@ -137,20 +131,18 @@ function matchProvider(
   const nameLower = judgeProviderName.toLowerCase();
 
   // Try exact match first
-  const exactMatch = originalResponses.find(r => r.provider.toLowerCase() === nameLower);
+  const exactMatch = originalResponses.find((r) => r.provider.toLowerCase() === nameLower);
   if (exactMatch) return exactMatch;
 
   // Try matching by provider name contained in judge's response
-  const containsMatch = originalResponses.find(r =>
-    nameLower.includes(r.provider.toLowerCase()) ||
-    nameLower.includes(r.nickname.toLowerCase())
+  const containsMatch = originalResponses.find(
+    (r) =>
+      nameLower.includes(r.provider.toLowerCase()) || nameLower.includes(r.nickname.toLowerCase())
   );
   if (containsMatch) return containsMatch;
 
   // Try matching by nickname
-  const nicknameMatch = originalResponses.find(r =>
-    r.nickname.toLowerCase() === nameLower
-  );
+  const nicknameMatch = originalResponses.find((r) => r.nickname.toLowerCase() === nameLower);
   if (nicknameMatch) return nicknameMatch;
 
   return undefined;
@@ -211,14 +203,13 @@ function parseJudgment(
     if (parsed.summary) {
       evaluation.summary = parsed.summary.toString();
     }
-
   } catch (error) {
     logger.warn(`Failed to parse JSON judgment from ${judgeProvider}:`, error);
     return createFallbackEvaluation(evaluation, originalResponses, response);
   }
 
   // Ensure all original responses are represented
-  const rankedProviders = new Set(evaluation.rankings.map(r => r.provider));
+  const rankedProviders = new Set(evaluation.rankings.map((r) => r.provider));
   for (const resp of originalResponses) {
     if (!rankedProviders.has(resp.provider)) {
       evaluation.rankings.push({
@@ -263,7 +254,8 @@ function formatJudgeResult(evaluation: JudgeEvaluation): string {
   output += `─────────────────────────────────────\n`;
 
   for (const ranking of evaluation.rankings) {
-    const medal = ranking.rank === 1 ? '🥇' : ranking.rank === 2 ? '🥈' : ranking.rank === 3 ? '🥉' : '  ';
+    const medal =
+      ranking.rank === 1 ? '🥇' : ranking.rank === 2 ? '🥈' : ranking.rank === 3 ? '🥉' : '  ';
     const bar = '█'.repeat(Math.floor(ranking.score / 10));
     const emptyBar = '░'.repeat(10 - Math.floor(ranking.score / 10));
 
