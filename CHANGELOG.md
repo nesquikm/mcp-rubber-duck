@@ -1,3 +1,10 @@
+# [1.16.0](https://github.com/nesquikm/mcp-rubber-duck/compare/v1.15.2...v1.16.0) (2026-03-06)
+
+
+### Features
+
+* add multimodal vision input support ([#76](https://github.com/nesquikm/mcp-rubber-duck/issues/76)) ([#77](https://github.com/nesquikm/mcp-rubber-duck/issues/77)) ([d696607](https://github.com/nesquikm/mcp-rubber-duck/commit/d696607af4e18dc45c9477d603f182930eebb398))
+
 ## [1.15.2](https://github.com/nesquikm/mcp-rubber-duck/compare/v1.15.1...v1.15.2) (2026-03-05)
 
 
