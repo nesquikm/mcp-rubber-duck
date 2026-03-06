@@ -37,7 +37,7 @@ export function approveMCPRequestTool(
   try {
     // Get the request details before processing
     const request = approvalService.getApprovalRequest(approval_id);
-    
+
     if (!request) {
       return {
         content: [
@@ -111,7 +111,6 @@ export function approveMCPRequestTool(
       ],
       isError: !success,
     };
-
   } catch (error: unknown) {
     return {
       content: [

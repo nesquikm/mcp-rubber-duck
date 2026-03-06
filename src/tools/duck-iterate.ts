@@ -51,7 +51,9 @@ export async function duckIterateTool(
     }
   }
 
-  logger.info(`Starting ${mode} iteration with ${providers.join(' <-> ')} for ${iterations} rounds`);
+  logger.info(
+    `Starting ${mode} iteration with ${providers.join(' <-> ')} for ${iterations} rounds`
+  );
 
   const rounds: IterationRound[] = [];
   let lastResponse = '';
@@ -101,7 +103,7 @@ export async function duckIterateTool(
       logger.info(`Convergence detected at round ${i}`);
     }
 
-    const role = mode === 'refine' ? 'refiner' : (i % 2 === 0 ? 'critic' : 'refiner');
+    const role = mode === 'refine' ? 'refiner' : i % 2 === 0 ? 'critic' : 'refiner';
 
     rounds.push({
       round: i,
@@ -198,7 +200,8 @@ Be constructive but thorough. Format as a bulleted critique.`;
     } else {
       // Improvement round based on critique
       const lastCritique = previousRounds[previousRounds.length - 1]?.content || '';
-      const lastGoodResponse = previousRounds[previousRounds.length - 2]?.content || previousResponse;
+      const lastGoodResponse =
+        previousRounds[previousRounds.length - 2]?.content || previousResponse;
 
       return `You are improving a response based on critical feedback.
 
@@ -222,13 +225,14 @@ function checkConvergence(previous: string, current: string): boolean {
   const prevWords = new Set(previous.toLowerCase().split(/\s+/));
   const currWords = new Set(current.toLowerCase().split(/\s+/));
 
-  const intersection = new Set([...prevWords].filter(x => currWords.has(x)));
+  const intersection = new Set([...prevWords].filter((x) => currWords.has(x)));
   const union = new Set([...prevWords, ...currWords]);
 
   const similarity = intersection.size / union.size;
 
   // Also check if lengths are similar
-  const lengthRatio = Math.min(previous.length, current.length) / Math.max(previous.length, current.length);
+  const lengthRatio =
+    Math.min(previous.length, current.length) / Math.max(previous.length, current.length);
 
   return similarity > CONVERGENCE_THRESHOLD && lengthRatio > 0.8;
 }
@@ -249,14 +253,14 @@ function formatIterationResult(result: IterationResult): string {
   output += `─────────────────────────────────────\n`;
 
   for (const round of result.rounds) {
-    const roleEmoji = round.role === 'generator' ? '🎯' :
-                      round.role === 'critic' ? '🔍' : '✨';
+    const roleEmoji = round.role === 'generator' ? '🎯' : round.role === 'critic' ? '🔍' : '✨';
     output += `\n${roleEmoji} **Round ${round.round}: ${round.nickname}** (${round.role})\n`;
 
     // Truncate long content for display
-    const displayContent = round.content.length > 500
-      ? round.content.substring(0, 500) + '...[truncated]'
-      : round.content;
+    const displayContent =
+      round.content.length > 500
+        ? round.content.substring(0, 500) + '...[truncated]'
+        : round.content;
     output += `${displayContent}\n`;
   }
 

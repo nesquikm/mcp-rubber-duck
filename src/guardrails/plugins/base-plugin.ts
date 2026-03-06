@@ -1,9 +1,4 @@
-import {
-  GuardrailPlugin,
-  GuardrailPhase,
-  GuardrailContext,
-  GuardrailResult,
-} from '../types.js';
+import { GuardrailPlugin, GuardrailPhase, GuardrailContext, GuardrailResult } from '../types.js';
 
 /**
  * Abstract base class for guardrail plugins

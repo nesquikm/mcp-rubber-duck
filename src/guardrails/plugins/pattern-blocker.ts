@@ -1,6 +1,6 @@
 import { BaseGuardrailPlugin } from './base-plugin.js';
 import { GuardrailPhase, GuardrailContext, GuardrailResult } from '../types.js';
-import { PatternBlockerConfig } from '../../config/types.js';
+import { PatternBlockerConfig, ContentPart } from '../../config/types.js';
 
 interface PatternMatch {
   pattern: string;
@@ -99,10 +99,7 @@ export class PatternBlockerPlugin extends BaseGuardrailPlugin {
       // Redact matches from text
       let redactedText = textToCheck;
       for (const match of matches) {
-        redactedText = redactedText.replace(
-          match.matchedText,
-          '[REDACTED]'
-        );
+        redactedText = redactedText.replace(match.matchedText, '[REDACTED]');
       }
 
       this.addModification(
@@ -120,9 +117,15 @@ export class PatternBlockerPlugin extends BaseGuardrailPlugin {
         // Also update last message if present (create new object to avoid mutating original)
         if (context.messages.length > 0) {
           const lastIndex = context.messages.length - 1;
+          const originalContent = context.messages[lastIndex].content;
           context.messages[lastIndex] = {
             ...context.messages[lastIndex],
-            content: redactedText,
+            content:
+              typeof originalContent === 'string'
+                ? redactedText
+                : originalContent.map((part: ContentPart) =>
+                    part.type === 'text' ? { ...part, text: this.redactText(part.text) } : part
+                  ),
           };
         }
       } else if (phase === 'pre_tool_input') {
@@ -176,6 +179,17 @@ export class PatternBlockerPlugin extends BaseGuardrailPlugin {
     }
 
     return matches;
+  }
+
+  /**
+   * Redact blocked patterns from an individual text string
+   */
+  private redactText(text: string): string {
+    let result = text;
+    for (const match of this.findMatches(text)) {
+      result = result.replace(match.matchedText, '[REDACTED]');
+    }
+    return result;
   }
 
   /**

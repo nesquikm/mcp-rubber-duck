@@ -32,7 +32,9 @@ export class PricingService {
       (acc, models) => acc + Object.keys(models).length,
       0
     );
-    logger.debug(`PricingService initialized with ${providerCount} providers, ${modelCount} models`);
+    logger.debug(
+      `PricingService initialized with ${providerCount} providers, ${modelCount} models`
+    );
   }
 
   /**

@@ -7,13 +7,13 @@ import { SafeLogger } from '../utils/safe-logger.js';
 export interface MCPServerConfig {
   name: string;
   type: 'stdio' | 'http';
-  command?: string;  // for stdio
-  args?: string[];   // for stdio
-  url?: string;      // for http
-  apiKey?: string;   // for http auth
+  command?: string; // for stdio
+  args?: string[]; // for stdio
+  url?: string; // for http
+  apiKey?: string; // for http auth
   enabled?: boolean;
   retryAttempts?: number; // Number of retry attempts (default: 3)
-  retryDelay?: number;    // Initial retry delay in ms (default: 1000)
+  retryDelay?: number; // Initial retry delay in ms (default: 1000)
 }
 
 export interface MCPTool {
@@ -26,21 +26,22 @@ export interface MCPTool {
 export class MCPClientManager {
   private clients: Map<string, Client> = new Map();
   private configs: MCPServerConfig[] = [];
-  private connectionStatus: Map<string, 'connected' | 'connecting' | 'disconnected' | 'error'> = new Map();
+  private connectionStatus: Map<string, 'connected' | 'connecting' | 'disconnected' | 'error'> =
+    new Map();
   private retryInfo: Map<string, { attempts: number; lastAttempt: number }> = new Map();
 
   constructor(configs: MCPServerConfig[] = []) {
-    this.configs = configs.filter(config => config.enabled !== false);
+    this.configs = configs.filter((config) => config.enabled !== false);
   }
 
   async initialize(): Promise<void> {
     logger.info(`Initializing MCP Client Manager with ${this.configs.length} servers`);
-    
-    const connectionPromises = this.configs.map(config => this.connectToServer(config));
-    
+
+    const connectionPromises = this.configs.map((config) => this.connectToServer(config));
+
     // Connect to all servers in parallel, but don't fail if some fail
     const results = await Promise.allSettled(connectionPromises);
-    
+
     let successCount = 0;
     results.forEach((result, index) => {
       const serverName = this.configs[index].name;
@@ -52,15 +53,17 @@ export class MCPClientManager {
         this.connectionStatus.set(serverName, 'error');
       }
     });
-    
-    logger.info(`MCP Client Manager initialized: ${successCount}/${this.configs.length} servers connected`);
+
+    logger.info(
+      `MCP Client Manager initialized: ${successCount}/${this.configs.length} servers connected`
+    );
   }
 
   private async connectToServer(config: MCPServerConfig): Promise<Client> {
     const { name, type } = config;
     const maxRetries = config.retryAttempts ?? 3;
     const initialDelay = config.retryDelay ?? 1000;
-    
+
     if (this.clients.has(name)) {
       const status = this.connectionStatus.get(name);
       if (status === 'connected') {
@@ -69,36 +72,45 @@ export class MCPClientManager {
       }
       // Clean up stale client before reconnecting
       const staleClient = this.clients.get(name)!;
-      try { await staleClient.close(); } catch { /* ignore close errors */ }
+      try {
+        await staleClient.close();
+      } catch {
+        /* ignore close errors */
+      }
       this.clients.delete(name);
     }
-    
+
     for (let attempt = 0; attempt <= maxRetries; attempt++) {
       try {
         this.connectionStatus.set(name, 'connecting');
         this.retryInfo.set(name, { attempts: attempt, lastAttempt: Date.now() });
-        
+
         if (attempt > 0) {
           const delay = initialDelay * Math.pow(2, attempt - 1); // Exponential backoff
-          logger.info(`Retrying connection to MCP server ${name} (attempt ${attempt}/${maxRetries}) after ${delay}ms`);
+          logger.info(
+            `Retrying connection to MCP server ${name} (attempt ${attempt}/${maxRetries}) after ${delay}ms`
+          );
           await this.sleep(delay);
         }
-        
+
         // Create client
-        const client = new Client({
-          name: 'mcp-rubber-duck',
-          version: '1.0.0',
-        }, {
-          capabilities: {},
-        });
-        
+        const client = new Client(
+          {
+            name: 'mcp-rubber-duck',
+            version: '1.0.0',
+          },
+          {
+            capabilities: {},
+          }
+        );
+
         // Create transport based on type
         let transport;
         if (type === 'stdio') {
           if (!config.command) {
             throw new Error(`stdio server ${name} requires command`);
           }
-          
+
           transport = new StdioClientTransport({
             command: config.command,
             args: config.args || [],
@@ -107,44 +119,43 @@ export class MCPClientManager {
           if (!config.url) {
             throw new Error(`http server ${name} requires url`);
           }
-          
+
           // HTTP transport using StreamableHTTPClientTransport
           const url = new URL(config.url);
           const transportOptions: { requestInit?: { headers?: Record<string, string> } } = {};
-          
+
           if (config.apiKey) {
             transportOptions.requestInit = {
               headers: {
-                'Authorization': `Bearer ${config.apiKey}`,
+                Authorization: `Bearer ${config.apiKey}`,
               },
             };
           }
-          
+
           transport = new StreamableHTTPClientTransport(url, transportOptions);
         } else {
           throw new Error(`Unsupported transport type: ${String(type)}`);
         }
-        
+
         // Connect to server with timeout
-        const connectTimeout = new Promise((_, reject) => 
+        const connectTimeout = new Promise((_, reject) =>
           setTimeout(() => reject(new Error('Connection timeout')), 30000)
         );
-        
-        await Promise.race([
-          client.connect(transport),
-          connectTimeout
-        ]);
-        
+
+        await Promise.race([client.connect(transport), connectTimeout]);
+
         this.clients.set(name, client);
         this.connectionStatus.set(name, 'connected');
         this.retryInfo.delete(name); // Clear retry info on success
-        
+
         logger.info(`Connected to MCP server: ${name} (${type}) after ${attempt} retries`);
         return client;
-        
       } catch (error: unknown) {
-        logger.warn(`Failed to connect to MCP server ${name} (attempt ${attempt + 1}/${maxRetries + 1}):`, error instanceof Error ? error.message : String(error));
-        
+        logger.warn(
+          `Failed to connect to MCP server ${name} (attempt ${attempt + 1}/${maxRetries + 1}):`,
+          error instanceof Error ? error.message : String(error)
+        );
+
         if (attempt === maxRetries) {
           this.connectionStatus.set(name, 'error');
           this.retryInfo.set(name, { attempts: attempt + 1, lastAttempt: Date.now() });
@@ -153,17 +164,17 @@ export class MCPClientManager {
         }
       }
     }
-    
+
     throw new Error(`Failed to connect to MCP server ${name} after ${maxRetries + 1} attempts`);
   }
 
   private sleep(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
   async disconnectAll(): Promise<void> {
     logger.info('Disconnecting all MCP clients');
-    
+
     const disconnectPromises = Array.from(this.clients.entries()).map(async ([name, client]) => {
       try {
         await client.close();
@@ -174,9 +185,9 @@ export class MCPClientManager {
         logger.error(`Error disconnecting from MCP server ${name}:`, errorMessage);
       }
     });
-    
+
     await Promise.allSettled(disconnectPromises);
-    
+
     this.clients.clear();
     logger.info('All MCP clients disconnected');
   }
@@ -184,43 +195,45 @@ export class MCPClientManager {
   getClient(serverName: string): Client | undefined {
     const client = this.clients.get(serverName);
     const status = this.connectionStatus.get(serverName);
-    
+
     if (!client || status !== 'connected') {
       return undefined;
     }
-    
+
     return client;
   }
 
-  getConnectionStatus(serverName: string): 'connected' | 'connecting' | 'disconnected' | 'error' | 'unknown' {
+  getConnectionStatus(
+    serverName: string
+  ): 'connected' | 'connecting' | 'disconnected' | 'error' | 'unknown' {
     return this.connectionStatus.get(serverName) || 'unknown';
   }
 
   getConnectedServers(): string[] {
-    return Array.from(this.clients.keys()).filter(name => 
-      this.connectionStatus.get(name) === 'connected'
+    return Array.from(this.clients.keys()).filter(
+      (name) => this.connectionStatus.get(name) === 'connected'
     );
   }
 
   async listAllTools(): Promise<MCPTool[]> {
     const allTools: MCPTool[] = [];
-    
+
     for (const [serverName, client] of this.clients.entries()) {
       if (this.connectionStatus.get(serverName) !== 'connected') {
         continue;
       }
-      
+
       try {
         const toolsResult = await client.listTools();
-        
+
         if (toolsResult.tools) {
-          const serverTools = toolsResult.tools.map(tool => ({
+          const serverTools = toolsResult.tools.map((tool) => ({
             serverName,
             name: tool.name,
             description: tool.description || '',
             inputSchema: tool.inputSchema,
           }));
-          
+
           allTools.push(...serverTools);
           logger.debug(`Listed ${serverTools.length} tools from ${serverName}`);
         }
@@ -229,7 +242,7 @@ export class MCPClientManager {
         logger.error(`Failed to list tools from ${serverName}:`, errorMessage);
       }
     }
-    
+
     logger.debug(`Total MCP tools available: ${allTools.length}`);
     return allTools;
   }
@@ -239,45 +252,54 @@ export class MCPClientManager {
     if (!client) {
       throw new Error(`MCP server ${serverName} not connected`);
     }
-    
+
     try {
       const toolsResult = await client.listTools();
-      
+
       if (!toolsResult.tools) {
         return [];
       }
-      
-      return toolsResult.tools.map(tool => ({
+
+      return toolsResult.tools.map((tool) => ({
         serverName,
         name: tool.name,
         description: tool.description || '',
         inputSchema: tool.inputSchema,
       }));
     } catch (error: unknown) {
-      logger.error(`Failed to list tools from ${serverName}:`, error instanceof Error ? error.message : String(error));
+      logger.error(
+        `Failed to list tools from ${serverName}:`,
+        error instanceof Error ? error.message : String(error)
+      );
       throw error;
     }
   }
 
-  async callTool(serverName: string, toolName: string, args: Record<string, unknown>): Promise<unknown> {
+  async callTool(
+    serverName: string,
+    toolName: string,
+    args: Record<string, unknown>
+  ): Promise<unknown> {
     const client = this.getClient(serverName);
     if (!client) {
       throw new Error(`MCP server ${serverName} not connected`);
     }
-    
+
     try {
       SafeLogger.debug(`Calling MCP tool ${serverName}:${toolName} with args:`, args);
-      
+
       const result = await client.callTool({
         name: toolName,
         arguments: args,
       });
-      
+
       SafeLogger.debug(`MCP tool ${serverName}:${toolName} returned:`, result);
       return result;
-      
     } catch (error: unknown) {
-      logger.error(`Failed to call MCP tool ${serverName}:${toolName}:`, error instanceof Error ? error.message : String(error));
+      logger.error(
+        `Failed to call MCP tool ${serverName}:${toolName}:`,
+        error instanceof Error ? error.message : String(error)
+      );
       throw error;
     }
   }
@@ -285,7 +307,7 @@ export class MCPClientManager {
   // Health check for all connected servers
   async healthCheck(): Promise<Record<string, boolean>> {
     const healthStatus: Record<string, boolean> = {};
-    
+
     for (const [serverName, client] of this.clients.entries()) {
       try {
         // Try to list tools as a health check
@@ -295,29 +317,38 @@ export class MCPClientManager {
       } catch (error: unknown) {
         healthStatus[serverName] = false;
         this.connectionStatus.set(serverName, 'error');
-        logger.warn(`Health check failed for MCP server ${serverName}:`, error instanceof Error ? error.message : String(error));
+        logger.warn(
+          `Health check failed for MCP server ${serverName}:`,
+          error instanceof Error ? error.message : String(error)
+        );
       }
     }
-    
+
     return healthStatus;
   }
 
   // Get status of all servers
-  getStatus(): Record<string, {
-    status: string;
-    type: string;
-    toolCount?: number;
-    retryAttempts?: number;
-    lastAttempt?: number;
-  }> {
-    const status: Record<string, {
+  getStatus(): Record<
+    string,
+    {
       status: string;
       type: string;
+      toolCount?: number;
       retryAttempts?: number;
       lastAttempt?: number;
-    }> = {};
-    
-    this.configs.forEach(config => {
+    }
+  > {
+    const status: Record<
+      string,
+      {
+        status: string;
+        type: string;
+        retryAttempts?: number;
+        lastAttempt?: number;
+      }
+    > = {};
+
+    this.configs.forEach((config) => {
       const retryInfo = this.retryInfo.get(config.name);
       status[config.name] = {
         status: this.connectionStatus.get(config.name) || 'unknown',
@@ -328,7 +359,7 @@ export class MCPClientManager {
         }),
       };
     });
-    
+
     return status;
   }
 
@@ -339,7 +370,7 @@ export class MCPClientManager {
 
   // Retry connection for a specific server
   async retryConnection(serverName: string): Promise<boolean> {
-    const config = this.configs.find(c => c.name === serverName);
+    const config = this.configs.find((c) => c.name === serverName);
     if (!config) {
       logger.error(`Server config not found for ${serverName}`);
       return false;
@@ -355,12 +386,15 @@ export class MCPClientManager {
 
       // Reset retry info
       this.retryInfo.delete(serverName);
-      
+
       // Attempt to connect
       await this.connectToServer(config);
       return true;
     } catch (error: unknown) {
-      logger.error(`Manual retry failed for ${serverName}:`, error instanceof Error ? error.message : String(error));
+      logger.error(
+        `Manual retry failed for ${serverName}:`,
+        error instanceof Error ? error.message : String(error)
+      );
       return false;
     }
   }

@@ -12,12 +12,18 @@ interface UsageData {
     errors: number;
     estimatedCostUSD?: number;
   };
-  usage: Record<string, Record<string, {
-    requests: number;
-    promptTokens: number;
-    completionTokens: number;
-    errors: number;
-  }>>;
+  usage: Record<
+    string,
+    Record<
+      string,
+      {
+        requests: number;
+        promptTokens: number;
+        completionTokens: number;
+        errors: number;
+      }
+    >
+  >;
   costByProvider?: Record<string, number>;
 }
 
@@ -44,9 +50,7 @@ app.ontoolresult = (params) => {
   }
 
   try {
-    const data: UsageData = JSON.parse(
-      (content[1] as { type: string; text: string }).text
-    );
+    const data: UsageData = JSON.parse((content[1] as { type: string; text: string }).text);
     render(data);
   } catch {
     container.innerHTML = `<div class="error-banner">Failed to parse usage data</div>`;

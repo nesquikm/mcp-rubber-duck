@@ -20,7 +20,7 @@ function getLogsDirectory(): string {
     const __dirname = dirname(__filename);
     const projectRoot = join(__dirname, '..', '..');
     const projectLogsDir = join(projectRoot, 'logs');
-    
+
     // Check if we can write to project directory
     if (existsSync(projectRoot)) {
       return projectLogsDir;
@@ -40,12 +40,9 @@ if (!existsSync(logsDir)) {
 }
 
 // Use simpler format for MCP to avoid interfering with JSON communication
-const consoleFormat = isMCP 
+const consoleFormat = isMCP
   ? winston.format.simple()
-  : winston.format.combine(
-      winston.format.colorize(),
-      winston.format.simple()
-    );
+  : winston.format.combine(winston.format.colorize(), winston.format.simple());
 
 // File format with more details for debugging crashes
 const fileFormat = winston.format.combine(

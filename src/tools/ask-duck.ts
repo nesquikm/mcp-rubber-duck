@@ -1,16 +1,15 @@
 import { ProviderManager } from '../providers/manager.js';
+import { ImageInput, buildContent } from '../config/types.js';
 import { formatDuckResponse } from '../utils/ascii-art.js';
 import { logger } from '../utils/logger.js';
 
-export async function askDuckTool(
-  providerManager: ProviderManager,
-  args: Record<string, unknown>
-) {
-  const { prompt, provider, model, temperature } = args as {
+export async function askDuckTool(providerManager: ProviderManager, args: Record<string, unknown>) {
+  const { prompt, provider, model, temperature, images } = args as {
     prompt?: string;
     provider?: string;
     model?: string;
     temperature?: number;
+    images?: ImageInput[];
   };
 
   if (!prompt) {
@@ -25,17 +24,14 @@ export async function askDuckTool(
     }
   }
 
-  const response = await providerManager.askDuck(provider, prompt, {
+  const content = buildContent(prompt, images);
+  const response = await providerManager.askDuck(provider, content, {
     model,
     temperature,
   });
 
   // Format the response
-  const formattedResponse = formatDuckResponse(
-    response.nickname,
-    response.content,
-    response.model
-  );
+  const formattedResponse = formatDuckResponse(response.nickname, response.content, response.model);
 
   // Add usage info if available
   let usageInfo = '';

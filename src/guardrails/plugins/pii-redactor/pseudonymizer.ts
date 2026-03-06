@@ -46,10 +46,7 @@ export class Pseudonymizer {
 
     for (const [placeholder, original] of mappings) {
       // Use global replace to handle multiple occurrences
-      result = result.replace(
-        new RegExp(this.escapeRegex(placeholder), 'g'),
-        original
-      );
+      result = result.replace(new RegExp(this.escapeRegex(placeholder), 'g'), original);
     }
 
     return result;

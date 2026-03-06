@@ -6,7 +6,13 @@ interface DebateData {
   format: 'oxford' | 'socratic' | 'adversarial';
   totalRounds: number;
   participants: { provider: string; nickname: string; position: string }[];
-  rounds: { round: number; provider: string; nickname: string; position: string; content: string }[][];
+  rounds: {
+    round: number;
+    provider: string;
+    nickname: string;
+    position: string;
+    content: string;
+  }[][];
   synthesis: string;
   synthesizer: string;
 }
@@ -39,9 +45,7 @@ app.ontoolresult = (params) => {
   }
 
   try {
-    const data: DebateData = JSON.parse(
-      (content[1] as { type: string; text: string }).text
-    );
+    const data: DebateData = JSON.parse((content[1] as { type: string; text: string }).text);
     render(data);
   } catch {
     container.innerHTML = `<div class="error-banner">Failed to parse debate data</div>`;

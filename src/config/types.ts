@@ -168,9 +168,45 @@ export type GuardrailsPluginsConfig = z.infer<typeof GuardrailsPluginsConfigSche
 export type GuardrailsConfig = z.infer<typeof GuardrailsConfigSchema>;
 export type Config = z.infer<typeof ConfigSchema>;
 
+// Multimodal content types
+export interface ImageInput {
+  data: string; // base64-encoded image data
+  mimeType: string; // e.g. "image/png", "image/jpeg"
+}
+
+export type TextContentPart = { type: 'text'; text: string };
+export type ImageContentPart = { type: 'image'; data: string; mimeType: string };
+export type ContentPart = TextContentPart | ImageContentPart;
+export type MessageContent = string | ContentPart[];
+
+/** Extract plain text from MessageContent, regardless of format */
+export function getTextContent(content: MessageContent): string {
+  if (typeof content === 'string') return content;
+  return content
+    .filter((p): p is TextContentPart => p.type === 'text')
+    .map((p) => p.text)
+    .join('\n');
+}
+
+/** Check if content contains images */
+export function hasImages(content: MessageContent): boolean {
+  if (typeof content === 'string') return false;
+  return content.some((p) => p.type === 'image');
+}
+
+/** Build a MessageContent from text + optional images */
+export function buildContent(text: string, images?: ImageInput[]): MessageContent {
+  if (!images || images.length === 0) return text;
+  const parts: ContentPart[] = [{ type: 'text', text }];
+  for (const img of images) {
+    parts.push({ type: 'image', data: img.data, mimeType: img.mimeType });
+  }
+  return parts;
+}
+
 export interface ConversationMessage {
   role: 'system' | 'user' | 'assistant';
-  content: string;
+  content: MessageContent;
   timestamp: Date;
   provider?: string;
 }

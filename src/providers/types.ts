@@ -1,10 +1,10 @@
 import { ConversationMessage } from '../config/types.js';
 import { FunctionDefinition } from '../services/function-bridge.js';
-import type { 
-  ChatCompletion, 
+import type {
+  ChatCompletion,
   ChatCompletionMessageParam,
   ChatCompletionMessageToolCall,
-  ChatCompletionCreateParamsNonStreaming
+  ChatCompletionCreateParamsNonStreaming,
 } from 'openai/resources/chat/completions';
 
 export interface ModelInfo {

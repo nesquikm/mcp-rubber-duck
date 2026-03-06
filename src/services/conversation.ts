@@ -23,12 +23,9 @@ export class ConversationManager {
     return this.conversations.get(id);
   }
 
-  addMessage(
-    conversationId: string,
-    message: ConversationMessage
-  ): Conversation {
+  addMessage(conversationId: string, message: ConversationMessage): Conversation {
     const conversation = this.conversations.get(conversationId);
-    
+
     if (!conversation) {
       throw new Error(`Conversation ${conversationId} not found`);
     }
@@ -49,14 +46,14 @@ export class ConversationManager {
 
   switchProvider(conversationId: string, newProvider: string): Conversation {
     const conversation = this.conversations.get(conversationId);
-    
+
     if (!conversation) {
       throw new Error(`Conversation ${conversationId} not found`);
     }
 
     conversation.provider = newProvider;
     conversation.updatedAt = new Date();
-    
+
     // Add a system message noting the provider switch
     conversation.messages.push({
       role: 'system',
@@ -76,7 +73,7 @@ export class ConversationManager {
     createdAt: Date;
     updatedAt: Date;
   }> {
-    return Array.from(this.conversations.values()).map(conv => ({
+    return Array.from(this.conversations.values()).map((conv) => ({
       id: conv.id,
       provider: conv.provider,
       messageCount: conv.messages.length,
@@ -111,13 +108,13 @@ export class ConversationManager {
 
   getConversationContext(id: string, maxMessages?: number): ConversationMessage[] {
     const conversation = this.conversations.get(id);
-    
+
     if (!conversation) {
       return [];
     }
 
     const messages = conversation.messages;
-    
+
     if (maxMessages && messages.length > maxMessages) {
       return messages.slice(-maxMessages);
     }
@@ -127,17 +124,19 @@ export class ConversationManager {
 
   clearAll(): { conversationsCleared: number; messagesCleared: number } {
     let totalMessages = 0;
-    
+
     // Count total messages across all conversations
     for (const conversation of this.conversations.values()) {
       totalMessages += conversation.messages.length;
     }
-    
+
     const conversationsCleared = this.conversations.size;
     this.conversations.clear();
-    
-    logger.info(`Cleared ${conversationsCleared} conversations with ${totalMessages} total messages`);
-    
+
+    logger.info(
+      `Cleared ${conversationsCleared} conversations with ${totalMessages} total messages`
+    );
+
     return {
       conversationsCleared,
       messagesCleared: totalMessages,

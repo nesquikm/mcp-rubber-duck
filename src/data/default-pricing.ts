@@ -65,13 +65,13 @@ export const DEFAULT_PRICING: PricingConfig = {
     'o4-mini-deep-research': { inputPricePerMillion: 2, outputPricePerMillion: 8 },
 
     // o3 reasoning models
-    'o3': { inputPricePerMillion: 2, outputPricePerMillion: 8 },
+    o3: { inputPricePerMillion: 2, outputPricePerMillion: 8 },
     'o3-pro': { inputPricePerMillion: 20, outputPricePerMillion: 80 },
     'o3-deep-research': { inputPricePerMillion: 10, outputPricePerMillion: 40 },
     'o3-mini': { inputPricePerMillion: 1.1, outputPricePerMillion: 4.4 },
 
     // o1 reasoning models
-    'o1': { inputPricePerMillion: 15, outputPricePerMillion: 60 },
+    o1: { inputPricePerMillion: 15, outputPricePerMillion: 60 },
     'o1-pro': { inputPricePerMillion: 150, outputPricePerMillion: 600 },
     'o1-2024-12-17': { inputPricePerMillion: 15, outputPricePerMillion: 60 },
     'o1-preview': { inputPricePerMillion: 15, outputPricePerMillion: 60 },
@@ -141,7 +141,10 @@ export const DEFAULT_PRICING: PricingConfig = {
     'gemini-2.5-flash-lite': { inputPricePerMillion: 0.1, outputPricePerMillion: 0.4 },
     'gemini-2.5-flash-image': { inputPricePerMillion: 0.3, outputPricePerMillion: 3 },
     'gemini-2.5-flash-preview-09-2025': { inputPricePerMillion: 0.3, outputPricePerMillion: 2.5 },
-    'gemini-2.5-flash-lite-preview-09-2025': { inputPricePerMillion: 0.1, outputPricePerMillion: 0.4 },
+    'gemini-2.5-flash-lite-preview-09-2025': {
+      inputPricePerMillion: 0.1,
+      outputPricePerMillion: 0.4,
+    },
     'gemini-2.5-flash-native-audio-preview-12-2025': {
       inputPricePerMillion: 0.5,
       outputPricePerMillion: 2,
@@ -300,7 +303,10 @@ export const DEFAULT_PRICING: PricingConfig = {
     },
 
     // Llama 3
-    'meta-llama/Llama-3-8B-Instruct-Lite': { inputPricePerMillion: 0.1, outputPricePerMillion: 0.1 },
+    'meta-llama/Llama-3-8B-Instruct-Lite': {
+      inputPricePerMillion: 0.1,
+      outputPricePerMillion: 0.1,
+    },
     'meta-llama/Llama-3-70B-Instruct-Turbo': {
       inputPricePerMillion: 0.88,
       outputPricePerMillion: 0.88,
@@ -334,7 +340,10 @@ export const DEFAULT_PRICING: PricingConfig = {
     'Qwen/Qwen3-Coder-480B-A35B-Instruct': { inputPricePerMillion: 2, outputPricePerMillion: 2 },
     'Qwen/Qwen3-235B-A22B-Instruct-FP8': { inputPricePerMillion: 0.2, outputPricePerMillion: 0.6 },
     'Qwen/Qwen3-235B-A22B-Thinking-FP8': { inputPricePerMillion: 0.65, outputPricePerMillion: 3 },
-    'Qwen/Qwen3-235B-A22B-FP8-Throughput': { inputPricePerMillion: 0.2, outputPricePerMillion: 0.6 },
+    'Qwen/Qwen3-235B-A22B-FP8-Throughput': {
+      inputPricePerMillion: 0.2,
+      outputPricePerMillion: 0.6,
+    },
 
     // Qwen 2.5
     'Qwen/Qwen2.5-72B-Instruct-Turbo': { inputPricePerMillion: 1.2, outputPricePerMillion: 1.2 },
@@ -361,7 +370,10 @@ export const DEFAULT_PRICING: PricingConfig = {
     // Mistral
     'mistralai/Mistral-7B-Instruct-v0.2': { inputPricePerMillion: 0.2, outputPricePerMillion: 0.2 },
     'mistralai/Mistral-Small-3': { inputPricePerMillion: 0.1, outputPricePerMillion: 0.3 },
-    'mistralai/Mixtral-8x7B-Instruct-v0.1': { inputPricePerMillion: 0.6, outputPricePerMillion: 0.6 },
+    'mistralai/Mixtral-8x7B-Instruct-v0.1': {
+      inputPricePerMillion: 0.6,
+      outputPricePerMillion: 0.6,
+    },
     'mistralai/Ministral-3-14B-Instruct-2512': {
       inputPricePerMillion: 0.2,
       outputPricePerMillion: 0.2,
@@ -398,16 +410,16 @@ export const DEFAULT_PRICING: PricingConfig = {
     // All local models are free
     'llama3.2': { inputPricePerMillion: 0, outputPricePerMillion: 0 },
     'llama3.1': { inputPricePerMillion: 0, outputPricePerMillion: 0 },
-    'llama3': { inputPricePerMillion: 0, outputPricePerMillion: 0 },
-    'llama4': { inputPricePerMillion: 0, outputPricePerMillion: 0 },
-    'mistral': { inputPricePerMillion: 0, outputPricePerMillion: 0 },
-    'codellama': { inputPricePerMillion: 0, outputPricePerMillion: 0 },
-    'phi3': { inputPricePerMillion: 0, outputPricePerMillion: 0 },
-    'phi4': { inputPricePerMillion: 0, outputPricePerMillion: 0 },
-    'gemma2': { inputPricePerMillion: 0, outputPricePerMillion: 0 },
-    'gemma3': { inputPricePerMillion: 0, outputPricePerMillion: 0 },
+    llama3: { inputPricePerMillion: 0, outputPricePerMillion: 0 },
+    llama4: { inputPricePerMillion: 0, outputPricePerMillion: 0 },
+    mistral: { inputPricePerMillion: 0, outputPricePerMillion: 0 },
+    codellama: { inputPricePerMillion: 0, outputPricePerMillion: 0 },
+    phi3: { inputPricePerMillion: 0, outputPricePerMillion: 0 },
+    phi4: { inputPricePerMillion: 0, outputPricePerMillion: 0 },
+    gemma2: { inputPricePerMillion: 0, outputPricePerMillion: 0 },
+    gemma3: { inputPricePerMillion: 0, outputPricePerMillion: 0 },
     'qwen2.5': { inputPricePerMillion: 0, outputPricePerMillion: 0 },
-    'qwen3': { inputPricePerMillion: 0, outputPricePerMillion: 0 },
+    qwen3: { inputPricePerMillion: 0, outputPricePerMillion: 0 },
     'deepseek-r1': { inputPricePerMillion: 0, outputPricePerMillion: 0 },
     'deepseek-v3': { inputPricePerMillion: 0, outputPricePerMillion: 0 },
   },

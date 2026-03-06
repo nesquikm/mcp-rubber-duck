@@ -20,7 +20,7 @@ export async function listDucksTool(
   let healthStatus = new Map<string, ProviderHealth>();
   if (check_health) {
     const healthResults = await healthMonitor.performHealthChecks();
-    healthStatus = new Map(healthResults.map(result => [result.provider, result]));
+    healthStatus = new Map(healthResults.map((result) => [result.provider, result]));
   }
 
   // Build response
@@ -30,7 +30,7 @@ export async function listDucksTool(
   for (const provider of providers) {
     const health = healthStatus.get(provider.name);
     const statusEmoji = health?.healthy ? '✅' : health === undefined ? '❓' : '❌';
-    
+
     const providerType = provider.info.type === 'cli' ? 'CLI' : 'HTTP';
     response += `${statusEmoji} **${provider.info.nickname}** (${provider.name}) [${providerType}]\n`;
     response += `   📍 Model: ${provider.info.model}\n`;
@@ -41,7 +41,7 @@ export async function listDucksTool(
       response += `   🔗 Endpoint: ${provider.info.baseURL}\n`;
       response += `   🔑 API Key: ${provider.info.hasApiKey ? 'Configured' : 'Not required'}\n`;
     }
-    
+
     if (health) {
       response += `   💓 Health: ${health.healthy ? 'Healthy' : 'Unhealthy'}`;
       if (health.latency) {
@@ -52,12 +52,12 @@ export async function listDucksTool(
       }
       response += `\n   🕒 Last check: ${health.lastCheck.toLocaleTimeString()}\n`;
     }
-    
+
     response += '\n';
   }
 
   // Add summary
-  const healthyCount = Array.from(healthStatus.values()).filter(h => h.healthy).length;
+  const healthyCount = Array.from(healthStatus.values()).filter((h) => h.healthy).length;
   response += `\n📊 Summary: ${healthyCount}/${providers.length} ducks are healthy and ready!`;
 
   logger.info(`Listed ${providers.length} ducks, ${healthyCount} healthy`);

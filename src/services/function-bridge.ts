@@ -42,7 +42,10 @@ export class FunctionBridge {
     this.mcpManager = mcpManager;
     this.approvalService = approvalService;
     this.trustedTools = new Set(trustedTools);
-    this.ajv = new (Ajv as unknown as new (options: unknown) => unknown)({ allErrors: true, removeAdditional: 'all' });
+    this.ajv = new (Ajv as unknown as new (options: unknown) => unknown)({
+      allErrors: true,
+      removeAdditional: 'all',
+    });
     this.approvalMode = approvalMode;
     this.guardrailsService = guardrailsService;
 
@@ -55,18 +58,17 @@ export class FunctionBridge {
   async getFunctionDefinitions(): Promise<FunctionDefinition[]> {
     try {
       const mcpTools = await this.mcpManager.listAllTools();
-      
-      const functionDefinitions: FunctionDefinition[] = mcpTools.map(tool => {
+
+      const functionDefinitions: FunctionDefinition[] = mcpTools.map((tool) => {
         const functionDef = this.convertMCPToolToFunction(tool);
         // Cache the tool schema for validation
         const toolKey = `${tool.serverName}:${tool.name}`;
         this.toolSchemas.set(toolKey, tool.inputSchema);
         return functionDef;
       });
-      
+
       logger.debug(`Generated ${functionDefinitions.length} function definitions from MCP tools`);
       return functionDefinitions;
-      
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : String(error);
       logger.error('Failed to generate function definitions:', errorMessage);
@@ -83,7 +85,7 @@ export class FunctionBridge {
         properties: {
           // Include the MCP tool's original parameters
           ...((mcpTool.inputSchema as { properties?: Record<string, unknown> })?.properties || {}),
-          
+
           // Add our internal parameters
           _mcp_server: {
             type: 'string',
@@ -91,7 +93,7 @@ export class FunctionBridge {
             default: mcpTool.serverName,
           },
           _mcp_tool: {
-            type: 'string', 
+            type: 'string',
             description: 'Internal: MCP tool name',
             default: mcpTool.name,
           },
@@ -100,28 +102,33 @@ export class FunctionBridge {
             description: 'Internal: Approval ID if pre-approved',
           },
         },
-        required: ((mcpTool.inputSchema as { required?: string[] })?.required || []),
+        required: (mcpTool.inputSchema as { required?: string[] })?.required || [],
       },
     };
   }
 
-  private validateToolArguments(toolKey: string, args: Record<string, unknown>): { valid: boolean; errors?: string[] } {
+  private validateToolArguments(
+    toolKey: string,
+    args: Record<string, unknown>
+  ): { valid: boolean; errors?: string[] } {
     const schema = this.toolSchemas.get(toolKey);
     if (!schema) {
       return { valid: true }; // No schema available, skip validation
     }
 
     try {
-      const validate: ValidateFunction = (this.ajv as { compile: (schema: unknown) => ValidateFunction }).compile(schema);
+      const validate: ValidateFunction = (
+        this.ajv as { compile: (schema: unknown) => ValidateFunction }
+      ).compile(schema);
       const valid = validate(args);
-      
+
       if (!valid && validate.errors) {
-        const errors = validate.errors.map(err => 
-          `${err.instancePath || 'root'}: ${err.message || 'validation error'}`
+        const errors = validate.errors.map(
+          (err) => `${err.instancePath || 'root'}: ${err.message || 'validation error'}`
         );
         return { valid: false, errors };
       }
-      
+
       return { valid: true };
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : String(error);
@@ -138,7 +145,7 @@ export class FunctionBridge {
     try {
       logger.info(`FunctionBridge.handleFunctionCall called: ${duckName} -> ${functionName}`);
       logger.debug(`Approval mode: ${this.approvalMode}, Function: ${functionName}`);
-      
+
       // Validate that this is an MCP function
       if (!functionName.startsWith('mcp__')) {
         logger.warn(`Invalid function name format: ${functionName}`);
@@ -149,7 +156,8 @@ export class FunctionBridge {
       }
 
       // Extract MCP server and tool names from args or function name
-      const mcpServer = (args._mcp_server as string) || this.extractServerFromFunctionName(functionName);
+      const mcpServer =
+        (args._mcp_server as string) || this.extractServerFromFunctionName(functionName);
       const mcpTool = (args._mcp_tool as string) || this.extractToolFromFunctionName(functionName);
       const approvalId = args._approval_id as string;
 
@@ -178,24 +186,33 @@ export class FunctionBridge {
 
       // Check if approval is needed based on approval mode
       let isTrusted = false;
-      
+
       // First check server-specific trusted tools
       const serverTrustedTools = this.trustedToolsByServer.get(mcpServer);
       if (serverTrustedTools) {
-        isTrusted = serverTrustedTools.has('*') || // Wildcard for all tools from server
-                    serverTrustedTools.has(mcpTool) || // Tool name only
-                    serverTrustedTools.has(toolKey); // Full server:tool format
-        logger.debug(`Server-specific trust check for ${mcpServer}: ${Array.from(serverTrustedTools).join(', ')} - isTrusted: ${isTrusted}`);
+        isTrusted =
+          serverTrustedTools.has('*') || // Wildcard for all tools from server
+          serverTrustedTools.has(mcpTool) || // Tool name only
+          serverTrustedTools.has(toolKey); // Full server:tool format
+        logger.debug(
+          `Server-specific trust check for ${mcpServer}: ${Array.from(serverTrustedTools).join(', ')} - isTrusted: ${isTrusted}`
+        );
       } else {
         // Fall back to global trusted tools
         isTrusted = this.trustedTools.has(toolKey) || this.trustedTools.has(mcpTool);
         logger.debug(`Global trust check - isTrusted: ${isTrusted}`);
       }
-      
-      const isAlreadyApprovedForSession = this.approvalService.isToolApprovedForSession(duckName, mcpServer, mcpTool);
+
+      const isAlreadyApprovedForSession = this.approvalService.isToolApprovedForSession(
+        duckName,
+        mcpServer,
+        mcpTool
+      );
       let needsApproval = false;
 
-      logger.debug(`Approval check - Mode: ${this.approvalMode}, Trusted: ${isTrusted}, SessionApproved: ${isAlreadyApprovedForSession}, ToolKey: ${toolKey}, Server: ${mcpServer}, ApprovalId: ${approvalId}`);
+      logger.debug(
+        `Approval check - Mode: ${this.approvalMode}, Trusted: ${isTrusted}, SessionApproved: ${isAlreadyApprovedForSession}, ToolKey: ${toolKey}, Server: ${mcpServer}, ApprovalId: ${approvalId}`
+      );
 
       if (this.approvalMode === 'always') {
         // Always require approval unless already approved or approved for session
@@ -231,7 +248,7 @@ export class FunctionBridge {
       // If approval ID provided, verify it (except in 'never' mode)
       if (approvalId && this.approvalMode !== 'never') {
         const approvalStatus = this.approvalService.getApprovalStatus(approvalId);
-        
+
         if (approvalStatus !== 'approved') {
           return {
             success: false,
@@ -269,7 +286,10 @@ export class FunctionBridge {
       // Execute post_tool_output guardrails
       if (guardrailContext && this.guardrailsService?.isEnabled()) {
         guardrailContext.toolResult = result;
-        const postResult = await this.guardrailsService.execute('post_tool_output', guardrailContext);
+        const postResult = await this.guardrailsService.execute(
+          'post_tool_output',
+          guardrailContext
+        );
         if (postResult.action === 'block') {
           throw new GuardrailBlockError(
             postResult.blockedBy || 'unknown',
@@ -289,7 +309,6 @@ export class FunctionBridge {
         success: true,
         data: result,
       };
-
     } catch (error: unknown) {
       // Re-throw GuardrailBlockError as-is
       if (error instanceof GuardrailBlockError) {
@@ -320,7 +339,7 @@ export class FunctionBridge {
   async isToolAvailable(serverName: string, toolName: string): Promise<boolean> {
     try {
       const tools = await this.mcpManager.listServerTools(serverName);
-      return tools.some(tool => tool.name === toolName);
+      return tools.some((tool) => tool.name === toolName);
     } catch (_error) {
       return false;
     }
@@ -332,7 +351,7 @@ export class FunctionBridge {
       const allTools = await this.mcpManager.listAllTools();
       const toolsByServer: Record<string, MCPTool[]> = {};
 
-      allTools.forEach(tool => {
+      allTools.forEach((tool) => {
         if (!toolsByServer[tool.serverName]) {
           toolsByServer[tool.serverName] = [];
         }
@@ -348,10 +367,13 @@ export class FunctionBridge {
   }
 
   // Update trusted tools list
-  updateTrustedTools(trustedTools: string[], trustedToolsByServer?: Record<string, string[]>): void {
+  updateTrustedTools(
+    trustedTools: string[],
+    trustedToolsByServer?: Record<string, string[]>
+  ): void {
     this.trustedTools = new Set(trustedTools);
     logger.info(`Updated global trusted tools list: ${Array.from(this.trustedTools).join(', ')}`);
-    
+
     if (trustedToolsByServer) {
       this.trustedToolsByServer.clear();
       Object.entries(trustedToolsByServer).forEach(([serverName, tools]) => {

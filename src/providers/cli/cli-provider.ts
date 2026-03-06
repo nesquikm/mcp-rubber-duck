@@ -2,6 +2,7 @@ import { IDuckProvider, ChatOptions, ChatResponse, ModelInfo } from '../types.js
 import { ResolvedCLIConfig } from './presets.js';
 import { runCLIProcess } from './process-runner.js';
 import { parseTextOutput, parseJsonOutput, parseJsonlOutput } from './output-parsers.js';
+import { getTextContent } from '../../config/types.js';
 import { logger } from '../../utils/logger.js';
 
 export class CLIDuckProvider implements IDuckProvider {
@@ -69,16 +70,20 @@ export class CLIDuckProvider implements IDuckProvider {
 
   listModels(): Promise<ModelInfo[]> {
     if (this.config.models && this.config.models.length > 0) {
-      return Promise.resolve(this.config.models.map(id => ({
-        id,
-        description: `Configured CLI model`,
-      })));
+      return Promise.resolve(
+        this.config.models.map((id) => ({
+          id,
+          description: `Configured CLI model`,
+        }))
+      );
     }
 
-    return Promise.resolve([{
-      id: this.config.default_model || 'default',
-      description: `Default CLI model for ${this.config.cli_type}`,
-    }]);
+    return Promise.resolve([
+      {
+        id: this.config.default_model || 'default',
+        description: `Default CLI model for ${this.config.cli_type}`,
+      },
+    ]);
   }
 
   getInfo() {
@@ -98,10 +103,10 @@ export class CLIDuckProvider implements IDuckProvider {
     const messages = options.messages;
     for (let i = messages.length - 1; i >= 0; i--) {
       if (messages[i].role === 'user') {
-        return messages[i].content;
+        return getTextContent(messages[i].content);
       }
     }
-    return messages[messages.length - 1]?.content || '';
+    return getTextContent(messages[messages.length - 1]?.content ?? '');
   }
 
   private buildCommandArgs(
@@ -150,7 +155,7 @@ export class CLIDuckProvider implements IDuckProvider {
         args.push(prompt);
         break;
       case 'stdin':
-        stdin = (systemPrompt && !systemPromptHandled) ? `${systemPrompt}\n\n${prompt}` : prompt;
+        stdin = systemPrompt && !systemPromptHandled ? `${systemPrompt}\n\n${prompt}` : prompt;
         break;
     }
 
@@ -190,11 +195,7 @@ export class CLIDuckProvider implements IDuckProvider {
   private parseOutput(stdout: string) {
     switch (this.config.output_format) {
       case 'json':
-        return parseJsonOutput(
-          stdout,
-          this.config.response_json_path,
-          this.config.usage_json_path
-        );
+        return parseJsonOutput(stdout, this.config.response_json_path, this.config.usage_json_path);
       case 'jsonl':
         return parseJsonlOutput(stdout, this.config.response_json_path);
       case 'text':

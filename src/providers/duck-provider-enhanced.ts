@@ -1,7 +1,15 @@
 import { DuckProvider } from './provider.js';
-import { ChatOptions, ChatResponse, ProviderOptions, OpenAIChatParams, OpenAIMessage, MCPResult, OpenAIToolCall } from './types.js';
+import {
+  ChatOptions,
+  ChatResponse,
+  ProviderOptions,
+  OpenAIChatParams,
+  OpenAIMessage,
+  MCPResult,
+  OpenAIToolCall,
+} from './types.js';
 import { FunctionBridge } from '../services/function-bridge.js';
-import { ConversationMessage } from '../config/types.js';
+import { ConversationMessage, getTextContent } from '../config/types.js';
 import { logger } from '../utils/logger.js';
 import { SafeLogger } from '../utils/safe-logger.js';
 import { GuardrailsService } from '../guardrails/service.js';
@@ -46,7 +54,7 @@ export class EnhancedDuckProvider extends DuckProvider {
             provider: this.name,
             model: modelToUse,
             messages: options.messages,
-            prompt: options.messages[options.messages.length - 1]?.content,
+            prompt: getTextContent(options.messages[options.messages.length - 1]?.content ?? ''),
           })
         : undefined;
 
@@ -91,7 +99,7 @@ export class EnhancedDuckProvider extends DuckProvider {
 
       // Add tools if available
       if (options.tools && options.tools.length > 0) {
-        baseParams.tools = options.tools.map(tool => ({
+        baseParams.tools = options.tools.map((tool) => ({
           type: 'function',
           function: {
             name: tool.name,
@@ -120,7 +128,10 @@ export class EnhancedDuckProvider extends DuckProvider {
         // Execute post_response guardrails on final result
         if (guardrailContext && this.guardrailsService?.isEnabled()) {
           guardrailContext.response = toolResult.content;
-          const postResult = await this.guardrailsService.execute('post_response', guardrailContext);
+          const postResult = await this.guardrailsService.execute(
+            'post_response',
+            guardrailContext
+          );
           if (postResult.action === 'block') {
             throw new GuardrailBlockError(
               postResult.blockedBy || 'unknown',
@@ -155,15 +166,16 @@ export class EnhancedDuckProvider extends DuckProvider {
       // No tool calls, return regular response
       return {
         content,
-        usage: response.usage ? {
-          promptTokens: response.usage.prompt_tokens,
-          completionTokens: response.usage.completion_tokens,
-          totalTokens: response.usage.total_tokens,
-        } : undefined,
+        usage: response.usage
+          ? {
+              promptTokens: response.usage.prompt_tokens,
+              completionTokens: response.usage.completion_tokens,
+              totalTokens: response.usage.total_tokens,
+            }
+          : undefined,
         model: modelToUse,
         finishReason: choice.finish_reason || undefined,
       };
-
     } catch (error: unknown) {
       // Re-throw GuardrailBlockError as-is
       if (error instanceof GuardrailBlockError) {
@@ -185,7 +197,11 @@ export class EnhancedDuckProvider extends DuckProvider {
   ): Promise<EnhancedChatResponse> {
     // Accumulate usage across all rounds
     let accumulatedUsage = initialUsage
-      ? { promptTokens: initialUsage.prompt_tokens, completionTokens: initialUsage.completion_tokens, totalTokens: initialUsage.total_tokens }
+      ? {
+          promptTokens: initialUsage.prompt_tokens,
+          completionTokens: initialUsage.completion_tokens,
+          totalTokens: initialUsage.total_tokens,
+        }
       : undefined;
 
     const allMcpResults: MCPResult[] = [];
@@ -241,14 +257,16 @@ export class EnhancedDuckProvider extends DuckProvider {
               success: false,
               error: `Approval needed: ${result.message || functionName}`,
             });
-
           } else if (result.success) {
             toolMessages.push({
               role: 'tool',
               tool_call_id: toolCall.id,
-              content: result.data != null
-                ? (typeof result.data === 'string' ? result.data : JSON.stringify(result.data))
-                : 'Success',
+              content:
+                result.data != null
+                  ? typeof result.data === 'string'
+                    ? result.data
+                    : JSON.stringify(result.data)
+                  : 'Success',
             });
 
             allMcpResults.push({
@@ -256,7 +274,6 @@ export class EnhancedDuckProvider extends DuckProvider {
               success: true,
               data: result.data,
             });
-
           } else {
             toolMessages.push({
               role: 'tool',
@@ -272,7 +289,6 @@ export class EnhancedDuckProvider extends DuckProvider {
               error: result.error || 'Unknown error',
             });
           }
-
         } catch (error: unknown) {
           logger.error(`Error processing tool call ${toolCall.id}:`, error);
           const errorMessage = error instanceof Error ? error.message : String(error);
@@ -297,9 +313,10 @@ export class EnhancedDuckProvider extends DuckProvider {
 
       // If we have pending approvals, return immediately
       if (pendingApprovals.length > 0) {
-        const approvalMessage = pendingApprovals.length === 1
-          ? pendingApprovals[0].message
-          : `Multiple approvals needed: ${pendingApprovals.map(a => a.id).join(', ')}`;
+        const approvalMessage =
+          pendingApprovals.length === 1
+            ? pendingApprovals[0].message
+            : `Multiple approvals needed: ${pendingApprovals.map((a) => a.id).join(', ')}`;
 
         return {
           content: `⏳ ${approvalMessage}`,
@@ -342,7 +359,9 @@ export class EnhancedDuckProvider extends DuckProvider {
 
       // Warn about growing message count that could overflow context window
       if (messages.length > 40) {
-        logger.warn(`${this.nickname} message count is ${messages.length} at round ${round} — risk of context window overflow`);
+        logger.warn(
+          `${this.nickname} message count is ${messages.length} at round ${round} — risk of context window overflow`
+        );
       }
 
       // If no more tool calls, return the text response
@@ -362,7 +381,9 @@ export class EnhancedDuckProvider extends DuckProvider {
     }
 
     // Max rounds reached — force a text-only response
-    logger.warn(`${this.nickname} hit max tool rounds (${this.maxToolRounds}), forcing text response`);
+    logger.warn(
+      `${this.nickname} hit max tool rounds (${this.maxToolRounds}), forcing text response`
+    );
     const finalParams = {
       ...baseParams,
       messages,
@@ -409,7 +430,7 @@ export class EnhancedDuckProvider extends DuckProvider {
   ): Promise<EnhancedChatResponse> {
     // Add approval ID to the tool arguments
     if (options.tools) {
-      options.tools = options.tools.map(tool => ({
+      options.tools = options.tools.map((tool) => ({
         ...tool,
         parameters: {
           ...tool.parameters,

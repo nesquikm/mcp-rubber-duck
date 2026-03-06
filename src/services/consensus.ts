@@ -11,11 +11,7 @@ export class ConsensusService {
   /**
    * Build a voting prompt that asks the LLM to vote on options
    */
-  buildVotePrompt(
-    question: string,
-    options: string[],
-    requireReasoning: boolean = true
-  ): string {
+  buildVotePrompt(question: string, options: string[], requireReasoning: boolean = true): string {
     const optionsList = options.map((opt, i) => `${i + 1}. ${opt}`).join('\n');
 
     const format = requireReasoning
@@ -53,12 +49,7 @@ IMPORTANT:
   /**
    * Parse a vote from an LLM response
    */
-  parseVote(
-    response: string,
-    voter: string,
-    nickname: string,
-    options: string[]
-  ): VoteResult {
+  parseVote(response: string, voter: string, nickname: string, options: string[]): VoteResult {
     const result: VoteResult = {
       voter,
       nickname,
@@ -82,17 +73,16 @@ IMPORTANT:
       const choice = parsed.choice?.toString().trim();
       if (choice) {
         // Try exact match first
-        const exactMatch = options.find(
-          opt => opt.toLowerCase() === choice.toLowerCase()
-        );
+        const exactMatch = options.find((opt) => opt.toLowerCase() === choice.toLowerCase());
 
         if (exactMatch) {
           result.choice = exactMatch;
         } else {
           // Try partial match
           const partialMatch = options.find(
-            opt => opt.toLowerCase().includes(choice.toLowerCase()) ||
-                   choice.toLowerCase().includes(opt.toLowerCase())
+            (opt) =>
+              opt.toLowerCase().includes(choice.toLowerCase()) ||
+              choice.toLowerCase().includes(opt.toLowerCase())
           );
           if (partialMatch) {
             result.choice = partialMatch;
@@ -115,7 +105,6 @@ IMPORTANT:
       if (parsed.reasoning) {
         result.reasoning = parsed.reasoning.toString().trim();
       }
-
     } catch (error) {
       logger.warn(`Failed to parse JSON vote from ${voter}:`, error);
       return this.fallbackParse(response, voter, nickname, options);
@@ -158,11 +147,7 @@ IMPORTANT:
   /**
    * Aggregate votes into a final result
    */
-  aggregateVotes(
-    question: string,
-    options: string[],
-    votes: VoteResult[]
-  ): AggregatedVote {
+  aggregateVotes(question: string, options: string[], votes: VoteResult[]): AggregatedVote {
     // Initialize tally and confidence tracking
     const tally: Record<string, number> = {};
     const confidenceSums: Record<string, number> = {};
@@ -188,14 +173,15 @@ IMPORTANT:
     // Calculate average confidence per option
     const confidenceByOption: Record<string, number> = {};
     for (const option of options) {
-      confidenceByOption[option] = confidenceCounts[option] > 0
-        ? Math.round(confidenceSums[option] / confidenceCounts[option])
-        : 0;
+      confidenceByOption[option] =
+        confidenceCounts[option] > 0
+          ? Math.round(confidenceSums[option] / confidenceCounts[option])
+          : 0;
     }
 
     // Determine winner
     const maxVotes = Math.max(...Object.values(tally));
-    const winners = options.filter(opt => tally[opt] === maxVotes && maxVotes > 0);
+    const winners = options.filter((opt) => tally[opt] === maxVotes && maxVotes > 0);
 
     const isTie = winners.length > 1;
     let winner: string | null = null;
@@ -214,12 +200,7 @@ IMPORTANT:
     }
 
     // Determine consensus level
-    const consensusLevel = this.determineConsensusLevel(
-      validVotes,
-      votes.length,
-      maxVotes,
-      isTie
-    );
+    const consensusLevel = this.determineConsensusLevel(validVotes, votes.length, maxVotes, isTie);
 
     return {
       question,
@@ -273,8 +254,12 @@ IMPORTANT:
 
     // Winner announcement
     if (result.winner) {
-      const emoji = result.consensusLevel === 'unanimous' ? '🏆' :
-                    result.consensusLevel === 'majority' ? '✅' : '📊';
+      const emoji =
+        result.consensusLevel === 'unanimous'
+          ? '🏆'
+          : result.consensusLevel === 'majority'
+            ? '✅'
+            : '📊';
       output += `${emoji} **Winner:** ${result.winner}`;
       if (result.isTie) {
         output += ` (tie-breaker by confidence)`;
@@ -287,9 +272,7 @@ IMPORTANT:
 
     // Vote tally
     output += `**Vote Tally:**\n`;
-    const sortedOptions = [...result.options].sort(
-      (a, b) => result.tally[b] - result.tally[a]
-    );
+    const sortedOptions = [...result.options].sort((a, b) => result.tally[b] - result.tally[a]);
 
     for (const option of sortedOptions) {
       const votes = result.tally[option];

@@ -1,6 +1,6 @@
 import { BaseGuardrailPlugin } from '../base-plugin.js';
 import { GuardrailPhase, GuardrailContext, GuardrailResult } from '../../types.js';
-import { PIIRedactorConfig } from '../../../config/types.js';
+import { PIIRedactorConfig, ContentPart } from '../../../config/types.js';
 import { PIIDetector, PIIDetectorConfig } from './detectors.js';
 import { Pseudonymizer } from './pseudonymizer.js';
 import { logger } from '../../../utils/logger.js';
@@ -59,10 +59,7 @@ export class PIIRedactorPlugin extends BaseGuardrailPlugin {
     }
   }
 
-  private redactPII(
-    context: GuardrailContext,
-    phase: GuardrailPhase
-  ): Promise<GuardrailResult> {
+  private redactPII(context: GuardrailContext, phase: GuardrailPhase): Promise<GuardrailResult> {
     let textToScan: string;
     let field: string;
 
@@ -109,7 +106,7 @@ export class PIIRedactorPlugin extends BaseGuardrailPlugin {
       field,
       `Redacted ${detections.length} PII items: ${[...new Set(detections.map((d) => d.type))].join(', ')}`,
       undefined, // Don't store original (contains PII)
-      undefined  // Don't store new (would expose placeholder patterns)
+      undefined // Don't store new (would expose placeholder patterns)
     );
 
     // Apply modification
@@ -118,9 +115,17 @@ export class PIIRedactorPlugin extends BaseGuardrailPlugin {
       // Also update the last message if present
       if (context.messages.length > 0) {
         const lastIndex = context.messages.length - 1;
+        const originalContent = context.messages[lastIndex].content;
         context.messages[lastIndex] = {
           ...context.messages[lastIndex],
-          content: redactedText,
+          content:
+            typeof originalContent === 'string'
+              ? redactedText
+              : originalContent.map((part: ContentPart) =>
+                  part.type === 'text'
+                    ? { ...part, text: this.redactTextPart(part.text) }
+                    : part
+                ),
         };
       }
     } else {
@@ -135,10 +140,7 @@ export class PIIRedactorPlugin extends BaseGuardrailPlugin {
     return Promise.resolve(this.modify(context));
   }
 
-  private restorePII(
-    context: GuardrailContext,
-    phase: GuardrailPhase
-  ): Promise<GuardrailResult> {
+  private restorePII(context: GuardrailContext, phase: GuardrailPhase): Promise<GuardrailResult> {
     const mappings = context.metadata.get('pii_mappings') as Map<string, string> | undefined;
 
     if (!mappings || mappings.size === 0) {
@@ -185,6 +187,16 @@ export class PIIRedactorPlugin extends BaseGuardrailPlugin {
     }
 
     return Promise.resolve(this.modify(context));
+  }
+
+  /**
+   * Redact PII from an individual text string
+   */
+  private redactTextPart(text: string): string {
+    const detections = this.detector.detect(text);
+    if (detections.length === 0) return text;
+    const { text: redacted } = this.pseudonymizer.pseudonymize(text, detections);
+    return redacted;
   }
 
   /**
