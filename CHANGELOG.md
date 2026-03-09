@@ -1,3 +1,10 @@
+## [1.16.1](https://github.com/nesquikm/mcp-rubber-duck/compare/v1.16.0...v1.16.1) (2026-03-09)
+
+
+### Bug Fixes
+
+* update express-rate-limit to 8.3.0 for CVE fix ([#81](https://github.com/nesquikm/mcp-rubber-duck/issues/81)) ([785fe76](https://github.com/nesquikm/mcp-rubber-duck/commit/785fe767686dae66b8c66a3e510e135e09aacd1a))
+
 # [1.16.0](https://github.com/nesquikm/mcp-rubber-duck/compare/v1.15.2...v1.16.0) (2026-03-06)
 
 
