@@ -1,3 +1,10 @@
+## [1.16.2](https://github.com/nesquikm/mcp-rubber-duck/compare/v1.16.1...v1.16.2) (2026-03-16)
+
+
+### Bug Fixes
+
+* update deps to resolve all security vulnerabilities ([#86](https://github.com/nesquikm/mcp-rubber-duck/issues/86)) ([afa5723](https://github.com/nesquikm/mcp-rubber-duck/commit/afa572388aeda85e15c64a7a947565c8124d54ea))
+
 ## [1.16.1](https://github.com/nesquikm/mcp-rubber-duck/compare/v1.16.0...v1.16.1) (2026-03-09)
 
 
