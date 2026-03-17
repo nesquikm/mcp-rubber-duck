@@ -170,12 +170,15 @@ export type Config = z.infer<typeof ConfigSchema>;
 
 // Multimodal content types
 export interface ImageInput {
-  data: string; // base64-encoded image data
-  mimeType: string; // e.g. "image/png", "image/jpeg"
+  data?: string; // base64-encoded image data
+  url?: string; // image URL — passed directly to provider
+  mimeType?: string; // required for data, optional for url
 }
 
 export type TextContentPart = { type: 'text'; text: string };
-export type ImageContentPart = { type: 'image'; data: string; mimeType: string };
+export type ImageContentPartBase64 = { type: 'image'; data: string; mimeType: string };
+export type ImageContentPartUrl = { type: 'image'; url: string; mimeType?: string };
+export type ImageContentPart = ImageContentPartBase64 | ImageContentPartUrl;
 export type ContentPart = TextContentPart | ImageContentPart;
 export type MessageContent = string | ContentPart[];
 
@@ -199,7 +202,13 @@ export function buildContent(text: string, images?: ImageInput[]): MessageConten
   if (!images || images.length === 0) return text;
   const parts: ContentPart[] = [{ type: 'text', text }];
   for (const img of images) {
-    parts.push({ type: 'image', data: img.data, mimeType: img.mimeType });
+    if (img.url) {
+      const part: ImageContentPartUrl = { type: 'image', url: img.url };
+      if (img.mimeType) part.mimeType = img.mimeType;
+      parts.push(part);
+    } else if (img.data !== undefined && img.mimeType !== undefined) {
+      parts.push({ type: 'image', data: img.data, mimeType: img.mimeType });
+    }
   }
   return parts;
 }

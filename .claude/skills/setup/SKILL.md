@@ -1,8 +1,12 @@
 ---
+name: setup
 description: Add mcp-rubber-duck MCP server to an AI coding tool (Claude Desktop, Cursor, VS Code, Windsurf, etc.)
+disable-model-invocation: true
+argument-hint: '[tool-name]'
 allowed-tools: Read, Write, Edit, Bash, AskUserQuestion
-argument-hint: [tool-name]
 ---
+
+# Setup mcp-rubber-duck
 
 You are setting up **mcp-rubber-duck** as an MCP server in an AI coding tool.
 

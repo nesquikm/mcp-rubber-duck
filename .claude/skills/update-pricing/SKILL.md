@@ -1,7 +1,11 @@
 ---
+name: update-pricing
 description: Update LLM pricing data for all providers
-allowed-tools: Task, Read, Edit, Write, Glob, Grep, WebFetch, WebSearch, Bash
+disable-model-invocation: true
+argument-hint: '[provider name to update, or omit for all]'
 ---
+
+# Update Pricing
 
 Use the **pricing-updater** subagent to update the LLM pricing data in `src/data/default-pricing.ts`.
 

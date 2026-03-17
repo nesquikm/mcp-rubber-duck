@@ -4,7 +4,7 @@
   <img src="../assets/docs-roadmap.jpg" alt="Roadmap planning wall" width="600">
 </p>
 
-*Last updated: February 2026*
+*Last updated: March 2026*
 
 ## Recommended Feature Priority
 
@@ -14,6 +14,7 @@
 |---|---------|-------|--------|--------|
 | 1 | ~~Multimodal - Vision input~~ ✅ | [#76](https://github.com/nesquikm/mcp-rubber-duck/issues/76) | Medium-High | Medium |
 | 1b | Multimodal MCP Bridge - image tool results | [#78](https://github.com/nesquikm/mcp-rubber-duck/issues/78) | Medium | Medium |
+| 1c | Image URL support in multimodal input | [#87](https://github.com/nesquikm/mcp-rubber-duck/issues/87) | Medium | Low |
 | 2 | outputSchema for voting/consensus tools | [#53](https://github.com/nesquikm/mcp-rubber-duck/issues/53) | High | Low-Medium |
 | 3 | ~~Multi-round tool calling loop~~ ✅ | [#69](https://github.com/nesquikm/mcp-rubber-duck/issues/69) | High | Medium |
 | 4 | Streamable HTTP transport + Streaming responses | [#57](https://github.com/nesquikm/mcp-rubber-duck/issues/57), [#47](https://github.com/nesquikm/mcp-rubber-duck/issues/47) | High | Medium |

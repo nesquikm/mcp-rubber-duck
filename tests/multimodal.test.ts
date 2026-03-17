@@ -5,6 +5,7 @@ import {
   buildContent,
   MessageContent,
   ContentPart,
+  ImageContentPart,
   ImageInput,
 } from '../src/config/types.js';
 
@@ -218,6 +219,132 @@ describe('DuckProvider.prepareMessages multimodal', () => {
   });
 });
 
+describe('buildContent with URL images', () => {
+  it('should create ImageContentPart with url field when url is provided', () => {
+    const images: ImageInput[] = [
+      { url: 'https://example.com/photo.jpg' },
+    ];
+    const result = buildContent('Describe this', images) as ContentPart[];
+    expect(Array.isArray(result)).toBe(true);
+    expect(result).toHaveLength(2);
+    expect(result[0]).toEqual({ type: 'text', text: 'Describe this' });
+    expect(result[1]).toEqual({
+      type: 'image',
+      url: 'https://example.com/photo.jpg',
+    });
+  });
+
+  it('should handle mix of base64 and URL images', () => {
+    const images: ImageInput[] = [
+      { data: 'abc123', mimeType: 'image/png' },
+      { url: 'https://example.com/photo.jpg' },
+    ];
+    const result = buildContent('Compare these', images) as ContentPart[];
+    expect(result).toHaveLength(3);
+    expect(result[1]).toEqual({ type: 'image', data: 'abc123', mimeType: 'image/png' });
+    expect(result[2]).toEqual({ type: 'image', url: 'https://example.com/photo.jpg' });
+  });
+
+  it('should allow url with optional mimeType', () => {
+    const images: ImageInput[] = [
+      { url: 'https://example.com/photo.png', mimeType: 'image/png' },
+    ];
+    const result = buildContent('Describe', images) as ContentPart[];
+    expect(result[1]).toEqual({
+      type: 'image',
+      url: 'https://example.com/photo.png',
+      mimeType: 'image/png',
+    });
+  });
+});
+
+describe('DuckProvider.convertContentParts with URL images', () => {
+  let prepareMessages: (
+    messages: { role: string; content: MessageContent; timestamp: Date }[],
+    systemPrompt?: string
+  ) => Array<{ role: string; content: unknown }>;
+
+  beforeEach(async () => {
+    const { DuckProvider } = await import('../src/providers/provider.js');
+
+    class TestDuckProvider extends DuckProvider {
+      public testPrepareMessages(
+        messages: { role: string; content: MessageContent; timestamp: Date }[],
+        systemPrompt?: string
+      ) {
+        return this.prepareMessages(
+          messages as Parameters<typeof this.prepareMessages>[0],
+          systemPrompt
+        );
+      }
+    }
+
+    const provider = new TestDuckProvider('test', 'Test Duck', {
+      apiKey: 'test-key',
+      baseURL: 'http://localhost',
+      model: 'test-model',
+    });
+
+    prepareMessages = (messages, systemPrompt) =>
+      provider.testPrepareMessages(messages, systemPrompt);
+  });
+
+  it('should pass URL images through as image_url with the URL directly', () => {
+    const content: ContentPart[] = [
+      { type: 'text', text: 'What is this?' },
+      { type: 'image', url: 'https://example.com/photo.jpg' } as ImageContentPart,
+    ];
+
+    const result = prepareMessages([
+      { role: 'user', content, timestamp: new Date() },
+    ]);
+
+    const parts = result[0].content as Array<Record<string, unknown>>;
+    expect(parts).toHaveLength(2);
+    expect(parts[0]).toEqual({ type: 'text', text: 'What is this?' });
+    expect(parts[1]).toEqual({
+      type: 'image_url',
+      image_url: { url: 'https://example.com/photo.jpg' },
+    });
+  });
+
+  it('should still convert base64 images to data URIs', () => {
+    const content: ContentPart[] = [
+      { type: 'image', data: 'iVBOR...', mimeType: 'image/png' },
+    ];
+
+    const result = prepareMessages([
+      { role: 'user', content, timestamp: new Date() },
+    ]);
+
+    const parts = result[0].content as Array<{ type: string; image_url?: { url: string } }>;
+    expect(parts[0].image_url?.url).toBe('data:image/png;base64,iVBOR...');
+  });
+
+  it('should handle mixed base64 and URL images in same message', () => {
+    const content: ContentPart[] = [
+      { type: 'text', text: 'Compare' },
+      { type: 'image', data: 'abc', mimeType: 'image/png' },
+      { type: 'image', url: 'https://example.com/img.jpg' } as ImageContentPart,
+    ];
+
+    const result = prepareMessages([
+      { role: 'user', content, timestamp: new Date() },
+    ]);
+
+    const parts = result[0].content as Array<Record<string, unknown>>;
+    expect(parts).toHaveLength(3);
+    expect(parts[1]).toEqual({
+      type: 'image_url',
+      image_url: { url: 'data:image/png;base64,abc' },
+    });
+    expect(parts[2]).toEqual({
+      type: 'image_url',
+      image_url: { url: 'https://example.com/img.jpg' },
+    });
+  });
+});
+
 describe('askDuckTool with images', () => {
   let mockProviderManager: { askDuck: jest.Mock; validateModel: jest.Mock };
 
@@ -264,6 +391,23 @@ describe('askDuckTool with images', () => {
 
     const callArgs = mockProviderManager.askDuck.mock.calls[0];
     expect(callArgs[1]).toBe('No images here');
+  });
+
+  it('should pass URL images through to provider via buildContent', async () => {
+    const { askDuckTool } = await import('../src/tools/ask-duck.js');
+
+    const images = [{ url: 'https://example.com/photo.jpg' }];
+    await askDuckTool(mockProviderManager as never, {
+      prompt: 'What is in this image?',
+      images,
+    });
+
+    const callArgs = mockProviderManager.askDuck.mock.calls[0];
+    const content = callArgs[1];
+    expect(Array.isArray(content)).toBe(true);
+    expect(content).toHaveLength(2);
+    expect(content[0]).toEqual({ type: 'text', text: 'What is in this image?' });
+    expect(content[1]).toEqual({ type: 'image', url: 'https://example.com/photo.jpg' });
   });
 });
 

@@ -185,6 +185,14 @@ export class DuckProvider implements IDuckProvider {
       if (part.type === 'text') {
         return { type: 'text' as const, text: part.text };
       }
+      // URL images: pass through directly
+      if ('url' in part) {
+        return {
+          type: 'image_url' as const,
+          image_url: { url: part.url },
+        };
+      }
+      // Base64 images: wrap as data URI
       return {
         type: 'image_url' as const,
         image_url: { url: `data:${part.mimeType};base64,${part.data}` },
