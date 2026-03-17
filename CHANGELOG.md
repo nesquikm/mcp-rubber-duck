@@ -1,3 +1,10 @@
+# [1.17.0](https://github.com/nesquikm/mcp-rubber-duck/compare/v1.16.2...v1.17.0) (2026-03-17)
+
+
+### Features
+
+* image URL support + development skills ([#88](https://github.com/nesquikm/mcp-rubber-duck/issues/88)) ([5e28760](https://github.com/nesquikm/mcp-rubber-duck/commit/5e28760e29cd8d841247e964cc5390a804e6aa35)), closes [#87](https://github.com/nesquikm/mcp-rubber-duck/issues/87)
+
 ## [1.16.2](https://github.com/nesquikm/mcp-rubber-duck/compare/v1.16.1...v1.16.2) (2026-03-16)
 
 
