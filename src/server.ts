@@ -23,10 +23,22 @@ import { UsageService } from './services/usage.js';
 import { DuckResponse, ImageInput, buildContent } from './config/types.js';
 
 // Shared schema for image inputs used across multiple tools
-const ImageInputSchema = z.object({
-  data: z.string().describe('Base64-encoded image data'),
-  mimeType: z.string().describe('MIME type (e.g., "image/png", "image/jpeg")'),
-});
+// Accepts either base64 data+mimeType OR a url (or both)
+const ImageInputSchema = z
+  .object({
+    data: z.string().optional().describe('Base64-encoded image data'),
+    url: z.string().optional().describe('Image URL — passed directly to the LLM provider'),
+    mimeType: z
+      .string()
+      .optional()
+      .describe('MIME type (e.g., "image/png") — required for base64 data, optional for URLs'),
+  })
+  .refine((img) => img.data || img.url, {
+    message: 'Either "data" (base64) or "url" must be provided',
+  })
+  .refine((img) => !img.data || img.mimeType, {
+    message: '"mimeType" is required when "data" is provided',
+  });
 import { ApprovalService } from './services/approval.js';
 import { FunctionBridge } from './services/function-bridge.js';
 import { GuardrailsService } from './guardrails/service.js';
