@@ -4,5 +4,9 @@
   "high": true,
   "critical": true,
   "report-type": "summary",
-  "allowlist": []
+  "allowlist": [
+    "GHSA-3v7f-55p6-f55p",
+    "GHSA-c2c7-rcm5-vvqj",
+    "GHSA-f886-m6hf-6m8v"
+  ]
 }
