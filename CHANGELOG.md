@@ -1,3 +1,10 @@
+## [1.17.1](https://github.com/nesquikm/mcp-rubber-duck/compare/v1.17.0...v1.17.1) (2026-03-30)
+
+
+### Bug Fixes
+
+* update deps to resolve security vulnerabilities ([#95](https://github.com/nesquikm/mcp-rubber-duck/issues/95)) ([5adcd63](https://github.com/nesquikm/mcp-rubber-duck/commit/5adcd6307e99f59a89c580400533f776e254b457)), closes [#90](https://github.com/nesquikm/mcp-rubber-duck/issues/90) [#91](https://github.com/nesquikm/mcp-rubber-duck/issues/91) [#92](https://github.com/nesquikm/mcp-rubber-duck/issues/92) [#93](https://github.com/nesquikm/mcp-rubber-duck/issues/93)
+
 # [1.17.0](https://github.com/nesquikm/mcp-rubber-duck/compare/v1.16.2...v1.17.0) (2026-03-17)
 
 
