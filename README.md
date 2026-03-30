@@ -10,6 +10,10 @@ An MCP (Model Context Protocol) server that acts as a bridge to query multiple L
   <img src="assets/mcp-rubber-duck.jpg" alt="MCP Rubber Duck - AI ducks helping debug code" width="600">
 </p>
 
+## Hosted deployment
+
+A hosted deployment is available on [Fronteir AI](https://fronteir.ai/mcp/nesquikm-mcp-rubber-duck).
+
 ## Features
 
 - **Universal OpenAI Compatibility** -- Works with any OpenAI-compatible API endpoint
