@@ -1,0 +1,5 @@
+{
+  "enabledPlugins": {
+    "dev-process-toolkit@dev-process-toolkit": true
+  }
+}
