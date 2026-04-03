@@ -89,6 +89,7 @@ export function getUsageStatsTool(usageService: UsageService, args: Record<strin
         text: JSON.stringify(structuredData),
       },
     ],
+    structuredContent: structuredData,
   };
 }
 

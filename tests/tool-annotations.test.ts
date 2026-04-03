@@ -442,6 +442,101 @@ describe('Tool Annotations', () => {
     });
   });
 
+  describe('Output Schemas', () => {
+    /**
+     * Tools that return structured JSON data should declare an outputSchema
+     * so clients can validate and understand the response format.
+     *
+     * Tools WITH outputSchema (return structured JSON in second content item):
+     * - compare_ducks, duck_vote, duck_debate, get_usage_stats
+     *
+     * Tools WITHOUT outputSchema (return only formatted text):
+     * - ask_duck, chat_with_duck, clear_conversations, list_ducks, list_models,
+     *   duck_council, duck_judge, duck_iterate
+     */
+
+    const toolsWithOutputSchema = [
+      'compare_ducks',
+      'duck_vote',
+      'duck_debate',
+      'get_usage_stats',
+    ];
+
+    const toolsWithoutOutputSchema = [
+      'ask_duck',
+      'chat_with_duck',
+      'clear_conversations',
+      'list_ducks',
+      'list_models',
+      'duck_council',
+      'duck_judge',
+      'duck_iterate',
+    ];
+
+    for (const toolName of toolsWithOutputSchema) {
+      it(`${toolName} should have an outputSchema`, () => {
+        const tool = findTool(toolName);
+        expect(tool?.outputSchema).toBeDefined();
+        expect(tool?.outputSchema?.type).toBe('object');
+      });
+    }
+
+    for (const toolName of toolsWithoutOutputSchema) {
+      it(`${toolName} should NOT have an outputSchema`, () => {
+        const tool = findTool(toolName);
+        expect(tool?.outputSchema).toBeUndefined();
+      });
+    }
+
+    it('compare_ducks outputSchema should describe response array', () => {
+      const tool = findTool('compare_ducks');
+      const schema = tool?.outputSchema as Record<string, unknown>;
+      const props = schema?.properties as Record<string, unknown>;
+      expect(props).toHaveProperty('responses');
+    });
+
+    it('duck_vote outputSchema should describe all vote result fields', () => {
+      const tool = findTool('duck_vote');
+      const schema = tool?.outputSchema as Record<string, unknown>;
+      const props = schema?.properties as Record<string, unknown>;
+      expect(props).toHaveProperty('question');
+      expect(props).toHaveProperty('options');
+      expect(props).toHaveProperty('winner');
+      expect(props).toHaveProperty('isTie');
+      expect(props).toHaveProperty('tally');
+      expect(props).toHaveProperty('confidenceByOption');
+      expect(props).toHaveProperty('votes');
+      expect(props).toHaveProperty('totalVoters');
+      expect(props).toHaveProperty('validVotes');
+      expect(props).toHaveProperty('consensusLevel');
+    });
+
+    it('duck_debate outputSchema should describe all debate result fields', () => {
+      const tool = findTool('duck_debate');
+      const schema = tool?.outputSchema as Record<string, unknown>;
+      const props = schema?.properties as Record<string, unknown>;
+      expect(props).toHaveProperty('topic');
+      expect(props).toHaveProperty('format');
+      expect(props).toHaveProperty('totalRounds');
+      expect(props).toHaveProperty('participants');
+      expect(props).toHaveProperty('rounds');
+      expect(props).toHaveProperty('synthesis');
+      expect(props).toHaveProperty('synthesizer');
+    });
+
+    it('get_usage_stats outputSchema should describe all usage data fields', () => {
+      const tool = findTool('get_usage_stats');
+      const schema = tool?.outputSchema as Record<string, unknown>;
+      const props = schema?.properties as Record<string, unknown>;
+      expect(props).toHaveProperty('period');
+      expect(props).toHaveProperty('startDate');
+      expect(props).toHaveProperty('endDate');
+      expect(props).toHaveProperty('totals');
+      expect(props).toHaveProperty('usage');
+      expect(props).toHaveProperty('costByProvider');
+    });
+  });
+
   describe('Base tools count', () => {
     it('should have exactly 12 base tools', () => {
       expect(tools).toHaveLength(12);
