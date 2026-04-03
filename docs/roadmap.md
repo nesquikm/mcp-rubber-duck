@@ -58,6 +58,7 @@
 | Async / Tasks | Done | MCP experimental tasks API with cancellation |
 | Multimodal Vision | Done | Image input for ask_duck, chat_with_duck, compare_ducks, duck_council (#76) |
 | Structured output | Done | `outputSchema` on compare_ducks, duck_vote, duck_debate, get_usage_stats (#53) |
+| MCP Registry | Done | Published as `io.github.nesquikm/rubber-duck` on [registry.modelcontextprotocol.io](https://registry.modelcontextprotocol.io/) |
 
 ## Client Support Matrix
 
