@@ -1,3 +1,10 @@
+# [1.18.0](https://github.com/nesquikm/mcp-rubber-duck/compare/v1.17.1...v1.18.0) (2026-04-03)
+
+
+### Features
+
+* add outputSchema and structuredContent to structured tools ([#53](https://github.com/nesquikm/mcp-rubber-duck/issues/53)) ([#99](https://github.com/nesquikm/mcp-rubber-duck/issues/99)) ([8cd4660](https://github.com/nesquikm/mcp-rubber-duck/commit/8cd4660858fa8aecfffd82fdbeb2f4971760fe9b))
+
 ## [1.17.1](https://github.com/nesquikm/mcp-rubber-duck/compare/v1.17.0...v1.17.1) (2026-03-30)
 
 
