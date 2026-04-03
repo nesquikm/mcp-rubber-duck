@@ -201,6 +201,7 @@ export class RubberDuckServer {
   // This helper narrows the type to satisfy McpServer's CallToolResult expectation.
   private toolResult(result: {
     content: { type: string; text: string }[];
+    structuredContent?: Record<string, unknown>;
     isError?: boolean;
   }): CallToolResult {
     return result as CallToolResult;
@@ -413,6 +414,25 @@ export class RubberDuckServer {
             .optional()
             .describe('Optional images to include with the prompt (for vision-capable models)'),
         },
+        outputSchema: {
+          responses: z.array(
+            z.object({
+              provider: z.string(),
+              nickname: z.string(),
+              model: z.string(),
+              content: z.string(),
+              latency: z.number(),
+              tokens: z
+                .object({
+                  prompt: z.number(),
+                  completion: z.number(),
+                  total: z.number(),
+                })
+                .nullable(),
+              error: z.string().optional(),
+            })
+          ),
+        },
         annotations: {
           readOnlyHint: true,
           openWorldHint: true,
@@ -503,6 +523,26 @@ export class RubberDuckServer {
             .boolean()
             .default(true)
             .describe('Require ducks to explain their vote (default: true)'),
+        },
+        outputSchema: {
+          question: z.string(),
+          options: z.array(z.string()),
+          winner: z.string().nullable(),
+          isTie: z.boolean(),
+          tally: z.record(z.string(), z.number()),
+          confidenceByOption: z.record(z.string(), z.number()),
+          votes: z.array(
+            z.object({
+              voter: z.string(),
+              nickname: z.string(),
+              choice: z.string(),
+              confidence: z.number(),
+              reasoning: z.string(),
+            })
+          ),
+          totalVoters: z.number(),
+          validVotes: z.number(),
+          consensusLevel: z.enum(['unanimous', 'majority', 'plurality', 'split', 'none']),
         },
         annotations: {
           readOnlyHint: true,
@@ -669,6 +709,31 @@ export class RubberDuckServer {
             .optional()
             .describe('Provider to synthesize the debate (optional, uses first provider)'),
         },
+        outputSchema: {
+          topic: z.string(),
+          format: z.enum(['oxford', 'socratic', 'adversarial']),
+          totalRounds: z.number(),
+          participants: z.array(
+            z.object({
+              provider: z.string(),
+              nickname: z.string(),
+              position: z.enum(['pro', 'con', 'neutral']),
+            })
+          ),
+          rounds: z.array(
+            z.array(
+              z.object({
+                round: z.number(),
+                provider: z.string(),
+                nickname: z.string(),
+                position: z.enum(['pro', 'con', 'neutral']),
+                content: z.string(),
+              })
+            )
+          ),
+          synthesis: z.string(),
+          synthesizer: z.string(),
+        },
         annotations: {
           readOnlyHint: true,
           openWorldHint: true,
@@ -723,6 +788,33 @@ export class RubberDuckServer {
             .enum(['today', '7d', '30d', 'all'])
             .default('today')
             .describe('Time period for stats'),
+        },
+        outputSchema: {
+          period: z.string(),
+          startDate: z.string(),
+          endDate: z.string(),
+          totals: z.object({
+            requests: z.number(),
+            promptTokens: z.number(),
+            completionTokens: z.number(),
+            errors: z.number(),
+            estimatedCostUSD: z.number().optional(),
+          }),
+          usage: z.record(
+            z.string(),
+            z.record(
+              z.string(),
+              z.object({
+                requests: z.number(),
+                promptTokens: z.number(),
+                completionTokens: z.number(),
+                errors: z.number(),
+              })
+            )
+          ),
+          costByProvider: z
+            .record(z.string(), z.number())
+            .optional(),
         },
         annotations: {
           readOnlyHint: true,
@@ -1004,7 +1096,7 @@ export class RubberDuckServer {
             total: r.usage.total_tokens,
           }
         : null,
-      error: r.content.startsWith('Error:') ? r.content : undefined,
+      ...(r.content.startsWith('Error:') && { error: r.content }),
     }));
 
     return {
@@ -1018,6 +1110,7 @@ export class RubberDuckServer {
           text: JSON.stringify(structuredData),
         },
       ],
+      structuredContent: { responses: structuredData },
     };
   }
 

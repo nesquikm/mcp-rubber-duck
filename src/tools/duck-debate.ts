@@ -188,6 +188,7 @@ export async function duckDebateTool(
         text: JSON.stringify(structuredData),
       },
     ],
+    structuredContent: structuredData,
   };
 }
 

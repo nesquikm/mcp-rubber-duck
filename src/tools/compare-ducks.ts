@@ -85,7 +85,7 @@ export async function compareDucksTool(
           total: r.usage.total_tokens,
         }
       : null,
-    error: r.content.startsWith('Error:') ? r.content : undefined,
+    ...(r.content.startsWith('Error:') && { error: r.content }),
   }));
 
   return {
@@ -99,5 +99,6 @@ export async function compareDucksTool(
         text: JSON.stringify(structuredData),
       },
     ],
+    structuredContent: { responses: structuredData },
   };
 }

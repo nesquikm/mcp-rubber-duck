@@ -4,7 +4,7 @@
   <img src="../assets/docs-roadmap.jpg" alt="Roadmap planning wall" width="600">
 </p>
 
-*Last updated: March 2026*
+*Last updated: April 2026*
 
 ## Recommended Feature Priority
 
@@ -14,8 +14,8 @@
 |---|---------|-------|--------|--------|
 | 1 | ~~Multimodal - Vision input~~ ✅ | [#76](https://github.com/nesquikm/mcp-rubber-duck/issues/76) | Medium-High | Medium |
 | 1b | Multimodal MCP Bridge - image tool results | [#78](https://github.com/nesquikm/mcp-rubber-duck/issues/78) | Medium | Medium |
-| 1c | Image URL support in multimodal input | [#87](https://github.com/nesquikm/mcp-rubber-duck/issues/87) | Medium | Low |
-| 2 | outputSchema for voting/consensus tools | [#53](https://github.com/nesquikm/mcp-rubber-duck/issues/53) | High | Low-Medium |
+| 1c | ~~Image URL support in multimodal input~~ ✅ | [#87](https://github.com/nesquikm/mcp-rubber-duck/issues/87) | Medium | Low |
+| 2 | ~~outputSchema for voting/consensus tools~~ ✅ | [#53](https://github.com/nesquikm/mcp-rubber-duck/issues/53) | High | Low-Medium |
 | 3 | ~~Multi-round tool calling loop~~ ✅ | [#69](https://github.com/nesquikm/mcp-rubber-duck/issues/69) | High | Medium |
 | 4 | Streamable HTTP transport + Streaming responses | [#57](https://github.com/nesquikm/mcp-rubber-duck/issues/57), [#47](https://github.com/nesquikm/mcp-rubber-duck/issues/47) | High | Medium |
 | 5 | MCP Resources + resource_link | [#48](https://github.com/nesquikm/mcp-rubber-duck/issues/48), [#56](https://github.com/nesquikm/mcp-rubber-duck/issues/56) | Medium-High | Medium |
@@ -44,7 +44,7 @@
 
 ## Suggested Phases
 
-- **Phase 1** (Foundation): outputSchema (#53) → Multi-round tool calling (#69) → Streamable HTTP (#57) + Streaming (#47)
+- **Phase 1** (Foundation): ~~outputSchema (#53)~~ → ~~Multi-round tool calling (#69)~~ → Streamable HTTP (#57) + Streaming (#47)
 - **Phase 2** (Differentiation): Duck Hypothesis (#45) + Duck Calibrate (#40) + Duck Deliberate (#35)
 - **Phase 3** (Platform): Resources (#48) + Smart Router (#10) + Fallback Chains (#20)
 - **Phase 4** (Agentic): Duck Autopilot (#12)
@@ -57,7 +57,7 @@
 | Streaming / Progress | Done | `ProgressReporter` via MCP `notifications/progress` |
 | Async / Tasks | Done | MCP experimental tasks API with cancellation |
 | Multimodal Vision | Done | Image input for ask_duck, chat_with_duck, compare_ducks, duck_council (#76) |
-| Structured output | Partial | Dual-content workaround, no formal `outputSchema` → #53 |
+| Structured output | Done | `outputSchema` on compare_ducks, duck_vote, duck_debate, get_usage_stats (#53) |
 
 ## Client Support Matrix
 

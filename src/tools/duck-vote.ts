@@ -107,5 +107,6 @@ export async function duckVoteTool(
         text: JSON.stringify(structuredData),
       },
     ],
+    structuredContent: structuredData,
   };
 }

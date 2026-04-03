@@ -31,6 +31,7 @@ An MCP (Model Context Protocol) server that acts as a bridge to query multiple L
 - **Granular Security** -- Per-server approval controls with session-based approvals
 - **Interactive UIs** -- Rich HTML panels for compare, vote, debate, and usage tools (via [MCP Apps](https://github.com/modelcontextprotocol/ext-apps))
 - **Tool Annotations** -- MCP-compliant hints for tool behavior (read-only, destructive, etc.)
+- **Structured Output** -- `outputSchema` on tools returning structured JSON for client-side validation (Cursor, VS Code/Copilot)
 
 ## Supported Providers
 
