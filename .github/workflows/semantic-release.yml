@@ -211,9 +211,16 @@ jobs:
             echo "No new release"
           fi
 
+      - name: 📦 Upgrade npm for OIDC publish support
+        if: steps.check-release.outputs.released == 'true'
+        run: |
+          npx npm@11 --version
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - name: 📤 Publish to npm with provenance
         if: steps.check-release.outputs.released == 'true'
-        run: npm publish --provenance --access public
+        run: npx npm@11 publish --provenance --access public
 
       - name: 📊 Release Summary
         if: success()
