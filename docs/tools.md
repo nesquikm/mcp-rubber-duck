@@ -111,7 +111,7 @@ Have multiple ducks vote on options with reasoning and confidence scores. Render
 {
   "question": "Best approach for error handling?",
   "options": ["try-catch", "Result type", "Either monad"],
-  "voters": ["openai", "gemini"],     // Optional, uses all if not specified
+  "voters": ["openai", "google"],     // Optional, uses all if not specified
   "require_reasoning": true            // Optional, default: true
 }
 ```
@@ -136,7 +136,7 @@ Iteratively refine a response between two ducks.
 ```typescript
 {
   "prompt": "Write a function to validate email addresses",
-  "providers": ["openai", "gemini"],   // Exactly 2 providers
+  "providers": ["openai", "google"],   // Exactly 2 providers
   "mode": "critique-improve",          // or "refine"
   "iterations": 3                      // Optional, default: 3, max: 10
 }
@@ -154,7 +154,7 @@ Structured multi-round debate between ducks. Renders an [interactive UI](../READ
   "prompt": "Should startups use microservices or monolith for MVP?",
   "format": "oxford",                  // "oxford", "socratic", or "adversarial"
   "rounds": 2,                         // Optional, default: 3
-  "providers": ["openai", "gemini"],   // Optional, uses all if not specified
+  "providers": ["openai", "google"],   // Optional, uses all if not specified
   "synthesizer": "openai"              // Optional, duck to synthesize debate
 }
 ```

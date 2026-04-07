@@ -113,7 +113,7 @@ describe('RateLimiterPlugin', () => {
 
       // Make requests for different providers
       for (let i = 0; i < 5; i++) {
-        const provider = i % 2 === 0 ? 'openai' : 'gemini';
+        const provider = i % 2 === 0 ? 'openai' : 'google';
         const context = createGuardrailContext({ provider });
         await plugin.execute('pre_request', context);
       }
@@ -148,13 +148,13 @@ describe('RateLimiterPlugin', () => {
       const openaiResult = await plugin.execute('pre_request', openaiContext);
       expect(openaiResult.action).toBe('block');
 
-      // But Gemini should still be allowed
-      const geminiContext = createGuardrailContext({ provider: 'gemini' });
-      const geminiResult = await plugin.execute('pre_request', geminiContext);
-      expect(geminiResult.action).toBe('allow');
+      // But Google should still be allowed
+      const googleContext = createGuardrailContext({ provider: 'google' });
+      const googleResult = await plugin.execute('pre_request', googleContext);
+      expect(googleResult.action).toBe('allow');
 
       expect(plugin.getRequestCounts('openai').lastMinute).toBe(3);
-      expect(plugin.getRequestCounts('gemini').lastMinute).toBe(1);
+      expect(plugin.getRequestCounts('google').lastMinute).toBe(1);
     });
   });
 

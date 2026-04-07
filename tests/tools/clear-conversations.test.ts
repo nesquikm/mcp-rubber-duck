@@ -62,7 +62,7 @@ describe('clear_conversations tool', () => {
         timestamp: new Date(),
       });
 
-      conversationManager.createConversation('test-3', 'gemini');
+      conversationManager.createConversation('test-3', 'google');
       // No messages in test-3
 
       const result = clearConversationsTool(conversationManager, {});
@@ -141,7 +141,7 @@ describe('clear_conversations tool', () => {
       });
 
       // Switch provider in second conversation
-      conversationManager.switchProvider('code-review', 'gemini');
+      conversationManager.switchProvider('code-review', 'google');
 
       // Verify setup
       expect(conversationManager.listConversations()).toHaveLength(2);

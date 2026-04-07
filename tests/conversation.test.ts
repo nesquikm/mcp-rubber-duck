@@ -344,7 +344,7 @@ describe('ConversationManager', () => {
 
       conversationManager.createConversation('old-1', 'openai');
       conversationManager.createConversation('old-2', 'groq');
-      conversationManager.createConversation('recent-1', 'gemini');
+      conversationManager.createConversation('recent-1', 'google');
 
       const old1 = conversationManager.getConversation('old-1')!;
       const old2 = conversationManager.getConversation('old-2')!;

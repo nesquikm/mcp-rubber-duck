@@ -74,7 +74,7 @@ await duck_judge({
 // Two ducks collaborate to improve a solution
 await duck_iterate({
   prompt: "Write a TypeScript function to deep clone objects",
-  providers: ["openai", "gemini"],
+  providers: ["openai", "google"],
   mode: "critique-improve",
   iterations: 3
 });

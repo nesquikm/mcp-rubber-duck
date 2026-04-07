@@ -243,63 +243,40 @@ describe('PricingService', () => {
     });
   });
 
-  describe('provider aliases', () => {
+  describe('google provider pricing (no alias needed)', () => {
     let service: PricingService;
 
     beforeEach(() => {
       service = new PricingService();
     });
 
-    it('should resolve "gemini" to "google" pricing', () => {
-      const pricing = service.getPricing('gemini', 'gemini-2.5-flash');
+    it('should look up "google" provider pricing directly', () => {
+      const pricing = service.getPricing('google', 'gemini-2.5-flash');
       expect(pricing).toBeDefined();
       expect(pricing?.inputPricePerMillion).toBe(0.3);
       expect(pricing?.outputPricePerMillion).toBe(2.5);
     });
 
-    it('should still work with canonical "google" provider name', () => {
-      const pricing = service.getPricing('google', 'gemini-2.5-flash');
-      expect(pricing).toBeDefined();
-      expect(pricing?.inputPricePerMillion).toBe(0.3);
-    });
-
-    it('should calculate cost with aliased provider', () => {
-      const cost = service.calculateCost('gemini', 'gemini-2.5-flash', 1_000_000, 1_000_000);
+    it('should calculate cost for google provider', () => {
+      const cost = service.calculateCost('google', 'gemini-2.5-flash', 1_000_000, 1_000_000);
       expect(cost).not.toBeNull();
       expect(cost?.inputCost).toBe(0.3);
       expect(cost?.outputCost).toBe(2.5);
     });
 
-    it('should return true for hasPricingFor with aliased provider', () => {
-      expect(service.hasPricingFor('gemini', 'gemini-2.5-flash')).toBe(true);
+    it('should return true for hasPricingFor google provider', () => {
+      expect(service.hasPricingFor('google', 'gemini-2.5-flash')).toBe(true);
     });
 
-    it('should list models for aliased provider', () => {
-      const models = service.getModelsForProvider('gemini');
+    it('should list models for google provider', () => {
+      const models = service.getModelsForProvider('google');
       expect(models).toContain('gemini-2.5-flash');
       expect(models).toContain('gemini-1.5-pro');
     });
 
-    it('should prefer direct provider match over alias', () => {
-      // If user adds "gemini" in their config, it should take precedence
-      const configPricing: PricingConfig = {
-        gemini: {
-          'custom-gemini-model': { inputPricePerMillion: 99, outputPricePerMillion: 199 },
-        },
-      };
-      const serviceWithOverride = new PricingService(configPricing);
-
-      // Custom model should work
-      const customPricing = serviceWithOverride.getPricing('gemini', 'custom-gemini-model');
-      expect(customPricing?.inputPricePerMillion).toBe(99);
-
-      // But google models won't be accessible via "gemini" anymore since direct match wins
-      const googlePricing = serviceWithOverride.getPricing('gemini', 'gemini-2.5-flash');
-      expect(googlePricing).toBeUndefined();
-
-      // Google models still accessible via "google"
-      const directPricing = serviceWithOverride.getPricing('google', 'gemini-2.5-flash');
-      expect(directPricing).toBeDefined();
+    it('should not resolve "gemini" as a provider (alias removed)', () => {
+      const pricing = service.getPricing('gemini', 'gemini-2.5-flash');
+      expect(pricing).toBeUndefined();
     });
   });
 

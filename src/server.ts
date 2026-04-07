@@ -221,6 +221,16 @@ export class RubberDuckServer {
     };
   }
 
+  /**
+   * Build a Zod enum from configured provider names.
+   * Falls back to z.string() when no providers are configured (z.enum([]) would throw).
+   */
+  private providerEnum() {
+    const names = this.providerManager.getProviderNames();
+    if (names.length === 0) return z.string();
+    return z.enum(names as [string, ...string[]]);
+  }
+
   private registerTools() {
     // ask_duck
     this.server.registerTool(
@@ -232,8 +242,7 @@ export class RubberDuckServer {
           : 'Ask a question to a specific LLM provider (duck)',
         inputSchema: {
           prompt: z.string().describe('The question or prompt to send to the duck'),
-          provider: z
-            .string()
+          provider: this.providerEnum()
             .optional()
             .describe('The provider name (optional, uses default if not specified)'),
           model: z
@@ -281,7 +290,7 @@ export class RubberDuckServer {
         inputSchema: {
           conversation_id: z.string().describe('Conversation ID (creates new if not exists)'),
           message: z.string().describe('Your message to the duck'),
-          provider: z.string().optional().describe('Provider to use (can switch mid-conversation)'),
+          provider: this.providerEnum().optional().describe('Provider to use (can switch mid-conversation)'),
           model: z.string().optional().describe('Specific model to use (optional)'),
           images: z
             .array(ImageInputSchema)
@@ -367,8 +376,7 @@ export class RubberDuckServer {
         title: 'List Models',
         description: 'List available models for LLM providers',
         inputSchema: {
-          provider: z
-            .string()
+          provider: this.providerEnum()
             .optional()
             .describe('Provider name (optional, lists all if not specified)'),
           fetch_latest: z
@@ -402,7 +410,7 @@ export class RubberDuckServer {
         inputSchema: {
           prompt: z.string().describe('The question to ask all ducks'),
           providers: z
-            .array(z.string())
+            .array(this.providerEnum())
             .optional()
             .describe('List of provider names to query (optional, uses all if not specified)'),
           model: z
@@ -516,7 +524,7 @@ export class RubberDuckServer {
             .max(10)
             .describe('The options to vote on (2-10 options)'),
           voters: z
-            .array(z.string())
+            .array(this.providerEnum())
             .optional()
             .describe('List of provider names to vote (optional, uses all if not specified)'),
           require_reasoning: z
@@ -584,8 +592,7 @@ export class RubberDuckServer {
             )
             .min(2)
             .describe('Array of duck responses to evaluate (from duck_council output)'),
-          judge: z
-            .string()
+          judge: this.providerEnum()
             .optional()
             .describe('Provider name of the judge duck (optional, uses first available)'),
           criteria: z
@@ -629,7 +636,7 @@ export class RubberDuckServer {
             .default(3)
             .describe('Number of iteration rounds (default: 3, max: 10)'),
           providers: z
-            .array(z.string())
+            .array(this.providerEnum())
             .min(2)
             .max(2)
             .describe('Exactly 2 provider names for the ping-pong iteration'),
@@ -695,7 +702,7 @@ export class RubberDuckServer {
             .default(3)
             .describe('Number of debate rounds (default: 3)'),
           providers: z
-            .array(z.string())
+            .array(this.providerEnum())
             .min(2)
             .optional()
             .describe('Provider names to participate (min 2, uses all if not specified)'),
@@ -704,8 +711,7 @@ export class RubberDuckServer {
             .describe(
               'Debate format: oxford (pro/con), socratic (questioning), adversarial (attack/defend)'
             ),
-          synthesizer: z
-            .string()
+          synthesizer: this.providerEnum()
             .optional()
             .describe('Provider to synthesize the debate (optional, uses first provider)'),
         },
@@ -842,7 +848,7 @@ export class RubberDuckServer {
           title: 'Pending Approvals',
           description: 'Get list of pending MCP tool approvals from ducks',
           inputSchema: {
-            duck: z.string().optional().describe('Filter by duck name (optional)'),
+            duck: this.providerEnum().optional().describe('Filter by duck name (optional)'),
           },
           annotations: {
             readOnlyHint: true,

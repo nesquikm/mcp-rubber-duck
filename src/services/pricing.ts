@@ -12,9 +12,7 @@ export interface CostCalculation {
  * Provider name aliases.
  * Maps common user-provided names to canonical provider names in pricing data.
  */
-const PROVIDER_ALIASES: Record<string, string> = {
-  gemini: 'google',
-};
+const PROVIDER_ALIASES: Record<string, string> = {};
 
 /**
  * PricingService manages token pricing data.
@@ -84,7 +82,7 @@ export class PricingService {
   /**
    * Get pricing for a specific provider and model.
    * Returns undefined if pricing is not configured.
-   * Supports provider aliases (e.g., "gemini" -> "google").
+   * Supports provider aliases.
    */
   getPricing(provider: string, model: string): ModelPricing | undefined {
     const resolvedProvider = this.resolveProvider(provider);

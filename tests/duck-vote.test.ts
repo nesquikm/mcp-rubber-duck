@@ -41,7 +41,7 @@ describe('duckVoteTool', () => {
             nickname: 'GPT-4',
             models: ['gpt-4'],
           },
-          gemini: {
+          google: {
             api_key: 'key2',
             base_url: 'https://api.gemini.com/v1',
             default_model: 'gemini-pro',
@@ -60,7 +60,7 @@ describe('duckVoteTool', () => {
 
     // Override the client method on all providers
     const provider1 = mockProviderManager.getProvider('openai');
-    const provider2 = mockProviderManager.getProvider('gemini');
+    const provider2 = mockProviderManager.getProvider('google');
     provider1['client'].chat.completions.create = mockCreate;
     provider2['client'].chat.completions.create = mockCreate;
   });
