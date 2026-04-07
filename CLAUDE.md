@@ -101,6 +101,48 @@ Config uses Zod schemas in `src/config/types.ts`. When adding config options:
 - `MCP_SERVER=true` - This server runs AS an MCP server (for Claude Desktop)
 - `MCP_BRIDGE_ENABLED=true` - Ducks can ACCESS external MCP servers as clients
 
+## Tech Stack
+
+- **Language:** TypeScript 5.x (ESM, `"type": "module"`)
+- **Runtime:** Node.js
+- **Framework:** MCP SDK (`@modelcontextprotocol/sdk`)
+- **Build:** `tsc` + Vite (UI builds)
+- **Testing:** Jest 29 with `ts-jest` (ESM via `--experimental-vm-modules`)
+- **Validation:** Zod (types inferred via `z.infer<>`)
+- **LLM Client:** OpenAI SDK (`openai`)
+- **Logging:** Winston
+
+## Gating Rule
+
+Every feature must pass before merging:
+
+```bash
+npm run typecheck && npm run lint && npm test
+```
+
+## Workflows
+
+**Bugfix:** `/debug → /implement → /gate-check → /pr`
+**Feature:** `/brainstorm → /spec-write → /implement → /spec-review → /gate-check → /pr`
+**Refactor:** `/implement → /simplify → /gate-check → /pr`
+
+## Testing Conventions
+
+- **Framework:** Jest 29 with ts-jest (ESM mode)
+- **Mocking:** `jest.fn()`, `jest.spyOn()`, manual mocks
+- **File naming:** `*.test.ts` in `tests/` directory
+- **Structure:** `tests/` mirrors `src/` — flat for top-level modules, subdirectories for `guardrails/`, `services/`, `tools/`
+- **Coverage:** Reported via Jest built-in coverage (see test output)
+- **Deterministic data:** Fixed provider configs and mock responses in each test
+
+## DO NOT
+
+- Do not commit without user approval
+- Do not add features not in the spec
+- Do not edit generated/built files in `dist/` or UI build outputs
+- Do not connect to real LLM APIs in tests — always mock provider responses
+- Do not use bare imports without `.js` extension
+
 ## Roadmap
 
 When completing features, closing issues, creating new issues, or working on items that appear in `docs/roadmap.md`, check if the roadmap should be updated (e.g., marking items as done, adding new items, adjusting phases or priorities). Don't update it for unrelated commits.

@@ -51,6 +51,9 @@ config/*.json
 !config/*.example.json
 !config/claude_desktop.json
 
+# Specs (local design docs)
+specs/
+
 # Temporary files
 tmp/
 temp/
