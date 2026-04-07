@@ -90,10 +90,10 @@ describe('Dynamic Provider Enum in Tool Schemas', () => {
     return properties[propName];
   }
 
-  describe('with configured providers [openai, gemini]', () => {
+  describe('with configured providers [openai, google]', () => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let tools: Record<string, any>;
-    const expectedEnum = ['openai', 'gemini'];
+    const expectedEnum = ['openai', 'google'];
 
     beforeAll(async () => {
       saveEnv();

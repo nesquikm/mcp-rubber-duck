@@ -57,19 +57,19 @@ describe('ConfigManager - Default Providers', () => {
     expect(providers.openai.nickname).toBe('Custom GPT Duck');
   });
 
-  it('should create Gemini provider when API key is set', () => {
+  it('should create Google provider when GEMINI_API_KEY is set', () => {
     process.env.GEMINI_API_KEY = 'gemini-test-key';
 
     const configManager = new ConfigManager();
     const providers = configManager.getAllProviders();
 
-    expect(providers.gemini).toBeDefined();
-    const gemini = providers.gemini as HttpProviderConfig;
-    expect(gemini.api_key).toBe('gemini-test-key');
-    expect(gemini.nickname).toBe('Gemini Duck');
+    expect(providers.google).toBeDefined();
+    const google = providers.google as HttpProviderConfig;
+    expect(google.api_key).toBe('gemini-test-key');
+    expect(google.nickname).toBe('Google Duck');
   });
 
-  it('should use custom Gemini model and nickname from env', () => {
+  it('should use custom Google model and nickname from env', () => {
     process.env.GEMINI_API_KEY = 'gemini-test-key';
     process.env.GEMINI_DEFAULT_MODEL = 'gemini-pro';
     process.env.GEMINI_NICKNAME = 'Custom Gemini Duck';
@@ -77,8 +77,8 @@ describe('ConfigManager - Default Providers', () => {
     const configManager = new ConfigManager();
     const providers = configManager.getAllProviders();
 
-    expect(providers.gemini.default_model).toBe('gemini-pro');
-    expect(providers.gemini.nickname).toBe('Custom Gemini Duck');
+    expect(providers.google.default_model).toBe('gemini-pro');
+    expect(providers.google.nickname).toBe('Custom Gemini Duck');
   });
 
   it('should create Groq provider when API key is set', () => {
@@ -459,10 +459,10 @@ describe('ConfigManager - Public Methods', () => {
     it('should override default_provider from environment', () => {
       process.env.OPENAI_API_KEY = 'openai-key';
       process.env.GEMINI_API_KEY = 'gemini-key';
-      process.env.DEFAULT_PROVIDER = 'gemini';
+      process.env.DEFAULT_PROVIDER = 'google';
 
       const configManager = new ConfigManager();
-      expect(configManager.getConfig().default_provider).toBe('gemini');
+      expect(configManager.getConfig().default_provider).toBe('google');
     });
 
     it('should override default_temperature from environment', () => {
@@ -667,7 +667,7 @@ describe('ConfigManager - Custom Providers', () => {
 
       // Should have built-in providers
       expect(providers.openai).toBeDefined();
-      expect(providers.gemini).toBeDefined();
+      expect(providers.google).toBeDefined();
       
       // Should have custom provider
       expect(providers.integration).toBeDefined();

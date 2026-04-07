@@ -39,7 +39,7 @@ describe('duckJudgeTool', () => {
 
     },
     {
-      provider: 'gemini',
+      provider: 'google',
       nickname: 'Gemini',
       model: 'gemini-pro',
       content: 'Response from Gemini about error handling using Result types.',
@@ -61,7 +61,7 @@ describe('duckJudgeTool', () => {
             nickname: 'GPT-4',
             models: ['gpt-4'],
           },
-          gemini: {
+          google: {
             api_key: 'key2',
             base_url: 'https://api.gemini.com/v1',
             default_model: 'gemini-pro',
@@ -80,7 +80,7 @@ describe('duckJudgeTool', () => {
 
     // Override the client method on all providers
     const provider1 = mockProviderManager.getProvider('openai');
-    const provider2 = mockProviderManager.getProvider('gemini');
+    const provider2 = mockProviderManager.getProvider('google');
     provider1['client'].chat.completions.create = mockCreate;
     provider2['client'].chat.completions.create = mockCreate;
   });
@@ -106,11 +106,11 @@ describe('duckJudgeTool', () => {
   it('should evaluate responses and return rankings', async () => {
     const judgeResponse = JSON.stringify({
       rankings: [
-        { provider: 'gemini', score: 85, justification: 'Better type safety explanation' },
+        { provider: 'google', score: 85, justification: 'Better type safety explanation' },
         { provider: 'openai', score: 75, justification: 'Good but less comprehensive' },
       ],
       criteria_scores: {
-        gemini: { accuracy: 85, completeness: 90, clarity: 80 },
+        google: { accuracy: 85, completeness: 90, clarity: 80 },
         openai: { accuracy: 75, completeness: 70, clarity: 80 },
       },
       summary: 'Gemini provided a more comprehensive response with better type safety coverage.',
@@ -136,7 +136,7 @@ describe('duckJudgeTool', () => {
     expect(text).toContain('Judge Evaluation');
     expect(text).toContain('#1');
     expect(text).toContain('#2');
-    expect(text).toContain('gemini');
+    expect(text).toContain('google');
     expect(text).toContain('85/100');
   });
 
@@ -144,7 +144,7 @@ describe('duckJudgeTool', () => {
     const judgeResponse = JSON.stringify({
       rankings: [
         { provider: 'openai', score: 80, justification: 'Good response' },
-        { provider: 'gemini', score: 70, justification: 'Okay response' },
+        { provider: 'google', score: 70, justification: 'Okay response' },
       ],
       summary: 'OpenAI wins.',
     });
@@ -160,7 +160,7 @@ describe('duckJudgeTool', () => {
 
     const result = await duckJudgeTool(mockProviderManager, {
       responses: mockResponses,
-      judge: 'gemini',
+      judge: 'google',
     });
 
     const text = result.content[0].text;
@@ -171,7 +171,7 @@ describe('duckJudgeTool', () => {
     const judgeResponse = JSON.stringify({
       rankings: [
         { provider: 'openai', score: 90, justification: 'Most secure' },
-        { provider: 'gemini', score: 85, justification: 'Good security' },
+        { provider: 'google', score: 85, justification: 'Good security' },
       ],
       summary: 'Security focused evaluation.',
     });
@@ -200,7 +200,7 @@ describe('duckJudgeTool', () => {
     const judgeResponse = JSON.stringify({
       rankings: [
         { provider: 'openai', score: 85, justification: 'Senior approved' },
-        { provider: 'gemini', score: 80, justification: 'Good for juniors' },
+        { provider: 'google', score: 80, justification: 'Good for juniors' },
       ],
       summary: 'From a senior perspective.',
     });
@@ -290,7 +290,7 @@ describe('duckJudgeTool', () => {
     const text = result.content[0].text;
     // Should include both providers even though only one was ranked
     expect(text).toContain('openai');
-    expect(text).toContain('gemini');
+    expect(text).toContain('google');
     expect(text).toContain('Not evaluated');
   });
 

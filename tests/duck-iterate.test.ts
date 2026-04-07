@@ -41,7 +41,7 @@ describe('duckIterateTool', () => {
             nickname: 'GPT-4',
             models: ['gpt-4'],
           },
-          gemini: {
+          google: {
             api_key: 'key2',
             base_url: 'https://api.gemini.com/v1',
             default_model: 'gemini-pro',
@@ -60,14 +60,14 @@ describe('duckIterateTool', () => {
 
     // Override the client method on all providers
     const provider1 = mockProviderManager.getProvider('openai');
-    const provider2 = mockProviderManager.getProvider('gemini');
+    const provider2 = mockProviderManager.getProvider('google');
     provider1['client'].chat.completions.create = mockCreate;
     provider2['client'].chat.completions.create = mockCreate;
   });
 
   it('should throw error when prompt is missing', async () => {
     await expect(
-      duckIterateTool(mockProviderManager, { providers: ['openai', 'gemini'], mode: 'refine' })
+      duckIterateTool(mockProviderManager, { providers: ['openai', 'google'], mode: 'refine' })
     ).rejects.toThrow('Prompt is required');
   });
 
@@ -77,23 +77,23 @@ describe('duckIterateTool', () => {
     ).rejects.toThrow('Exactly 2 providers are required');
 
     await expect(
-      duckIterateTool(mockProviderManager, { prompt: 'Test', providers: ['openai', 'gemini', 'another'], mode: 'refine' })
+      duckIterateTool(mockProviderManager, { prompt: 'Test', providers: ['openai', 'google', 'another'], mode: 'refine' })
     ).rejects.toThrow('Exactly 2 providers are required');
   });
 
   it('should throw error when mode is invalid', async () => {
     await expect(
-      duckIterateTool(mockProviderManager, { prompt: 'Test', providers: ['openai', 'gemini'], mode: 'invalid' })
+      duckIterateTool(mockProviderManager, { prompt: 'Test', providers: ['openai', 'google'], mode: 'invalid' })
     ).rejects.toThrow('Mode must be either "refine" or "critique-improve"');
   });
 
   it('should throw error when iterations out of range', async () => {
     await expect(
-      duckIterateTool(mockProviderManager, { prompt: 'Test', providers: ['openai', 'gemini'], mode: 'refine', iterations: 0 })
+      duckIterateTool(mockProviderManager, { prompt: 'Test', providers: ['openai', 'google'], mode: 'refine', iterations: 0 })
     ).rejects.toThrow('Iterations must be between 1 and 10');
 
     await expect(
-      duckIterateTool(mockProviderManager, { prompt: 'Test', providers: ['openai', 'gemini'], mode: 'refine', iterations: 11 })
+      duckIterateTool(mockProviderManager, { prompt: 'Test', providers: ['openai', 'google'], mode: 'refine', iterations: 11 })
     ).rejects.toThrow('Iterations must be between 1 and 10');
   });
 
@@ -123,7 +123,7 @@ describe('duckIterateTool', () => {
 
     const result = await duckIterateTool(mockProviderManager, {
       prompt: 'Write a sorting algorithm',
-      providers: ['openai', 'gemini'],
+      providers: ['openai', 'google'],
       mode: 'refine',
       iterations: 3,
     });
@@ -160,7 +160,7 @@ describe('duckIterateTool', () => {
 
     const result = await duckIterateTool(mockProviderManager, {
       prompt: 'Write a function',
-      providers: ['openai', 'gemini'],
+      providers: ['openai', 'google'],
       mode: 'critique-improve',
       iterations: 3,
     });
@@ -191,7 +191,7 @@ describe('duckIterateTool', () => {
 
     const result = await duckIterateTool(mockProviderManager, {
       prompt: 'Test prompt',
-      providers: ['openai', 'gemini'],
+      providers: ['openai', 'google'],
       mode: 'refine',
     });
 
@@ -220,7 +220,7 @@ describe('duckIterateTool', () => {
 
     const result = await duckIterateTool(mockProviderManager, {
       prompt: 'Test',
-      providers: ['openai', 'gemini'],
+      providers: ['openai', 'google'],
       mode: 'refine',
       iterations: 5,
     });
@@ -240,7 +240,7 @@ describe('duckIterateTool', () => {
 
     const result = await duckIterateTool(mockProviderManager, {
       prompt: 'Test',
-      providers: ['openai', 'gemini'],
+      providers: ['openai', 'google'],
       mode: 'refine',
       iterations: 1,
     });
@@ -267,7 +267,7 @@ describe('duckIterateTool', () => {
 
     const result = await duckIterateTool(mockProviderManager, {
       prompt: 'Test',
-      providers: ['openai', 'gemini'],
+      providers: ['openai', 'google'],
       mode: 'refine',
       iterations: 2,
     });
@@ -286,7 +286,7 @@ describe('duckIterateTool', () => {
     await expect(
       duckIterateTool(mockProviderManager, {
         prompt: 'Test',
-        providers: ['openai', 'gemini'],
+        providers: ['openai', 'google'],
         mode: 'refine',
       }, undefined, controller.signal)
     ).rejects.toThrow('Task cancelled');
@@ -313,7 +313,7 @@ describe('duckIterateTool', () => {
     await expect(
       duckIterateTool(mockProviderManager, {
         prompt: 'Test',
-        providers: ['openai', 'gemini'],
+        providers: ['openai', 'google'],
         mode: 'refine',
         iterations: 3,
       }, undefined, controller.signal)
@@ -348,7 +348,7 @@ describe('duckIterateTool', () => {
 
     await duckIterateTool(mockProviderManager, {
       prompt: 'Test prompt',
-      providers: ['openai', 'gemini'],
+      providers: ['openai', 'google'],
       mode: 'refine',
       iterations: 3,
     }, mockProgress);

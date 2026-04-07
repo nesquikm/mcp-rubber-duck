@@ -138,15 +138,15 @@ export class ConfigManager {
       };
     }
 
-    // Google Gemini
+    // Google
     if (process.env.GEMINI_API_KEY) {
-      providers.gemini = {
+      providers.google = {
         type: 'http' as const,
         api_key: process.env.GEMINI_API_KEY,
         base_url: 'https://generativelanguage.googleapis.com/v1beta/openai/',
         models: ['gemini-3-pro-preview', 'gemini-2.5-pro', 'gemini-2.5-flash'],
         default_model: process.env.GEMINI_DEFAULT_MODEL || 'gemini-2.5-flash',
-        nickname: process.env.GEMINI_NICKNAME || 'Gemini Duck',
+        nickname: process.env.GEMINI_NICKNAME || 'Google Duck',
       };
     }
 
