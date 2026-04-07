@@ -1,3 +1,16 @@
+# [1.19.0](https://github.com/nesquikm/mcp-rubber-duck/compare/v1.18.0...v1.19.0) (2026-04-07)
+
+
+### Bug Fixes
+
+* **ci:** remove broken npm upgrade step from release workflow ([92edc22](https://github.com/nesquikm/mcp-rubber-duck/commit/92edc222c66d6d23be8b5b7155ca0b3e6d36b140))
+* **ci:** use npx npm@11 for OIDC publish instead of global install ([da7ed52](https://github.com/nesquikm/mcp-rubber-duck/commit/da7ed528843988436bfaae3a0010fc64bd0b7f9f))
+
+
+### Features
+
+* dynamic provider enum in tool schemas ([#103](https://github.com/nesquikm/mcp-rubber-duck/issues/103)) ([165ed2f](https://github.com/nesquikm/mcp-rubber-duck/commit/165ed2f22060dec0e961656d87b530d07a7d5d7e))
+
 ## [1.19.1](https://github.com/nesquikm/mcp-rubber-duck/compare/v1.19.0...v1.19.1) (2026-04-07)
 
 
