@@ -211,12 +211,6 @@ jobs:
             echo "No new release"
           fi
 
-      - name: 📦 Upgrade npm for OIDC support
-        if: steps.check-release.outputs.released == 'true'
-        run: |
-          npm install -g npm@latest
-          npm --version
-
       - name: 📤 Publish to npm with provenance
         if: steps.check-release.outputs.released == 'true'
         run: npm publish --provenance --access public
