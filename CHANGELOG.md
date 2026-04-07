@@ -1,3 +1,10 @@
+## [1.19.1](https://github.com/nesquikm/mcp-rubber-duck/compare/v1.19.0...v1.19.1) (2026-04-07)
+
+
+### Bug Fixes
+
+* **ci:** remove broken npm upgrade step from release workflow ([92edc22](https://github.com/nesquikm/mcp-rubber-duck/commit/92edc222c66d6d23be8b5b7155ca0b3e6d36b140))
+
 # [1.19.0](https://github.com/nesquikm/mcp-rubber-duck/compare/v1.18.0...v1.19.0) (2026-04-07)
 
 
