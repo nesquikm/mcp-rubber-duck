@@ -1,3 +1,10 @@
+# [1.19.0](https://github.com/nesquikm/mcp-rubber-duck/compare/v1.18.0...v1.19.0) (2026-04-07)
+
+
+### Features
+
+* dynamic provider enum in tool schemas ([#103](https://github.com/nesquikm/mcp-rubber-duck/issues/103)) ([165ed2f](https://github.com/nesquikm/mcp-rubber-duck/commit/165ed2f22060dec0e961656d87b530d07a7d5d7e))
+
 # [1.18.0](https://github.com/nesquikm/mcp-rubber-duck/compare/v1.17.1...v1.18.0) (2026-04-03)
 
 
