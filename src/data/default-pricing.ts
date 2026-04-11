@@ -3,7 +3,7 @@ import { PricingConfig } from '../config/types.js';
 /**
  * Default pricing data for common LLM providers.
  * Prices are in USD per million tokens.
- * Last updated: 2026-03-05
+ * Last updated: 2026-04-11
  *
  * To update pricing:
  * 1. Research current pricing from provider websites
@@ -14,11 +14,21 @@ import { PricingConfig } from '../config/types.js';
  * Users can override these defaults in their config.json file.
  */
 export const DEFAULT_PRICING_VERSION = 2;
-export const DEFAULT_PRICING_LAST_UPDATED = '2026-03-05';
+export const DEFAULT_PRICING_LAST_UPDATED = '2026-04-11';
 
 export const DEFAULT_PRICING: PricingConfig = {
   openai: {
-    // GPT-5.2 models (latest flagship, released Feb 2026)
+    // GPT-5.4 models (latest flagship, released March 2026)
+    'gpt-5.4': { inputPricePerMillion: 2.5, outputPricePerMillion: 15 },
+    'gpt-5.4-mini': { inputPricePerMillion: 0.75, outputPricePerMillion: 4.5 },
+    'gpt-5.4-nano': { inputPricePerMillion: 0.2, outputPricePerMillion: 1.25 },
+    'gpt-5.4-pro': { inputPricePerMillion: 30, outputPricePerMillion: 180 },
+
+    // GPT-5.3 specialized models
+    'gpt-5.3-chat-latest': { inputPricePerMillion: 1.75, outputPricePerMillion: 14 },
+    'gpt-5.3-codex': { inputPricePerMillion: 1.75, outputPricePerMillion: 14 },
+
+    // GPT-5.2 models (deprecated, retiring June 5, 2026 - kept for compatibility)
     'gpt-5.2': { inputPricePerMillion: 1.75, outputPricePerMillion: 14 },
     'gpt-5.2-pro': { inputPricePerMillion: 21, outputPricePerMillion: 168 },
 
@@ -59,6 +69,9 @@ export const DEFAULT_PRICING: PricingConfig = {
     // GPT-3.5 Turbo
     'gpt-3.5-turbo': { inputPricePerMillion: 0.5, outputPricePerMillion: 1.5 },
     'gpt-3.5-turbo-0125': { inputPricePerMillion: 0.5, outputPricePerMillion: 1.5 },
+
+    // Computer use / specialized preview models
+    'computer-use-preview': { inputPricePerMillion: 1.5, outputPricePerMillion: 6 },
 
     // o4 reasoning models
     'o4-mini': { inputPricePerMillion: 1.1, outputPricePerMillion: 4.4 },
@@ -126,12 +139,12 @@ export const DEFAULT_PRICING: PricingConfig = {
     // Gemini 3.1 (preview)
     'gemini-3.1-pro-preview': { inputPricePerMillion: 2, outputPricePerMillion: 12 },
     'gemini-3.1-flash-lite-preview': { inputPricePerMillion: 0.25, outputPricePerMillion: 1.5 },
-    'gemini-3.1-flash-image-preview': { inputPricePerMillion: 0.5, outputPricePerMillion: 3 },
+    'gemini-3.1-flash-image-preview': { inputPricePerMillion: 0.5, outputPricePerMillion: 60 },
 
     // Gemini 3.0 (preview)
     'gemini-3-pro-preview': { inputPricePerMillion: 2, outputPricePerMillion: 12 },
     'gemini-3-flash-preview': { inputPricePerMillion: 0.5, outputPricePerMillion: 3 },
-    'gemini-3-pro-image-preview': { inputPricePerMillion: 2, outputPricePerMillion: 12 },
+    'gemini-3-pro-image-preview': { inputPricePerMillion: 2, outputPricePerMillion: 120 },
 
     // Gemini 2.5
     'gemini-2.5-pro': { inputPricePerMillion: 1.25, outputPricePerMillion: 10 },
@@ -272,7 +285,32 @@ export const DEFAULT_PRICING: PricingConfig = {
   },
 
   together: {
-    // Llama 4
+    // Current serverless lineup (April 2026)
+    'MiniMaxAI/MiniMax-M2.5': { inputPricePerMillion: 0.3, outputPricePerMillion: 1.2 },
+    'moonshotai/Kimi-K2.5': { inputPricePerMillion: 0.5, outputPricePerMillion: 2.8 },
+    'zai-org/GLM-5.1': { inputPricePerMillion: 1.4, outputPricePerMillion: 4.4 },
+    'zai-org/GLM-5': { inputPricePerMillion: 1, outputPricePerMillion: 3.2 },
+    'google/gemma-4-31B-it': { inputPricePerMillion: 0.2, outputPricePerMillion: 0.5 },
+    'openai/gpt-oss-120b': { inputPricePerMillion: 0.15, outputPricePerMillion: 0.6 },
+    'openai/gpt-oss-20b': { inputPricePerMillion: 0.05, outputPricePerMillion: 0.2 },
+    'LiquidAI/LFM2-24B-A2B': { inputPricePerMillion: 0.03, outputPricePerMillion: 0.12 },
+    'Qwen/Qwen3.5-397B-A17B': { inputPricePerMillion: 0.6, outputPricePerMillion: 3.6 },
+    'Qwen/Qwen3.5-9B': { inputPricePerMillion: 0.1, outputPricePerMillion: 0.15 },
+    'Qwen/Qwen3-Coder-Next-FP8': { inputPricePerMillion: 0.5, outputPricePerMillion: 1.2 },
+    'Qwen/Qwen3-Coder-480B-A35B-Instruct-FP8': {
+      inputPricePerMillion: 2,
+      outputPricePerMillion: 2,
+    },
+    'Qwen/Qwen3-235B-A22B-Instruct-2507-tput': {
+      inputPricePerMillion: 0.2,
+      outputPricePerMillion: 0.6,
+    },
+    'deepseek-ai/DeepSeek-V3.1': { inputPricePerMillion: 0.6, outputPricePerMillion: 1.7 },
+    'deepseek-ai/DeepSeek-R1': { inputPricePerMillion: 3, outputPricePerMillion: 7 },
+    'deepcogito/cogito-v2-1-671b': { inputPricePerMillion: 1.25, outputPricePerMillion: 1.25 },
+    'essentialai/rnj-1-instruct': { inputPricePerMillion: 0.15, outputPricePerMillion: 0.15 },
+
+    // Llama 4 (legacy names, kept for compatibility)
     'meta-llama/Llama-4-Maverick': { inputPricePerMillion: 0.27, outputPricePerMillion: 0.85 },
     'meta-llama/Llama-4-Scout': { inputPricePerMillion: 0.18, outputPricePerMillion: 0.59 },
 
@@ -312,8 +350,7 @@ export const DEFAULT_PRICING: PricingConfig = {
       outputPricePerMillion: 0.88,
     },
 
-    // DeepSeek
-    'deepseek-ai/DeepSeek-R1': { inputPricePerMillion: 3, outputPricePerMillion: 7 },
+    // DeepSeek (legacy variants; DeepSeek-R1 and DeepSeek-V3.1 listed above in current lineup)
     'deepseek-ai/DeepSeek-R1-Distill-Qwen-14B': {
       inputPricePerMillion: 0.18,
       outputPricePerMillion: 0.18,
