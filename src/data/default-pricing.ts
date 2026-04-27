@@ -3,7 +3,7 @@ import { PricingConfig } from '../config/types.js';
 /**
  * Default pricing data for common LLM providers.
  * Prices are in USD per million tokens.
- * Last updated: 2026-04-19
+ * Last updated: 2026-04-27
  *
  * To update pricing:
  * 1. Research current pricing from provider websites
@@ -14,11 +14,15 @@ import { PricingConfig } from '../config/types.js';
  * Users can override these defaults in their config.json file.
  */
 export const DEFAULT_PRICING_VERSION = 2;
-export const DEFAULT_PRICING_LAST_UPDATED = '2026-04-19';
+export const DEFAULT_PRICING_LAST_UPDATED = '2026-04-27';
 
 export const DEFAULT_PRICING: PricingConfig = {
   openai: {
-    // GPT-5.4 models (latest flagship, released March 2026)
+    // GPT-5.5 models (premium tier, released April 2026)
+    'gpt-5.5': { inputPricePerMillion: 5, outputPricePerMillion: 30 },
+    'gpt-5.5-pro': { inputPricePerMillion: 30, outputPricePerMillion: 180 },
+
+    // GPT-5.4 models (released March 2026)
     'gpt-5.4': { inputPricePerMillion: 2.5, outputPricePerMillion: 15 },
     'gpt-5.4-mini': { inputPricePerMillion: 0.75, outputPricePerMillion: 4.5 },
     'gpt-5.4-nano': { inputPricePerMillion: 0.2, outputPricePerMillion: 1.25 },
@@ -249,8 +253,10 @@ export const DEFAULT_PRICING: PricingConfig = {
     'mistral-medium-3.1': { inputPricePerMillion: 0.4, outputPricePerMillion: 2 },
     'mistral-medium-3': { inputPricePerMillion: 0.4, outputPricePerMillion: 2 },
 
-    // Mistral Small 3.2
+    // Mistral Small (4.0 / 3.x)
     'mistral-small-latest': { inputPricePerMillion: 0.075, outputPricePerMillion: 0.2 },
+    'mistral-small-4': { inputPricePerMillion: 0.15, outputPricePerMillion: 0.6 },
+    'mistral-small-2603': { inputPricePerMillion: 0.15, outputPricePerMillion: 0.6 },
     'mistral-small-3.2': { inputPricePerMillion: 0.075, outputPricePerMillion: 0.2 },
     'mistral-small-3.1': { inputPricePerMillion: 0.1, outputPricePerMillion: 0.3 },
     'mistral-small-2501': { inputPricePerMillion: 0.05, outputPricePerMillion: 0.08 },
@@ -262,6 +268,8 @@ export const DEFAULT_PRICING: PricingConfig = {
 
     // Magistral (reasoning)
     'magistral-medium': { inputPricePerMillion: 2, outputPricePerMillion: 5 },
+    'magistral-medium-1.2': { inputPricePerMillion: 2, outputPricePerMillion: 5 },
+    'magistral-small-1.2': { inputPricePerMillion: 0.5, outputPricePerMillion: 1.5 },
 
     // Codestral
     'codestral-latest': { inputPricePerMillion: 0.3, outputPricePerMillion: 0.9 },
@@ -306,6 +314,8 @@ export const DEFAULT_PRICING: PricingConfig = {
     'MiniMaxAI/MiniMax-M2.5': { inputPricePerMillion: 0.3, outputPricePerMillion: 1.2 },
     'MiniMaxAI/MiniMax-M2.7': { inputPricePerMillion: 0.3, outputPricePerMillion: 1.2 },
     'moonshotai/Kimi-K2.5': { inputPricePerMillion: 0.5, outputPricePerMillion: 2.8 },
+    'moonshotai/Kimi-K2.6': { inputPricePerMillion: 1.2, outputPricePerMillion: 4.5 },
+    'deepseek-ai/DeepSeek-V4-Pro': { inputPricePerMillion: 2.1, outputPricePerMillion: 4.4 },
     'zai-org/GLM-5.1': { inputPricePerMillion: 1.4, outputPricePerMillion: 4.4 },
     'zai-org/GLM-5': { inputPricePerMillion: 1, outputPricePerMillion: 3.2 },
     'google/gemma-4-31B-it': { inputPricePerMillion: 0.2, outputPricePerMillion: 0.5 },
@@ -412,6 +422,7 @@ export const DEFAULT_PRICING: PricingConfig = {
     'Kimi/K2-Thinking': { inputPricePerMillion: 1.2, outputPricePerMillion: 4 },
     'Kimi/K2-0905': { inputPricePerMillion: 1, outputPricePerMillion: 3 },
     'Kimi/K2.5': { inputPricePerMillion: 0.5, outputPricePerMillion: 2.8 },
+    'Kimi/K2.6': { inputPricePerMillion: 1.2, outputPricePerMillion: 4.5 },
 
     // MiniMax
     'MiniMax/MiniMax-M2.5': { inputPricePerMillion: 0.3, outputPricePerMillion: 1.2 },
