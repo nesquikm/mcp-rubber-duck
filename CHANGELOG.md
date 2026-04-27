@@ -1,3 +1,10 @@
+## [1.19.3](https://github.com/nesquikm/mcp-rubber-duck/compare/v1.19.2...v1.19.3) (2026-04-27)
+
+
+### Bug Fixes
+
+* bump postcss to patch GHSA-qx2v-qp2m-jg93 ([113082b](https://github.com/nesquikm/mcp-rubber-duck/commit/113082b393caa668fe8d3fdad566e757aef844d2))
+
 ## [1.19.2](https://github.com/nesquikm/mcp-rubber-duck/compare/v1.19.1...v1.19.2) (2026-04-19)
 
 
