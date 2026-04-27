@@ -1,3 +1,10 @@
+## [1.19.4](https://github.com/nesquikm/mcp-rubber-duck/compare/v1.19.3...v1.19.4) (2026-04-27)
+
+
+### Bug Fixes
+
+* update LLM pricing data (2026-04-27) ([#109](https://github.com/nesquikm/mcp-rubber-duck/issues/109)) ([d666357](https://github.com/nesquikm/mcp-rubber-duck/commit/d666357910e898c0a7d5f2f046471307f5d2a302))
+
 ## [1.19.3](https://github.com/nesquikm/mcp-rubber-duck/compare/v1.19.2...v1.19.3) (2026-04-27)
 
 
