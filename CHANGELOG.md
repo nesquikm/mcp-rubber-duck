@@ -1,3 +1,10 @@
+## [1.19.5](https://github.com/nesquikm/mcp-rubber-duck/compare/v1.19.4...v1.19.5) (2026-05-11)
+
+
+### Bug Fixes
+
+* patch transitive vulns in hono, fast-uri, ip-address, npm ([#113](https://github.com/nesquikm/mcp-rubber-duck/issues/113)) ([d512944](https://github.com/nesquikm/mcp-rubber-duck/commit/d512944f99c9e2ceedb12d60fb6295d5f07ffd67)), closes [#111](https://github.com/nesquikm/mcp-rubber-duck/issues/111) [#112](https://github.com/nesquikm/mcp-rubber-duck/issues/112)
+
 ## [1.19.4](https://github.com/nesquikm/mcp-rubber-duck/compare/v1.19.3...v1.19.4) (2026-04-27)
 
 
