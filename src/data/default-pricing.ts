@@ -3,7 +3,7 @@ import { PricingConfig } from '../config/types.js';
 /**
  * Default pricing data for common LLM providers.
  * Prices are in USD per million tokens.
- * Last updated: 2026-04-27
+ * Last updated: 2026-05-15
  *
  * To update pricing:
  * 1. Research current pricing from provider websites
@@ -14,7 +14,7 @@ import { PricingConfig } from '../config/types.js';
  * Users can override these defaults in their config.json file.
  */
 export const DEFAULT_PRICING_VERSION = 2;
-export const DEFAULT_PRICING_LAST_UPDATED = '2026-04-27';
+export const DEFAULT_PRICING_LAST_UPDATED = '2026-05-15';
 
 export const DEFAULT_PRICING: PricingConfig = {
   openai: {
@@ -143,10 +143,12 @@ export const DEFAULT_PRICING: PricingConfig = {
   },
 
   google: {
-    // Gemini 3.1 (preview)
+    // Gemini 3.1
+    'gemini-3.1-flash-lite': { inputPricePerMillion: 0.25, outputPricePerMillion: 1.5 },
     'gemini-3.1-pro-preview': { inputPricePerMillion: 2, outputPricePerMillion: 12 },
     'gemini-3.1-flash-lite-preview': { inputPricePerMillion: 0.25, outputPricePerMillion: 1.5 },
     'gemini-3.1-flash-image-preview': { inputPricePerMillion: 0.5, outputPricePerMillion: 60 },
+    'gemini-3.1-flash-live-preview': { inputPricePerMillion: 0.75, outputPricePerMillion: 4.5 },
 
     // Gemini 3.0 (preview)
     'gemini-3-pro-preview': { inputPricePerMillion: 2, outputPricePerMillion: 12 },
@@ -194,6 +196,7 @@ export const DEFAULT_PRICING: PricingConfig = {
 
     // Embeddings
     'gemini-embedding-001': { inputPricePerMillion: 0.15, outputPricePerMillion: 0 },
+    'gemini-embedding-2': { inputPricePerMillion: 0.2, outputPricePerMillion: 0 },
 
     // Robotics (preview)
     'gemini-robotics-er-1.5-preview': { inputPricePerMillion: 0.3, outputPricePerMillion: 2.5 },
@@ -234,10 +237,13 @@ export const DEFAULT_PRICING: PricingConfig = {
   },
 
   deepseek: {
-    // DeepSeek V3.2 (current models)
-    'deepseek-chat': { inputPricePerMillion: 0.28, outputPricePerMillion: 0.42 },
-    'deepseek-reasoner': { inputPricePerMillion: 0.28, outputPricePerMillion: 0.42 },
-    // Legacy aliases kept for compatibility
+    // DeepSeek V4 (current models, May 2026)
+    'deepseek-v4-flash': { inputPricePerMillion: 0.14, outputPricePerMillion: 0.28 },
+    'deepseek-v4-pro': { inputPricePerMillion: 0.435, outputPricePerMillion: 0.87 },
+    // Legacy aliases (deepseek-chat / deepseek-reasoner map to v4-flash non-thinking/thinking modes)
+    'deepseek-chat': { inputPricePerMillion: 0.14, outputPricePerMillion: 0.28 },
+    'deepseek-reasoner': { inputPricePerMillion: 0.14, outputPricePerMillion: 0.28 },
+    // Older aliases kept for compatibility
     'deepseek-v3': { inputPricePerMillion: 0.28, outputPricePerMillion: 0.42 },
     'deepseek-r1': { inputPricePerMillion: 0.28, outputPricePerMillion: 0.42 },
   },
@@ -318,7 +324,8 @@ export const DEFAULT_PRICING: PricingConfig = {
     'deepseek-ai/DeepSeek-V4-Pro': { inputPricePerMillion: 2.1, outputPricePerMillion: 4.4 },
     'zai-org/GLM-5.1': { inputPricePerMillion: 1.4, outputPricePerMillion: 4.4 },
     'zai-org/GLM-5': { inputPricePerMillion: 1, outputPricePerMillion: 3.2 },
-    'google/gemma-4-31B-it': { inputPricePerMillion: 0.2, outputPricePerMillion: 0.5 },
+    'google/gemma-4-31B-it': { inputPricePerMillion: 0.39, outputPricePerMillion: 0.97 },
+    'Qwen/Qwen3.6-Plus': { inputPricePerMillion: 0.5, outputPricePerMillion: 3 },
     'openai/gpt-oss-120b': { inputPricePerMillion: 0.15, outputPricePerMillion: 0.6 },
     'openai/gpt-oss-20b': { inputPricePerMillion: 0.05, outputPricePerMillion: 0.2 },
     'LiquidAI/LFM2-24B-A2B': { inputPricePerMillion: 0.03, outputPricePerMillion: 0.12 },
@@ -468,7 +475,7 @@ export const DEFAULT_PRICING: PricingConfig = {
     'marin-ai/Marin-8B-Instruct': { inputPricePerMillion: 0.18, outputPricePerMillion: 0.18 },
 
     // Gemma
-    'google/gemma-3n-E4B-it': { inputPricePerMillion: 0.02, outputPricePerMillion: 0.04 },
+    'google/gemma-3n-E4B-it': { inputPricePerMillion: 0.06, outputPricePerMillion: 0.12 },
   },
 
   // Local models typically have no per-token cost
