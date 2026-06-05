@@ -3,7 +3,7 @@ import { PricingConfig } from '../config/types.js';
 /**
  * Default pricing data for common LLM providers.
  * Prices are in USD per million tokens.
- * Last updated: 2026-05-15
+ * Last updated: 2026-06-05
  *
  * To update pricing:
  * 1. Research current pricing from provider websites
@@ -14,7 +14,7 @@ import { PricingConfig } from '../config/types.js';
  * Users can override these defaults in their config.json file.
  */
 export const DEFAULT_PRICING_VERSION = 2;
-export const DEFAULT_PRICING_LAST_UPDATED = '2026-05-15';
+export const DEFAULT_PRICING_LAST_UPDATED = '2026-06-05';
 
 export const DEFAULT_PRICING: PricingConfig = {
   openai: {
@@ -98,7 +98,10 @@ export const DEFAULT_PRICING: PricingConfig = {
   },
 
   anthropic: {
-    // Claude 4.7 models (current flagship, April 2026)
+    // Claude 4.8 models (current flagship)
+    'claude-opus-4-8': { inputPricePerMillion: 5, outputPricePerMillion: 25 },
+
+    // Claude 4.7 models
     'claude-opus-4-7': { inputPricePerMillion: 5, outputPricePerMillion: 25 },
 
     // Claude 4.6 models
@@ -143,6 +146,9 @@ export const DEFAULT_PRICING: PricingConfig = {
   },
 
   google: {
+    // Gemini 3.5
+    'gemini-3.5-flash': { inputPricePerMillion: 1.5, outputPricePerMillion: 9 },
+
     // Gemini 3.1
     'gemini-3.1-flash-lite': { inputPricePerMillion: 0.25, outputPricePerMillion: 1.5 },
     'gemini-3.1-pro-preview': { inputPricePerMillion: 2, outputPricePerMillion: 12 },
@@ -154,6 +160,7 @@ export const DEFAULT_PRICING: PricingConfig = {
     'gemini-3-pro-preview': { inputPricePerMillion: 2, outputPricePerMillion: 12 },
     'gemini-3-flash-preview': { inputPricePerMillion: 0.5, outputPricePerMillion: 3 },
     'gemini-3-pro-image-preview': { inputPricePerMillion: 2, outputPricePerMillion: 120 },
+    'gemini-3-pro-image': { inputPricePerMillion: 2, outputPricePerMillion: 120 },
 
     // Gemini 2.5
     'gemini-2.5-pro': { inputPricePerMillion: 1.25, outputPricePerMillion: 10 },
@@ -254,8 +261,9 @@ export const DEFAULT_PRICING: PricingConfig = {
     'mistral-large-2512': { inputPricePerMillion: 0.5, outputPricePerMillion: 1.5 },
     'mistral-large-2411': { inputPricePerMillion: 2, outputPricePerMillion: 6 },
 
-    // Mistral Medium 3.1
-    'mistral-medium-latest': { inputPricePerMillion: 0.4, outputPricePerMillion: 2 },
+    // Mistral Medium 3.5 (current latest)
+    'mistral-medium-latest': { inputPricePerMillion: 1.5, outputPricePerMillion: 7.5 },
+    'mistral-medium-3.5': { inputPricePerMillion: 1.5, outputPricePerMillion: 7.5 },
     'mistral-medium-3.1': { inputPricePerMillion: 0.4, outputPricePerMillion: 2 },
     'mistral-medium-3': { inputPricePerMillion: 0.4, outputPricePerMillion: 2 },
 
@@ -308,8 +316,8 @@ export const DEFAULT_PRICING: PricingConfig = {
     'voxtral-small-2507': { inputPricePerMillion: 0.1, outputPricePerMillion: 0.3 },
 
     // Mixtral
-    'open-mixtral-8x7b': { inputPricePerMillion: 0.24, outputPricePerMillion: 0.24 },
-    'open-mixtral-8x22b': { inputPricePerMillion: 1.2, outputPricePerMillion: 1.2 },
+    'open-mixtral-8x7b': { inputPricePerMillion: 0.7, outputPricePerMillion: 0.7 },
+    'open-mixtral-8x22b': { inputPricePerMillion: 2, outputPricePerMillion: 6 },
 
     // Open models
     'open-mistral-nemo': { inputPricePerMillion: 0.02, outputPricePerMillion: 0.04 },
@@ -326,6 +334,7 @@ export const DEFAULT_PRICING: PricingConfig = {
     'zai-org/GLM-5': { inputPricePerMillion: 1, outputPricePerMillion: 3.2 },
     'google/gemma-4-31B-it': { inputPricePerMillion: 0.39, outputPricePerMillion: 0.97 },
     'Qwen/Qwen3.6-Plus': { inputPricePerMillion: 0.5, outputPricePerMillion: 3 },
+    'Qwen/Qwen3.7-Max': { inputPricePerMillion: 1.25, outputPricePerMillion: 3.75 },
     'openai/gpt-oss-120b': { inputPricePerMillion: 0.15, outputPricePerMillion: 0.6 },
     'openai/gpt-oss-20b': { inputPricePerMillion: 0.05, outputPricePerMillion: 0.2 },
     'LiquidAI/LFM2-24B-A2B': { inputPricePerMillion: 0.03, outputPricePerMillion: 0.12 },
@@ -351,8 +360,8 @@ export const DEFAULT_PRICING: PricingConfig = {
 
     // Llama 3.3
     'meta-llama/Llama-3.3-70B-Instruct-Turbo': {
-      inputPricePerMillion: 0.88,
-      outputPricePerMillion: 0.88,
+      inputPricePerMillion: 1.04,
+      outputPricePerMillion: 1.04,
     },
 
     // Llama 3.2
