@@ -10,6 +10,8 @@ An MCP (Model Context Protocol) server that acts as a bridge to query multiple L
   <img src="assets/mcp-rubber-duck.jpg" alt="MCP Rubber Duck - AI ducks helping debug code" width="600">
 </p>
 
+> **Why direct provider integration?** MCP's `sampling` primitive -- a server borrowing the *host's* model -- was deprecated in the [2026-07-28 spec RC](https://github.com/modelcontextprotocol/modelcontextprotocol/pull/2577) in favor of servers integrating directly with LLM provider APIs. Rubber Duck has always worked this way (it brings its own ducks), so it's aligned with where the protocol is heading -- no migration required.
+
 ## Features
 
 - **Universal OpenAI Compatibility** -- Works with any OpenAI-compatible API endpoint
@@ -32,6 +34,7 @@ An MCP (Model Context Protocol) server that acts as a bridge to query multiple L
 - **Interactive UIs** -- Rich HTML panels for compare, vote, debate, and usage tools (via [MCP Apps](https://github.com/modelcontextprotocol/ext-apps))
 - **Tool Annotations** -- MCP-compliant hints for tool behavior (read-only, destructive, etc.)
 - **Structured Output** -- `outputSchema` on tools returning structured JSON for client-side validation (Cursor, VS Code/Copilot)
+- **Spec-Aligned by Design** -- connects directly to provider APIs, the path the MCP `2026-07-28` spec recommends now that server-side `sampling` is deprecated ([SEP-2577](https://github.com/modelcontextprotocol/modelcontextprotocol/pull/2577))
 
 ## Supported Providers
 
