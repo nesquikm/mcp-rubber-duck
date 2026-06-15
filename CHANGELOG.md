@@ -1,3 +1,10 @@
+## [1.19.8](https://github.com/nesquikm/mcp-rubber-duck/compare/v1.19.7...v1.19.8) (2026-06-15)
+
+
+### Bug Fixes
+
+* bump esbuild, vite, tsx to patch high-severity esbuild advisories ([#122](https://github.com/nesquikm/mcp-rubber-duck/issues/122)) ([d1c94be](https://github.com/nesquikm/mcp-rubber-duck/commit/d1c94be34d9e933306d7f3124dc3d4bea2e39512)), closes [hi#severity](https://github.com/hi/issues/severity)
+
 ## [1.19.7](https://github.com/nesquikm/mcp-rubber-duck/compare/v1.19.6...v1.19.7) (2026-06-05)
 
 
