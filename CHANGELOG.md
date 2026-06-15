@@ -1,3 +1,10 @@
+## [1.19.9](https://github.com/nesquikm/mcp-rubber-duck/compare/v1.19.8...v1.19.9) (2026-06-15)
+
+
+### Bug Fixes
+
+* **ci:** activate semantic-release releaseRules and prune stale audit allowlist ([#123](https://github.com/nesquikm/mcp-rubber-duck/issues/123)) ([92d3be9](https://github.com/nesquikm/mcp-rubber-duck/commit/92d3be9304310479cddaa375a24164a07699af00))
+
 ## [1.19.8](https://github.com/nesquikm/mcp-rubber-duck/compare/v1.19.7...v1.19.8) (2026-06-15)
 
 
