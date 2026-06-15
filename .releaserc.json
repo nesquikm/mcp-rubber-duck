@@ -4,7 +4,46 @@
     "main"
   ],
   "plugins": [
-    "@semantic-release/commit-analyzer",
+    [
+      "@semantic-release/commit-analyzer",
+      {
+        "preset": "angular",
+        "releaseRules": [
+          {
+            "breaking": true,
+            "release": "major"
+          },
+          {
+            "revert": true,
+            "release": "patch"
+          },
+          {
+            "type": "feat",
+            "release": "minor"
+          },
+          {
+            "type": "fix",
+            "release": "patch"
+          },
+          {
+            "type": "perf",
+            "release": "patch"
+          },
+          {
+            "type": "refactor",
+            "release": "patch"
+          },
+          {
+            "scope": "{deps,deps-dev}",
+            "release": "patch"
+          },
+          {
+            "scope": "no-release",
+            "release": false
+          }
+        ]
+      }
+    ],
     "@semantic-release/release-notes-generator",
     [
       "@semantic-release/changelog",
@@ -29,47 +68,5 @@
       }
     ],
     "@semantic-release/github"
-  ],
-  "releaseRules": [
-    {
-      "type": "feat",
-      "release": "minor"
-    },
-    {
-      "type": "fix",
-      "release": "patch"
-    },
-    {
-      "type": "docs",
-      "release": false
-    },
-    {
-      "type": "style",
-      "release": false
-    },
-    {
-      "type": "refactor",
-      "release": "patch"
-    },
-    {
-      "type": "perf",
-      "release": "patch"
-    },
-    {
-      "type": "test",
-      "release": false
-    },
-    {
-      "scope": "deps",
-      "release": "patch"
-    },
-    {
-      "type": "chore",
-      "release": false
-    },
-    {
-      "scope": "no-release",
-      "release": false
-    }
   ]
 }
