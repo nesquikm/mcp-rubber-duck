@@ -57,6 +57,7 @@ export async function duckIterateTool(
 
   const rounds: IterationRound[] = [];
   let lastResponse = '';
+  let lastImprovement = '';
   let converged = false;
 
   if (signal?.aborted) {
@@ -77,6 +78,7 @@ export async function duckIterateTool(
   });
 
   lastResponse = initialResponse.content;
+  lastImprovement = initialResponse.content;
   logger.info(`Round 1: ${providers[0]} generated initial response`);
 
   if (progress) {
@@ -115,6 +117,9 @@ export async function duckIterateTool(
     });
 
     lastResponse = response.content;
+    if (role !== 'critic') {
+      lastImprovement = response.content;
+    }
     logger.info(`Round ${i}: ${currentProvider} ${role === 'critic' ? 'critiqued' : 'refined'}`);
 
     if (progress) {
@@ -131,7 +136,7 @@ export async function duckIterateTool(
     mode,
     providers,
     rounds,
-    finalResponse: lastResponse,
+    finalResponse: lastImprovement,
     totalIterations: rounds.length,
     converged,
   };
