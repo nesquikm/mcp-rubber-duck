@@ -439,6 +439,36 @@ describe('Multi-Round Tool Calling', () => {
     expect(result.content).toBe('Just a simple answer.');
     expect(result.toolRoundsUsed).toBeUndefined();
   });
+
+  // AC-R5S9MH.2 — principal wiring: the provider must pass its stable provider
+  // NAME (this.name === 'test'), not its human nickname (this.nickname === 'Test Duck'),
+  // as the duckName argument to functionBridge.handleFunctionCall. The principal is
+  // the provider name so two providers sharing a nickname cannot cross-authorize.
+  it('passes the provider name (not the nickname) as the duckName to handleFunctionCall', async () => {
+    const provider = createProvider();
+
+    jest
+      .spyOn(provider as any, 'createChatCompletion')
+      .mockResolvedValueOnce(
+        mockChatResponse({
+          tool_calls: [toolCall('tc1', 'mcp__fs__search', { query: 'x' })],
+        })
+      )
+      .mockResolvedValueOnce(mockChatResponse({ content: 'Done.' }));
+
+    const handleFnSpy = jest
+      .spyOn(functionBridge, 'handleFunctionCall')
+      .mockResolvedValue({ success: true, data: 'ok' });
+
+    await provider.chat({
+      messages: [{ role: 'user', content: 'search', timestamp: new Date() }],
+    });
+
+    expect(handleFnSpy).toHaveBeenCalled();
+    const [duckNameArg] = handleFnSpy.mock.calls[0];
+    expect(duckNameArg).toBe('test'); // provider name
+    expect(duckNameArg).not.toBe('Test Duck'); // not the nickname
+  });
 });
 
 describe('Multi-Round Tool Calling Config', () => {

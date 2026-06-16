@@ -178,7 +178,7 @@ describe('ApprovalService', () => {
 
       service.approveRequest(request.id);
 
-      expect(service.isToolApprovedForSession('TestDuck', 'filesystem', 'read_file')).toBe(true);
+      expect(service.isToolApprovedForSession('TestDuck', 'filesystem', 'read_file', {})).toBe(true);
     });
   });
 
@@ -320,41 +320,79 @@ describe('ApprovalService', () => {
 
   describe('session approvals', () => {
     it('should track tool approvals for session', () => {
-      expect(service.isToolApprovedForSession('Duck', 'server', 'tool')).toBe(false);
+      expect(service.isToolApprovedForSession('Duck', 'server', 'tool', {})).toBe(false);
 
-      service.markToolAsApprovedForSession('Duck', 'server', 'tool');
+      service.markToolAsApprovedForSession('Duck', 'server', 'tool', {});
 
-      expect(service.isToolApprovedForSession('Duck', 'server', 'tool')).toBe(true);
+      expect(service.isToolApprovedForSession('Duck', 'server', 'tool', {})).toBe(true);
     });
 
     it('should differentiate between duck/server/tool combinations', () => {
-      service.markToolAsApprovedForSession('Duck1', 'server', 'tool');
+      service.markToolAsApprovedForSession('Duck1', 'server', 'tool', {});
 
-      expect(service.isToolApprovedForSession('Duck1', 'server', 'tool')).toBe(true);
-      expect(service.isToolApprovedForSession('Duck2', 'server', 'tool')).toBe(false);
-      expect(service.isToolApprovedForSession('Duck1', 'other', 'tool')).toBe(false);
-      expect(service.isToolApprovedForSession('Duck1', 'server', 'other')).toBe(false);
+      expect(service.isToolApprovedForSession('Duck1', 'server', 'tool', {})).toBe(true);
+      expect(service.isToolApprovedForSession('Duck2', 'server', 'tool', {})).toBe(false);
+      expect(service.isToolApprovedForSession('Duck1', 'other', 'tool', {})).toBe(false);
+      expect(service.isToolApprovedForSession('Duck1', 'server', 'other', {})).toBe(false);
     });
 
     it('should clear session approvals', () => {
-      service.markToolAsApprovedForSession('Duck1', 'server', 'tool1');
-      service.markToolAsApprovedForSession('Duck2', 'server', 'tool2');
+      service.markToolAsApprovedForSession('Duck1', 'server', 'tool1', {});
+      service.markToolAsApprovedForSession('Duck2', 'server', 'tool2', {});
 
       service.clearSessionApprovals();
 
-      expect(service.isToolApprovedForSession('Duck1', 'server', 'tool1')).toBe(false);
-      expect(service.isToolApprovedForSession('Duck2', 'server', 'tool2')).toBe(false);
+      expect(service.isToolApprovedForSession('Duck1', 'server', 'tool1', {})).toBe(false);
+      expect(service.isToolApprovedForSession('Duck2', 'server', 'tool2', {})).toBe(false);
     });
 
     it('should get all session approvals', () => {
-      service.markToolAsApprovedForSession('Duck1', 'server', 'tool1');
-      service.markToolAsApprovedForSession('Duck2', 'server', 'tool2');
+      service.markToolAsApprovedForSession('Duck1', 'server', 'tool1', {});
+      service.markToolAsApprovedForSession('Duck2', 'server', 'tool2', {});
 
       const approvals = service.getSessionApprovals();
 
+      // Keys now embed an args hash + the provider-name principal, so do not assert
+      // the legacy `Duck:server:tool` string — assert membership by recompute instead.
       expect(approvals).toHaveLength(2);
-      expect(approvals).toContain('Duck1:server:tool1');
-      expect(approvals).toContain('Duck2:server:tool2');
+      expect(service.isToolApprovedForSession('Duck1', 'server', 'tool1', {})).toBe(true);
+      expect(service.isToolApprovedForSession('Duck2', 'server', 'tool2', {})).toBe(true);
+    });
+
+    // AC-R5S9MH.2 — args-hash keying: a session approval for argsX must NOT
+    // auto-approve the same principal/server/tool with materially different argsY.
+    it('should not approve when args differ from the approved args', () => {
+      const argsX = { path: '/safe.txt' };
+      const argsY = { path: '/etc/shadow' };
+
+      service.markToolAsApprovedForSession('openai', 'filesystem', 'read_file', argsX);
+
+      expect(service.isToolApprovedForSession('openai', 'filesystem', 'read_file', argsX)).toBe(true);
+      expect(service.isToolApprovedForSession('openai', 'filesystem', 'read_file', argsY)).toBe(false);
+    });
+
+    // AC-R5S9MH.2 — TTL expiry: a session approval expires after approval_timeout.
+    it('should expire a session approval after the approval timeout (TTL)', () => {
+      const args = { path: '/safe.txt' };
+      service.markToolAsApprovedForSession('openai', 'filesystem', 'read_file', args);
+
+      expect(service.isToolApprovedForSession('openai', 'filesystem', 'read_file', args)).toBe(true);
+
+      // Advance beyond the 60s approval_timeout configured in beforeEach.
+      jest.advanceTimersByTime(61000);
+
+      expect(service.isToolApprovedForSession('openai', 'filesystem', 'read_file', args)).toBe(false);
+    });
+
+    // AC-R5S9MH.2 — principal scoping: the principal is the provider NAME, not the
+    // nickname. Marking for provider 'openai' must not authorize provider 'google'
+    // even when both share the same server/tool/args.
+    it('should scope approvals to the provider-name principal', () => {
+      const args = { path: '/safe.txt' };
+      service.markToolAsApprovedForSession('openai', 'filesystem', 'read_file', args);
+
+      expect(service.isToolApprovedForSession('openai', 'filesystem', 'read_file', args)).toBe(true);
+      expect(service.isToolApprovedForSession('google', 'filesystem', 'read_file', args)).toBe(false);
     });
   });
 

@@ -1,6 +1,7 @@
 import { logger } from '../utils/logger.js';
 import { SafeLogger } from '../utils/safe-logger.js';
-import { randomUUID } from 'crypto';
+import { randomUUID, createHash } from 'crypto';
+import { canonicalJSONStringify } from '../utils/canonical-json.js';
 
 export interface ApprovalRequest {
   id: string;
@@ -9,19 +10,21 @@ export interface ApprovalRequest {
   mcpServer: string;
   toolName: string;
   arguments: Record<string, unknown>;
-  status: 'pending' | 'approved' | 'denied' | 'expired';
+  status: 'pending' | 'approved' | 'denied' | 'expired' | 'consumed';
   approvedBy?: string;
   deniedReason?: string;
   expiresAt: number;
 }
 
-export type ApprovalStatus = 'pending' | 'approved' | 'denied' | 'expired';
+export type ApprovalStatus = 'pending' | 'approved' | 'denied' | 'expired' | 'consumed';
 
 export class ApprovalService {
   private pendingApprovals: Map<string, ApprovalRequest> = new Map();
   private approvalTimeout: number;
   private cleanupInterval: NodeJS.Timeout | null = null;
-  private approvedToolsForSession: Set<string> = new Set();
+  // Maps a session approval key -> expiresAt (epoch ms). The key is scoped by
+  // principal (provider name) + server + tool + normalized-args-hash.
+  private approvedToolsForSession: Map<string, number> = new Map();
 
   constructor(approvalTimeoutSeconds: number = 300) {
     this.approvalTimeout = approvalTimeoutSeconds * 1000; // Convert to milliseconds
@@ -102,13 +105,43 @@ export class ApprovalService {
     request.status = 'approved';
     request.approvedBy = approvedBy;
 
-    // Mark tool as approved for this session
-    const sessionKey = this.createSessionKey(request.duckName, request.mcpServer, request.toolName);
-    this.approvedToolsForSession.add(sessionKey);
+    // Mark tool as approved for this session, scoped by principal + server +
+    // tool + args-hash and carrying a TTL derived from the approval timeout.
+    const sessionKey = this.createSessionKey(
+      request.duckName,
+      request.mcpServer,
+      request.toolName,
+      request.arguments
+    );
+    this.approvedToolsForSession.set(sessionKey, Date.now() + this.approvalTimeout);
 
     logger.info(
       `Approval request ${id} approved by ${approvedBy} - tool ${sessionKey} now approved for session`
     );
+    return true;
+  }
+
+  /**
+   * Consume an approved request, transitioning it to the terminal `consumed`
+   * status. Single-use: returns true only on a valid approved→consumed
+   * transition; returns false if the request is missing or not in the
+   * `approved` state (e.g. already consumed).
+   */
+  consumeApproval(id: string): boolean {
+    const request = this.getApprovalRequest(id);
+
+    if (!request) {
+      logger.warn(`Approval request ${id} not found`);
+      return false;
+    }
+
+    if (request.status !== 'approved') {
+      logger.warn(`Approval request ${id} is not approved (status: ${request.status})`);
+      return false;
+    }
+
+    request.status = 'consumed';
+    logger.info(`Approval request ${id} consumed (single-use)`);
     return true;
   }
 
@@ -187,18 +220,54 @@ export class ApprovalService {
   }
 
   // Session-based approval methods
-  private createSessionKey(duckName: string, mcpServer: string, toolName: string): string {
-    return `${duckName}:${mcpServer}:${toolName}`;
+  //
+  // The session key is scoped by the principal (provider name), the MCP server,
+  // the tool name, and a hash of the normalized (canonical, key-sorted) args.
+  // This ensures: (1) two providers sharing a human nickname cannot
+  // cross-authorize (the principal is the stable provider name), and (2) an
+  // approval for one set of arguments does not auto-approve a materially
+  // different set.
+  private createSessionKey(
+    principal: string,
+    mcpServer: string,
+    toolName: string,
+    args: Record<string, unknown>
+  ): string {
+    const argsHash = createHash('sha256').update(canonicalJSONStringify(args)).digest('hex');
+    return `${principal}:${mcpServer}:${toolName}:${argsHash}`;
   }
 
-  isToolApprovedForSession(duckName: string, mcpServer: string, toolName: string): boolean {
-    const sessionKey = this.createSessionKey(duckName, mcpServer, toolName);
-    return this.approvedToolsForSession.has(sessionKey);
+  isToolApprovedForSession(
+    principal: string,
+    mcpServer: string,
+    toolName: string,
+    args: Record<string, unknown>
+  ): boolean {
+    const sessionKey = this.createSessionKey(principal, mcpServer, toolName, args);
+    const expiresAt = this.approvedToolsForSession.get(sessionKey);
+
+    if (expiresAt === undefined) {
+      return false;
+    }
+
+    // Expired approvals are evicted and treated as not approved, forcing a
+    // fresh approval prompt.
+    if (Date.now() >= expiresAt) {
+      this.approvedToolsForSession.delete(sessionKey);
+      return false;
+    }
+
+    return true;
   }
 
-  markToolAsApprovedForSession(duckName: string, mcpServer: string, toolName: string): void {
-    const sessionKey = this.createSessionKey(duckName, mcpServer, toolName);
-    this.approvedToolsForSession.add(sessionKey);
+  markToolAsApprovedForSession(
+    principal: string,
+    mcpServer: string,
+    toolName: string,
+    args: Record<string, unknown>
+  ): void {
+    const sessionKey = this.createSessionKey(principal, mcpServer, toolName, args);
+    this.approvedToolsForSession.set(sessionKey, Date.now() + this.approvalTimeout);
     logger.info(`Tool ${sessionKey} marked as approved for session`);
   }
 
@@ -209,7 +278,7 @@ export class ApprovalService {
   }
 
   getSessionApprovals(): string[] {
-    return Array.from(this.approvedToolsForSession);
+    return Array.from(this.approvedToolsForSession.keys());
   }
 
   // For debugging/admin purposes
@@ -219,6 +288,7 @@ export class ApprovalService {
     approved: number;
     denied: number;
     expired: number;
+    consumed: number;
   } {
     this.cleanupExpired();
 
@@ -230,6 +300,7 @@ export class ApprovalService {
       approved: all.filter((r) => r.status === 'approved').length,
       denied: all.filter((r) => r.status === 'denied').length,
       expired: all.filter((r) => r.status === 'expired').length,
+      consumed: all.filter((r) => r.status === 'consumed').length,
     };
   }
 }

@@ -231,7 +231,7 @@ export class EnhancedDuckProvider extends DuckProvider {
           SafeLogger.debug(`Function call arguments for ${functionName}:`, args);
 
           const result = await this.functionBridge.handleFunctionCall(
-            this.nickname,
+            this.name,
             functionName,
             args
           );
