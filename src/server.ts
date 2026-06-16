@@ -45,7 +45,8 @@ import { GuardrailsService } from './guardrails/service.js';
 import { TaskManager } from './services/task-manager.js';
 import { createProgressReporter } from './services/progress.js';
 import { logger } from './utils/logger.js';
-import { duckArt, getRandomDuckMessage } from './utils/ascii-art.js';
+import { getRandomDuckMessage } from './utils/ascii-art.js';
+import { printWelcomeBanner } from './utils/banner.js';
 
 // Import tools
 import { askDuckTool } from './tools/ask-duck.js';
@@ -1206,14 +1207,9 @@ export class RubberDuckServer {
   }
 
   async start() {
-    // Only show welcome message when not running as MCP server
-    const isMCP = process.env.MCP_SERVER === 'true' || process.argv.includes('--mcp');
-    if (!isMCP) {
-      // eslint-disable-next-line no-console
-      console.log(duckArt.welcome);
-      // eslint-disable-next-line no-console
-      console.log('\n' + getRandomDuckMessage('startup'));
-    }
+    // The welcome banner always goes to stderr (see printWelcomeBanner), so it is
+    // safe to print in every mode — stdout stays reserved for framed JSON-RPC.
+    printWelcomeBanner();
 
     // Initialize guardrails service if configured
     if (this.guardrailsService) {
