@@ -1,3 +1,13 @@
+## [1.19.10](https://github.com/nesquikm/mcp-rubber-duck/compare/v1.19.9...v1.19.10) (2026-06-16)
+
+
+### Bug Fixes
+
+* **config:** preserve file-defined mcp_servers/trusted_tools_by_server when env is empty ([0165786](https://github.com/nesquikm/mcp-rubber-duck/commit/01657862779e02deaefa3aae43e9e8b37d205db6))
+* **duck-iterate:** never return a critique as the final response in critique-improve mode ([b3f14d4](https://github.com/nesquikm/mcp-rubber-duck/commit/b3f14d4efc9d6c8b232b9180aec7b8b82f96a3a1))
+* **logger:** write logs and welcome banner to stderr so stdio stdout stays clean ([d1714cf](https://github.com/nesquikm/mcp-rubber-duck/commit/d1714cfd487ad03212f2136a778af77b496d1833))
+* **mcp-bridge:** bind approval IDs to their call and scope session approvals by provider+args+TTL ([36f0b4c](https://github.com/nesquikm/mcp-rubber-duck/commit/36f0b4cfc2def86d3f7d53657bbe09790c47e42c))
+
 ## [1.19.9](https://github.com/nesquikm/mcp-rubber-duck/compare/v1.19.8...v1.19.9) (2026-06-15)
 
 
