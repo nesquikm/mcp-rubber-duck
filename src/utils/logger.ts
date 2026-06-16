@@ -70,9 +70,13 @@ export const logger = winston.createLogger({
     winston.format.json()
   ),
   transports: [
-    new winston.transports.Console({
+    // The server always talks over stdio, so stdout carries framed JSON-RPC.
+    // Write every log level straight to process.stderr so no log line ever
+    // lands on stdout (winston's Console transport can route through
+    // console._stdout, which is unsafe under stdio).
+    new winston.transports.Stream({
+      stream: process.stderr,
       format: consoleFormat,
-      silent: isMCP, // Always silence console logs in MCP mode to avoid interfering with JSON-RPC
     }),
   ],
 });
