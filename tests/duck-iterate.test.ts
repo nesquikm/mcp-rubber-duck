@@ -359,4 +359,63 @@ describe('duckIterateTool', () => {
     expect(mockProgress.report).toHaveBeenNthCalledWith(2, 2, 3, expect.stringContaining('Round 2/3'));
     expect(mockProgress.report).toHaveBeenNthCalledWith(3, 3, 3, expect.stringContaining('Round 3/3'));
   });
+
+  // AC-R5S9MH.5 (H5): in critique-improve mode the final response must always be an
+  // improvement/answer, never a critique — including when iterations is even and the
+  // last round is a critic round. We assert against the "Final Response" section only,
+  // since the critique text legitimately appears in the iteration-history section.
+  const FINAL_MARKER = '🏁 **Final Response:**';
+
+  function finalResponseSection(text: string): string {
+    const idx = text.indexOf(FINAL_MARKER);
+    expect(idx).toBeGreaterThanOrEqual(0);
+    return text.slice(idx);
+  }
+
+  function mockRound(content: string, model: string) {
+    return {
+      choices: [{ message: { content }, finish_reason: 'stop' }],
+      usage: { prompt_tokens: 10, completion_tokens: 20, total_tokens: 30 },
+      model,
+    };
+  }
+
+  it('critique-improve with iterations=2 returns the round-1 improvement, not the round-2 critique', async () => {
+    // Round 1 = generator/improvement, Round 2 = critic.
+    // Distinctive, non-similar contents so convergence does NOT trigger.
+    mockCreate
+      .mockResolvedValueOnce(mockRound('GEN_ROUND_1', 'gpt-4'))
+      .mockResolvedValueOnce(mockRound('CRITIQUE_ROUND_2', 'gemini-pro'));
+
+    const result = await duckIterateTool(mockProviderManager, {
+      prompt: 'Write a function',
+      providers: ['openai', 'google'],
+      mode: 'critique-improve',
+      iterations: 2,
+    });
+
+    const finalSection = finalResponseSection(result.content[0].text);
+    expect(finalSection).toContain('GEN_ROUND_1');
+    expect(finalSection).not.toContain('CRITIQUE_ROUND_2');
+  });
+
+  it('critique-improve with iterations=4 returns the round-3 improvement, not the round-4 critique', async () => {
+    // Round 1 = generator, Round 2 = critic, Round 3 = improvement, Round 4 = critic.
+    mockCreate
+      .mockResolvedValueOnce(mockRound('GEN_ROUND_1', 'gpt-4'))
+      .mockResolvedValueOnce(mockRound('CRITIQUE_ROUND_2', 'gemini-pro'))
+      .mockResolvedValueOnce(mockRound('IMPROVE_ROUND_3', 'gpt-4'))
+      .mockResolvedValueOnce(mockRound('CRITIQUE_ROUND_4', 'gemini-pro'));
+
+    const result = await duckIterateTool(mockProviderManager, {
+      prompt: 'Write a function',
+      providers: ['openai', 'google'],
+      mode: 'critique-improve',
+      iterations: 4,
+    });
+
+    const finalSection = finalResponseSection(result.content[0].text);
+    expect(finalSection).toContain('IMPROVE_ROUND_3');
+    expect(finalSection).not.toContain('CRITIQUE_ROUND_4');
+  });
 });
