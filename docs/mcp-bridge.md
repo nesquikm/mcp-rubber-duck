@@ -32,8 +32,9 @@ MCP_TRUSTED_TOOLS_CONTEXT7="*"
 ## Approval Modes
 
 **`always`**: Every tool call requires approval (with session-based memory)
-- First use of a tool -> requires approval
-- Subsequent uses of the same tool -> automatic (until restart)
+- First use of a tool (with specific arguments) -> requires approval
+- Subsequent *identical* calls (same provider + server + tool + arguments) -> automatic, until the approval TTL expires
+- A material change in arguments, or TTL expiry -> re-prompts
 
 **`trusted`**: Only untrusted tools require approval
 - Tools in trusted lists execute immediately
@@ -120,11 +121,27 @@ Result: 500 tokens instead of 5,000+ tokens of raw documentation
 
 ## Session-Based Approvals
 
-When using `always` mode, the system remembers your approvals:
+When using `always` mode, the system remembers your approvals — but scoped
+narrowly so a one-time approval can never be replayed against a different action.
 
-1. **First time**: "Duck wants to use `search-docs` - Approve?"
-2. **Next time**: Duck uses `search-docs` automatically (no new approval needed)
-3. **Different tool**: "Duck wants to use `get-examples` - Approve?"
-4. **Restart**: Session memory clears, start over
+A session approval is keyed by **provider name + server + tool + a hash of the
+normalized arguments**, and each approval carries a **TTL** equal to
+`MCP_APPROVAL_TIMEOUT` (default 300s). It auto-approves only an *identical* later
+call, and only until it expires:
 
-This eliminates approval fatigue while maintaining security!
+1. **First time**: "Duck wants to use `search-docs` (with these arguments) - Approve?"
+2. **Next time (same tool + same arguments)**: runs automatically — until the TTL expires
+3. **Same tool, different arguments**: re-prompts (a new approval is required)
+4. **After the TTL elapses**: re-prompts
+5. **Different tool / different server**: re-prompts
+6. **Different provider that happens to share a nickname**: does **not** inherit the approval — the principal is the stable provider *name*, not the display nickname
+7. **Restart**: session memory clears, start over
+
+This eliminates approval fatigue for genuinely repeated actions while ensuring a
+single approval can never authorize a different tool, different arguments, or a
+different provider.
+
+> **Single-use approval IDs.** When a duck retries a call with a pre-issued
+> `_approval_id`, that ID is bound to its originating call (provider + server +
+> tool + arguments) and is consumed after one successful execution — it cannot be
+> replayed for a different tool, different arguments, or used twice.

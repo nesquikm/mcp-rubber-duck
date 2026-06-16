@@ -5,6 +5,7 @@ import Ajv, { ValidateFunction } from 'ajv';
 import { GuardrailsService } from '../guardrails/service.js';
 import { GuardrailContext } from '../guardrails/types.js';
 import { GuardrailBlockError } from '../guardrails/errors.js';
+import { canonicalJSONStringify } from '../utils/canonical-json.js';
 
 export interface FunctionDefinition {
   name: string;
@@ -206,7 +207,8 @@ export class FunctionBridge {
       const isAlreadyApprovedForSession = this.approvalService.isToolApprovedForSession(
         duckName,
         mcpServer,
-        mcpTool
+        mcpTool,
+        cleanArgs
       );
       let needsApproval = false;
 
@@ -245,14 +247,25 @@ export class FunctionBridge {
         };
       }
 
-      // If approval ID provided, verify it (except in 'never' mode)
+      // If approval ID provided, verify it (except in 'never' mode).
+      // Bind the approval to this exact call: the referenced request must be
+      // approved AND match the duck/server/tool AND have args that deep-equal
+      // the approved args (canonical, key-sorted JSON). This prevents replaying
+      // an approval ID against a different server/tool or with different args.
       if (approvalId && this.approvalMode !== 'never') {
-        const approvalStatus = this.approvalService.getApprovalStatus(approvalId);
+        const request = this.approvalService.getApprovalRequest(approvalId);
 
-        if (approvalStatus !== 'approved') {
+        if (
+          !request ||
+          request.status !== 'approved' ||
+          request.duckName !== duckName ||
+          request.mcpServer !== mcpServer ||
+          request.toolName !== mcpTool ||
+          canonicalJSONStringify(cleanArgs) !== canonicalJSONStringify(request.arguments)
+        ) {
           return {
             success: false,
-            error: `Request not approved or expired (status: ${approvalStatus})`,
+            error: `Request not approved or expired (status: ${request?.status ?? 'not found'})`,
           };
         }
       }
@@ -282,6 +295,12 @@ export class FunctionBridge {
       // Execute the MCP tool
       logger.info(`Executing MCP tool ${mcpServer}:${mcpTool} for ${duckName}`);
       const result = await this.mcpManager.callTool(mcpServer, mcpTool, cleanArgs);
+
+      // Consume the approval ID after a successful execution (single-use): a
+      // replay of the same ID will then be rejected by the binding check above.
+      if (approvalId && this.approvalMode !== 'never') {
+        this.approvalService.consumeApproval(approvalId);
+      }
 
       // Execute post_tool_output guardrails
       if (guardrailContext && this.guardrailsService?.isEnabled()) {
