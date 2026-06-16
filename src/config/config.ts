@@ -225,13 +225,23 @@ export class ConfigManager {
       if (maxRounds !== undefined) mcpConfig.max_tool_rounds = maxRounds;
     }
 
-    // Parse per-server trusted tools from environment
-    mcpConfig.trusted_tools_by_server = this.getTrustedToolsByServerFromEnv();
+    // Parse per-server trusted tools from environment.
+    // Only overwrite file-defined values when the env-derived list is non-empty,
+    // so file-provided values (carried via {...existingConfig}) are preserved.
+    const trustedToolsByServerFromEnv = this.getTrustedToolsByServerFromEnv();
+    if (Object.keys(trustedToolsByServerFromEnv).length > 0) {
+      mcpConfig.trusted_tools_by_server = trustedToolsByServerFromEnv;
+    }
 
-    // Configure MCP servers from environment
-    mcpConfig.mcp_servers = this.getMCPServersFromEnv();
+    // Configure MCP servers from environment (same non-empty guard).
+    const mcpServersFromEnv = this.getMCPServersFromEnv();
+    if (mcpServersFromEnv.length > 0) {
+      mcpConfig.mcp_servers = mcpServersFromEnv;
+    }
 
-    return mcpConfig.enabled || mcpConfig.mcp_servers?.length > 0 ? mcpConfig : existingConfig;
+    return mcpConfig.enabled || (mcpConfig.mcp_servers?.length ?? 0) > 0
+      ? mcpConfig
+      : existingConfig;
   }
 
   private hasMCPServerConfig(): boolean {

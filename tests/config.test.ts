@@ -1,4 +1,7 @@
 import { describe, it, expect, jest, beforeEach, afterEach } from '@jest/globals';
+import { writeFileSync, mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { ConfigManager } from '../src/config/config';
 import type { HttpProviderConfig, ProviderConfig } from '../src/config/types';
 
@@ -893,5 +896,92 @@ describe('ConfigManager - CLI Providers', () => {
 
     // Provider should have type 'http' after parsing
     expect(providers.openai.type).toBe('http');
+  });
+});
+
+/**
+ * AC-R5S9MH.4 (H4) — config file-vs-env merge for the MCP bridge.
+ *
+ * When config.json defines mcp_servers (and/or trusted_tools_by_server) and NO
+ * MCP_SERVER_* / MCP_TRUSTED_TOOLS_* env vars are set, getMCPBridgeConfig must
+ * PRESERVE the file values. Env-derived lists overwrite only when non-empty.
+ */
+describe('ConfigManager - MCP Bridge file-vs-env merge (AC-R5S9MH.4)', () => {
+  let originalEnv: NodeJS.ProcessEnv;
+  let tmpDir: string;
+  let configPath: string;
+
+  beforeEach(() => {
+    originalEnv = { ...process.env };
+    jest.clearAllMocks();
+
+    // Clear all MCP-related and provider env vars so nothing leaks into the merge
+    Object.keys(process.env).forEach((key) => {
+      if (key.startsWith('MCP_')) delete process.env[key];
+      if (key.startsWith('CUSTOM_')) delete process.env[key];
+    });
+    delete process.env.OPENAI_API_KEY;
+
+    tmpDir = mkdtempSync(join(tmpdir(), 'rubber-duck-config-'));
+    configPath = join(tmpDir, 'config.json');
+  });
+
+  afterEach(() => {
+    process.env = originalEnv;
+    rmSync(tmpDir, { recursive: true, force: true });
+  });
+
+  it('preserves file-defined mcp_servers when no MCP_SERVER_* env vars are set', () => {
+    const fileConfig = {
+      providers: {
+        openai: {
+          api_key: 'sk-file-key',
+          base_url: 'https://api.openai.com/v1',
+          default_model: 'gpt-4',
+          nickname: 'File GPT',
+          models: ['gpt-4'],
+        },
+      },
+      default_provider: 'openai',
+      mcp_bridge: {
+        enabled: true,
+        mcp_servers: [{ name: 'filesystem', type: 'stdio', command: 'echo' }],
+      },
+    };
+    writeFileSync(configPath, JSON.stringify(fileConfig));
+
+    const configManager = new ConfigManager(configPath);
+    const servers = configManager.getConfig().mcp_bridge?.mcp_servers;
+
+    expect(servers).toBeDefined();
+    expect(servers).toHaveLength(1);
+    expect(servers?.[0].name).toBe('filesystem');
+  });
+
+  it('preserves file-defined trusted_tools_by_server when no env vars are set', () => {
+    const fileConfig = {
+      providers: {
+        openai: {
+          api_key: 'sk-file-key',
+          base_url: 'https://api.openai.com/v1',
+          default_model: 'gpt-4',
+          nickname: 'File GPT',
+          models: ['gpt-4'],
+        },
+      },
+      default_provider: 'openai',
+      mcp_bridge: {
+        enabled: true,
+        mcp_servers: [{ name: 'filesystem', type: 'stdio', command: 'echo' }],
+        trusted_tools_by_server: { filesystem: ['read_file'] },
+      },
+    };
+    writeFileSync(configPath, JSON.stringify(fileConfig));
+
+    const configManager = new ConfigManager(configPath);
+    const trustedByServer = configManager.getConfig().mcp_bridge?.trusted_tools_by_server;
+
+    expect(trustedByServer).toBeDefined();
+    expect(trustedByServer?.filesystem).toEqual(['read_file']);
   });
 });
