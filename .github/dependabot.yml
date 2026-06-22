@@ -1,0 +1,24 @@
+# Dependabot configuration.
+#
+# Version-update PRs are disabled (open-pull-requests-limit: 0) to preserve this
+# repo's existing posture: it relies on GitHub's repo-level Dependabot *security*
+# updates plus the audit-ci CI gate (audit-ci.json), not scheduled version bumps.
+#
+# `undici` is ignored entirely. Every copy in the tree is a transitive,
+# dev/release-only dependency (via the semantic-release toolchain). The only
+# unpatched one — undici@6.26.0 — is bundled inside the npm CLI tarball
+# (npm -> node-gyp -> undici), so it cannot be lifted by package overrides and no
+# patched npm release exists yet (node-gyp still requires undici ^6.25.0).
+# Dependabot's repeated security-update attempts therefore fail by construction.
+# The audit-ci gate tracks this advisory independently and goes green on its own
+# once npm ships a bundle with undici >= 6.27.0 — at which point this ignore can
+# be removed. See audit-ci.json's allowlist for the matching scoped suppression.
+version: 2
+updates:
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 0
+    ignore:
+      - dependency-name: "undici"
