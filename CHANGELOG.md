@@ -1,3 +1,10 @@
+## [1.19.12](https://github.com/nesquikm/mcp-rubber-duck/compare/v1.19.11...v1.19.12) (2026-06-22)
+
+
+### Bug Fixes
+
+* **docker:** harden runtime image — clear 47 Trivy vulnerabilities ([507c9b0](https://github.com/nesquikm/mcp-rubber-duck/commit/507c9b0e8baf9ad275dba53af957d04b63925653))
+
 ## [1.19.11](https://github.com/nesquikm/mcp-rubber-duck/compare/v1.19.10...v1.19.11) (2026-06-22)
 
 ## [1.19.10](https://github.com/nesquikm/mcp-rubber-duck/compare/v1.19.9...v1.19.10) (2026-06-16)
