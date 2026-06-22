@@ -1,8 +1,16 @@
-# BusyBox vulnerabilities in node:20-alpine base image
-# These require local access and are accepted risk for this container
-CVE-2025-30680
-CVE-2024-42237
-
-# brace-expansion ReDoS - bundled in npm, low severity (CVSS 3.1)
-# Cannot be fixed without upstream semantic-release update
-CVE-2025-5889
+# Trivy ignore file.
+#
+# The four advisories below all map to undici@6.26.0, bundled inside the npm CLI
+# tarball (npm -> node-gyp -> undici). It reaches package-lock.json only via the
+# dev/release-only semantic-release toolchain and is NOT in the runtime Docker
+# image (the production stage removes the npm CLI entirely). The bundled copy
+# cannot be lifted by package overrides and no patched npm release exists yet
+# (node-gyp still requires undici ^6.25.0).
+#
+# Mirrors the suppression in audit-ci.json (allowlist) and .github/dependabot.yml
+# (ignore). Remove all three once `npm ls undici` shows no 6.26.0 — i.e. npm ships
+# a bundle with undici >= 6.27.0.
+CVE-2026-12151
+CVE-2026-9679
+CVE-2026-11525
+CVE-2026-6733

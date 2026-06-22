@@ -1,5 +1,5 @@
 # Multi-stage build for optimal size
-FROM node:20-alpine AS builder
+FROM node:22-alpine AS builder
 
 # Set working directory
 WORKDIR /app
@@ -17,10 +17,10 @@ COPY . .
 RUN npm run build
 
 # Production stage
-FROM node:20-alpine
+FROM node:22-alpine
 
 # Install dumb-init for proper signal handling
-RUN apk add --no-cache dumb-init=1.2.5-r3
+RUN apk add --no-cache dumb-init=1.2.5-r4
 
 # Create app user
 RUN addgroup -g 1001 -S nodejs && \
@@ -38,8 +38,12 @@ COPY --from=builder /app/node_modules ./node_modules
 # Copy built application from builder
 COPY --from=builder /app/dist ./dist
 
-# Remove dev dependencies to reduce image size
-RUN npm prune --production
+# Remove dev dependencies to reduce image size, then drop the global npm CLI.
+# npm is only needed at build time; the runtime starts with `node dist/index.js`,
+# so removing it strips build-tooling CVEs (tar, picomatch, ip-address, …) that
+# Trivy would otherwise flag in /usr/local/lib/node_modules/npm.
+RUN npm prune --production && \
+    rm -rf /usr/local/lib/node_modules/npm /usr/local/bin/npm /usr/local/bin/npx
 
 # Copy configuration examples
 COPY config/config.example.json ./config/
