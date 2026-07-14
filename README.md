@@ -42,12 +42,12 @@ An MCP (Model Context Protocol) server that acts as a bridge to query multiple L
 
 Any provider with an OpenAI-compatible API endpoint, including:
 
-- **OpenAI** (GPT-5.1, o3, o4-mini)
-- **Google Gemini** (Gemini 3, Gemini 2.5 Pro/Flash)
+- **OpenAI**
+- **Google Gemini**
 - **Anthropic** (via OpenAI-compatible endpoints)
-- **Groq** (Llama 4, Llama 3.3)
-- **Together AI** (Llama 4, Qwen, and more)
-- **Perplexity** (Online models with web search)
+- **Groq** (fast inference for open-weight models)
+- **Together AI** (broad open-weight model catalog)
+- **Perplexity** (online models with web search)
 - **Anyscale**, **Azure OpenAI**, **Ollama**, **LM Studio**, **Custom**
 
 ### CLI Providers (Coding Agents)

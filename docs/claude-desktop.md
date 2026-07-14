@@ -105,7 +105,7 @@ Use the compare_ducks tool with prompt: "Explain async/await in JavaScript"
 
 ### Test Specific Models
 ```
-Use the ask_duck tool with prompt: "Hello", provider: "openai", model: "gpt-4o"
+Use the ask_duck tool with prompt: "Hello", provider: "openai", model: "gpt-5.1"
 ```
 
 ## Troubleshooting
