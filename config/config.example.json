@@ -11,16 +11,16 @@
     "gemini": {
       "api_key": "${GEMINI_API_KEY}",
       "base_url": "https://generativelanguage.googleapis.com/v1beta/openai/",
-      "models": ["gemini-3-pro-preview", "gemini-2.5-pro", "gemini-2.5-flash"],
-      "default_model": "gemini-2.5-flash",
+      "models": ["gemini-3.5-flash", "gemini-3.1-pro-preview", "gemini-3.1-flash-lite"],
+      "default_model": "gemini-3.5-flash",
       "nickname": "Gemini Duck",
       "temperature": 0.7
     },
     "groq": {
       "api_key": "${GROQ_API_KEY}",
       "base_url": "https://api.groq.com/openai/v1",
-      "models": ["meta-llama/llama-4-scout-17b-16e-instruct", "meta-llama/llama-4-maverick-17b-128e-instruct", "llama-3.3-70b-versatile"],
-      "default_model": "llama-3.3-70b-versatile",
+      "models": ["openai/gpt-oss-120b", "openai/gpt-oss-20b"],
+      "default_model": "openai/gpt-oss-120b",
       "nickname": "Groq Duck",
       "temperature": 0.7
     },
