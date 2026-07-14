@@ -17,11 +17,11 @@ OPENAI_DEFAULT_MODEL=gpt-5.1  # Optional: defaults to gpt-5.1
 
 # Google Gemini
 GEMINI_API_KEY=...
-GEMINI_DEFAULT_MODEL=gemini-2.5-flash  # Optional: defaults to gemini-2.5-flash
+GEMINI_DEFAULT_MODEL=gemini-3.5-flash  # Optional: defaults to gemini-3.5-flash
 
 # Groq
 GROQ_API_KEY=gsk_...
-GROQ_DEFAULT_MODEL=llama-3.3-70b-versatile  # Optional: defaults to llama-3.3-70b-versatile
+GROQ_DEFAULT_MODEL=openai/gpt-oss-120b  # Optional: defaults to openai/gpt-oss-120b
 
 # Ollama (Local)
 OLLAMA_BASE_URL=http://localhost:11434/v1  # Optional
@@ -51,7 +51,7 @@ CLI_AIDER_ENABLED=true                       # Aider
 
 # Optional overrides for preset CLI agents
 CLI_CLAUDE_NICKNAME=My Claude                # Optional: display name
-CLI_CLAUDE_DEFAULT_MODEL=claude-sonnet-4-20250514  # Optional: model override
+CLI_CLAUDE_DEFAULT_MODEL=claude-sonnet-5     # Optional: model override
 CLI_CLAUDE_SYSTEM_PROMPT=Be concise          # Optional: system prompt
 CLI_CLAUDE_CLI_ARGS=--max-turns,5,--verbose  # Optional: extra CLI args
 
