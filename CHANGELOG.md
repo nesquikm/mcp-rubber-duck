@@ -1,3 +1,15 @@
+# [1.20.0](https://github.com/nesquikm/mcp-rubber-duck/compare/v1.19.12...v1.20.0) (2026-07-14)
+
+
+### Bug Fixes
+
+* update LLM pricing data (2026-07-14) ([702f290](https://github.com/nesquikm/mcp-rubber-duck/commit/702f290a2bfa0fcb702e5518f6a6091952ca48af))
+
+
+### Features
+
+* migrate default models off deprecated Groq and Gemini models ([bb4d918](https://github.com/nesquikm/mcp-rubber-duck/commit/bb4d91848540f4f81ef7f10781ced3eb669f4ce6))
+
 ## [1.19.12](https://github.com/nesquikm/mcp-rubber-duck/compare/v1.19.11...v1.19.12) (2026-06-22)
 
 
