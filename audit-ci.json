@@ -4,10 +4,5 @@
   "high": true,
   "critical": true,
   "report-type": "summary",
-  "allowlist": [
-    "GHSA-p88m-4jfj-68fv|undici",
-    "GHSA-vxpw-j846-p89q|undici",
-    "GHSA-35p6-xmwp-9g52|undici",
-    "GHSA-g8m3-5g58-fq7m|undici"
-  ]
+  "allowlist": []
 }
