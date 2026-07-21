@@ -6,12 +6,10 @@
  * API only require updates here.
  */
 
-import {
-  InMemoryTaskStore,
-  InMemoryTaskMessageQueue,
-} from '@modelcontextprotocol/sdk/experimental';
+import { InMemoryTaskMessageQueue } from '@modelcontextprotocol/sdk/experimental';
 import type { TaskStore, TaskMessageQueue } from '@modelcontextprotocol/sdk/experimental';
 import type { CallToolResult, Result } from '@modelcontextprotocol/sdk/types.js';
+import { RetentionTaskStore } from './retention-task-store.js';
 import { logger } from '../utils/logger.js';
 
 export interface TaskManagerConfig {
@@ -26,7 +24,7 @@ export interface TaskManagerConfig {
 }
 
 const DEFAULT_CONFIG: TaskManagerConfig = {
-  defaultTtl: 300_000, // 5 minutes
+  defaultTtl: 1_800_000, // 30 minutes
   pollInterval: 2_000, // 2 seconds
   maxQueueSize: 100,
   cleanupInterval: 60_000, // 1 minute
@@ -35,7 +33,7 @@ const DEFAULT_CONFIG: TaskManagerConfig = {
 /**
  * Manages MCP task lifecycle: creation, background execution, cancellation, and cleanup.
  *
- * - Provides `InMemoryTaskStore` and `InMemoryTaskMessageQueue` instances for
+ * - Provides `RetentionTaskStore` and `InMemoryTaskMessageQueue` instances for
  *   `McpServer`'s `ProtocolOptions`.
  * - Tracks active background work via `AbortController` per task for cancellation.
  * - Handles graceful shutdown (cancels active tasks, clears timers).
@@ -45,13 +43,24 @@ export class TaskManager {
   readonly taskMessageQueue: TaskMessageQueue;
   readonly config: TaskManagerConfig;
 
+  /**
+   * Concrete handle to the same instance exposed as `taskStore`. Retained so the
+   * periodic sweep and shutdown can call `RetentionTaskStore`-specific methods
+   * (`sweepExpired`, `cleanup`) without repeatedly downcasting the `TaskStore`.
+   */
+  private readonly retentionStore: RetentionTaskStore;
+
   /** Maps taskId → AbortController for active background work. */
   private activeControllers: Map<string, AbortController> = new Map();
   private cleanupTimer?: ReturnType<typeof setInterval>;
 
   constructor(config?: Partial<TaskManagerConfig>) {
     this.config = { ...DEFAULT_CONFIG, ...config };
-    this.taskStore = new InMemoryTaskStore();
+    // Feed the configured default into the store so a task created without an
+    // explicit `ttl` still gets a bounded post-terminal retention window rather
+    // than becoming an immortal terminal entry.
+    this.retentionStore = new RetentionTaskStore(this.config.defaultTtl);
+    this.taskStore = this.retentionStore;
     this.taskMessageQueue = new InMemoryTaskMessageQueue();
     this.startCleanup();
   }
@@ -103,7 +112,9 @@ export class TaskManager {
               isError: true,
             } as Result);
           } catch {
-            // Task store may have already cleaned up (TTL)
+            // Defensive: a still-'working' task is immortal under RetentionTaskStore,
+            // so this should not fail via TTL eviction — guard only against a
+            // concurrent terminal-state transition on the same task.
           }
         }
       } finally {
@@ -130,6 +141,8 @@ export class TaskManager {
   private startCleanup(): void {
     this.cleanupTimer = setInterval(() => {
       logger.debug(`Active background tasks: ${this.activeControllers.size}`);
+      // Drop expired terminal task entries whose retention window has elapsed.
+      this.retentionStore.sweepExpired();
     }, this.config.cleanupInterval);
     // Allow the process to exit even if the timer is still running
     if (
@@ -154,7 +167,7 @@ export class TaskManager {
     }
     this.activeControllers.clear();
 
-    // Clear InMemoryTaskStore internal TTL timers
-    (this.taskStore as InMemoryTaskStore).cleanup();
+    // Clear RetentionTaskStore internal state
+    this.retentionStore.cleanup();
   }
 }

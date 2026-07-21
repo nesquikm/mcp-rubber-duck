@@ -1,14 +1,28 @@
 import { describe, it, expect, jest, beforeEach, afterEach } from '@jest/globals';
 
-jest.mock('../../src/utils/logger');
-
 import { TaskManager } from '../../src/services/task-manager.js';
+import { logger } from '../../src/utils/logger.js';
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
+
+// Under this repo's ESM Jest config (ts-jest default-esm, isolatedModules),
+// `jest.mock(path, factory)` is a no-op. Spy on the real winston singleton
+// instead: `mockImplementation` silences output for the tests that don't assert
+// on the logger, while `errorSpy.mock.calls` gives the AC-XNJKNA.5 success-path
+// test a genuine record of error-level logs to assert against.
+let errorSpy: ReturnType<typeof jest.spyOn>;
+
+function installLoggerSpies(): void {
+  jest.spyOn(logger, 'debug').mockImplementation(() => logger as never);
+  jest.spyOn(logger, 'info').mockImplementation(() => logger as never);
+  jest.spyOn(logger, 'warn').mockImplementation(() => logger as never);
+  errorSpy = jest.spyOn(logger, 'error').mockImplementation(() => logger as never);
+}
 
 describe('TaskManager', () => {
   let taskManager: TaskManager;
 
   beforeEach(() => {
+    installLoggerSpies();
     taskManager = new TaskManager({
       cleanupInterval: 600_000, // long interval to avoid noise
     });
@@ -16,13 +30,15 @@ describe('TaskManager', () => {
 
   afterEach(() => {
     taskManager.shutdown();
+    jest.restoreAllMocks();
   });
 
   describe('constructor', () => {
     it('should use default config values when none provided', () => {
       const tm = new TaskManager();
       try {
-        expect(tm.config.defaultTtl).toBe(300_000);
+        // AC-XNJKNA.3: default TTL is now the 30-min post-terminal retention window.
+        expect(tm.config.defaultTtl).toBe(1_800_000);
         expect(tm.config.pollInterval).toBe(2_000);
         expect(tm.config.maxQueueSize).toBe(100);
         expect(tm.config.cleanupInterval).toBe(60_000);
@@ -339,6 +355,87 @@ describe('TaskManager', () => {
       } finally {
         shortTtlManager.shutdown();
       }
+    });
+  });
+
+  // AC-XNJKNA.4 / AC-XNJKNA.5 — the RetentionTaskStore is wired into TaskManager,
+  // so a run that outlives the old 5-min wall completes with its result retained
+  // and no misleading error-level "failed" log on the success path. These drive
+  // fake timers against real background work, so they live in their own describe.
+  describe('RetentionTaskStore wiring (fake timers)', () => {
+    let tm: TaskManager;
+
+    beforeEach(() => {
+      jest.clearAllMocks();
+      jest.useFakeTimers();
+      tm = new TaskManager({ cleanupInterval: 600_000 });
+    });
+
+    afterEach(() => {
+      tm.shutdown();
+      jest.useRealTimers();
+    });
+
+    // AC-XNJKNA.4: the task store TaskManager hands the server is the new store class.
+    it('AC-XNJKNA.4: exposes a RetentionTaskStore as its taskStore', async () => {
+      const { RetentionTaskStore } = await import(
+        '../../src/services/retention-task-store.js'
+      );
+      expect(tm.taskStore).toBeInstanceOf(RetentionTaskStore);
+    });
+
+    // AC-XNJKNA.4: a run whose work exceeds the old 300_000 ms wall still completes
+    // and its result stays retrievable (the old store would have evicted it mid-run).
+    it('AC-XNJKNA.4: completes a run exceeding the old 5-min wall and keeps its result retrievable', async () => {
+      const task = await tm.taskStore.createTask(
+        { ttl: 300_000 }, // the old 5-minute wall
+        'req-long',
+        { method: 'tools/call', params: { name: 'duck_debate', arguments: {} } }
+      );
+
+      const expected: CallToolResult = {
+        content: [{ type: 'text', text: 'debate complete' }],
+      };
+
+      tm.startBackground(task.taskId, async () => {
+        // Work that runs longer than the old 5-minute eviction wall.
+        await new Promise<void>((resolve) => setTimeout(resolve, 350_000));
+        return expected;
+      });
+
+      // Drive past the old wall; the run finishes at 350s.
+      await jest.advanceTimersByTimeAsync(360_000);
+
+      const stored = await tm.taskStore.getTask(task.taskId);
+      expect(stored?.status).toBe('completed');
+
+      const result = await tm.taskStore.getTaskResult(task.taskId);
+      expect(result).toEqual(expected);
+    });
+
+    // AC-XNJKNA.5: the completed success path emits no error-level "failed" log.
+    it('AC-XNJKNA.5: does not log an error-level "failed" message on the success path', async () => {
+      const task = await tm.taskStore.createTask(
+        { ttl: 300_000 },
+        'req-success-log',
+        { method: 'tools/call', params: { name: 'duck_iterate', arguments: {} } }
+      );
+
+      tm.startBackground(task.taskId, async () => {
+        await new Promise<void>((resolve) => setTimeout(resolve, 350_000));
+        return { content: [{ type: 'text', text: 'iterate complete' }] };
+      });
+
+      await jest.advanceTimersByTimeAsync(360_000);
+
+      // Sanity: the run actually reached the completed success path.
+      const stored = await tm.taskStore.getTask(task.taskId);
+      expect(stored?.status).toBe('completed');
+
+      const failedErrorLogs = errorSpy.mock.calls
+        .map((call) => (call as unknown[]).map((a) => String(a)).join(' '))
+        .filter((msg) => /failed/i.test(msg));
+      expect(failedErrorLogs).toHaveLength(0);
     });
   });
 });
