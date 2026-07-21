@@ -1,3 +1,11 @@
+## [1.20.1](https://github.com/nesquikm/mcp-rubber-duck/compare/v1.20.0...v1.20.1) (2026-07-21)
+
+
+### Bug Fixes
+
+* **deps:** clear audit-ci CVEs (tar, brace-expansion, js-yaml, body-parser) ([9b12879](https://github.com/nesquikm/mcp-rubber-duck/commit/9b1287949cb981d819ec34597d142397c87d712e))
+* **tasks:** stop evicting running debate/iterate tasks at TTL ([0c0ea93](https://github.com/nesquikm/mcp-rubber-duck/commit/0c0ea93688350e5ee6f26247e5b3c4abb7fad8e4)), closes [#127](https://github.com/nesquikm/mcp-rubber-duck/issues/127)
+
 # [1.20.0](https://github.com/nesquikm/mcp-rubber-duck/compare/v1.19.12...v1.20.0) (2026-07-14)
 
 
