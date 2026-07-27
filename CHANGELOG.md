@@ -1,3 +1,10 @@
+## [1.20.2](https://github.com/nesquikm/mcp-rubber-duck/compare/v1.20.1...v1.20.2) (2026-07-27)
+
+
+### Bug Fixes
+
+* **deps:** clear audit-ci CVEs (hono, @hono/node-server, fast-uri, postcss) ([a71ffac](https://github.com/nesquikm/mcp-rubber-duck/commit/a71ffac26951d23bdb8095457833028b35bf0e80)), closes [#132](https://github.com/nesquikm/mcp-rubber-duck/issues/132)
+
 ## [1.20.1](https://github.com/nesquikm/mcp-rubber-duck/compare/v1.20.0...v1.20.1) (2026-07-21)
 
 
