@@ -85,7 +85,9 @@ jobs:
         run: npm outdated || true
 
       - name: 🔒 Check for known vulnerabilities
-        # audit-ci respects allowlist in audit-ci.json for false positives
+        # audit-ci respects the allowlist in audit-ci.json — advisories with no
+        # reachable fix (bundled/unpatched transitive dev deps). Each entry carries
+        # a rationale + re-check trigger in $allowlist-rationale.
         run: npx audit-ci --config audit-ci.json
 
   dockerfile-lint:

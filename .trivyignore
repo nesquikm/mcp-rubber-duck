@@ -1,15 +1,18 @@
 # Trivy ignore file.
 #
-# The four advisories below all map to undici@6.26.0, bundled inside the npm CLI
-# tarball (npm -> node-gyp -> undici). It reaches package-lock.json only via the
+# The four advisories below all map to undici bundled inside the npm CLI tarball
+# (npm -> node-gyp -> undici). It reaches package-lock.json only via the
 # dev/release-only semantic-release toolchain and is NOT in the runtime Docker
 # image (the production stage removes the npm CLI entirely). The bundled copy
-# cannot be lifted by package overrides and no patched npm release exists yet
-# (node-gyp still requires undici ^6.25.0).
+# cannot be lifted by package overrides.
 #
-# Mirrors the suppression in audit-ci.json (allowlist) and .github/dependabot.yml
-# (ignore). Remove all three once `npm ls undici` shows no 6.26.0 — i.e. npm ships
-# a bundle with undici >= 6.27.0.
+# STATUS: npm now bundles the patched undici 6.27.0, so the matching audit-ci.json
+# allowlist entries were removed in 9b12879 (audit-ci's allowlist today holds
+# unrelated brace-expansion/tar advisories — it no longer mirrors this file).
+# These four lines and the .github/dependabot.yml ignore survive only because
+# Trivy scans package-lock.json, which still carries an orphaned undici 6.21.0
+# entry that is absent from the installed tree (`npm ls undici`). Remove both once
+# that lock entry is gone — verify the Trivy fs scan passes without them first.
 CVE-2026-12151
 CVE-2026-9679
 CVE-2026-11525

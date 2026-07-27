@@ -5,8 +5,8 @@
   "critical": true,
   "report-type": "summary",
   "$allowlist-rationale": {
-    "GHSA-mh99-v99m-4gvg": "brace-expansion DoS. Dev-only (eslint, typescript-eslint, jest, and the npm CLI bundled by semantic-release). Patched only in 5.0.8; the 1.x/2.x lines used by minimatch 3/9 have no backport, and forcing 5.x breaks them (v5 CJS exports {expand} instead of the function itself). npm's copy is bundled in its tarball and unreachable by overrides. Re-check once eslint/jest move to minimatch 10.",
-    "GHSA-r292-9mhp-454m": "node-tar DoS. Dev/release-only: bundled inside the npm CLI tarball pulled in by semantic-release. Patched in tar 7.5.21 (2026-07-21); latest npm (12.0.1) still bundles 7.5.19, so no override can reach it. Re-check once npm ships a release bundling tar >= 7.5.21."
+    "GHSA-mh99-v99m-4gvg": "brace-expansion DoS. Dev-only, via three paths. (1) minimatch 3 (eslint, jest) -> 1.1.16 and (2) minimatch 9 (typescript-eslint) -> 2.1.2: patched only in 5.0.8, the 1.x/2.x lines have no backport, and forcing 5.x breaks them (v5 CJS exports {expand} instead of the function itself, so minimatch 3 throws 'expand is not a function'). (3) the npm CLI bundles minimatch 10 -> brace-expansion 5.0.7, one patch short, inside its own tarball where overrides cannot reach. Re-check when eslint/jest move to minimatch 10 (clears 1+2) and when npm rebundles brace-expansion >= 5.0.8 (clears 3).",
+    "GHSA-r292-9mhp-454m": "node-tar DoS. Dev/release-only: bundled inside the npm CLI tarball pulled in by semantic-release. Patched in tar 7.5.21 (2026-07-21); the latest npm (12.0.1) still bundles 7.5.19, and bundled deps are unreachable by overrides. Clearing this needs BOTH an npm release bundling tar >= 7.5.21 AND the `npm` override in package.json raised to allow it — it currently pins ^11.16.0, so a fix that lands only in npm 12.x would not be picked up."
   },
   "allowlist": ["GHSA-mh99-v99m-4gvg", "GHSA-r292-9mhp-454m"]
 }
