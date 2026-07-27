@@ -4,5 +4,9 @@
   "high": true,
   "critical": true,
   "report-type": "summary",
-  "allowlist": []
+  "$allowlist-rationale": {
+    "GHSA-mh99-v99m-4gvg": "brace-expansion DoS. Dev-only (eslint, typescript-eslint, jest, and the npm CLI bundled by semantic-release). Patched only in 5.0.8; the 1.x/2.x lines used by minimatch 3/9 have no backport, and forcing 5.x breaks them (v5 CJS exports {expand} instead of the function itself). npm's copy is bundled in its tarball and unreachable by overrides. Re-check once eslint/jest move to minimatch 10.",
+    "GHSA-r292-9mhp-454m": "node-tar DoS. Dev/release-only: bundled inside the npm CLI tarball pulled in by semantic-release. Patched in tar 7.5.21 (2026-07-21); latest npm (12.0.1) still bundles 7.5.19, so no override can reach it. Re-check once npm ships a release bundling tar >= 7.5.21."
+  },
+  "allowlist": ["GHSA-mh99-v99m-4gvg", "GHSA-r292-9mhp-454m"]
 }
