@@ -4,15 +4,22 @@
 # repo's existing posture: it relies on GitHub's repo-level Dependabot *security*
 # updates plus the audit-ci CI gate (audit-ci.json), not scheduled version bumps.
 #
-# `undici` is ignored entirely. Every copy in the tree is a transitive,
-# dev/release-only dependency (via the semantic-release toolchain). The only
-# unpatched one — undici@6.26.0 — is bundled inside the npm CLI tarball
-# (npm -> node-gyp -> undici), so it cannot be lifted by package overrides and no
-# patched npm release exists yet (node-gyp still requires undici ^6.25.0).
-# Dependabot's repeated security-update attempts therefore fail by construction.
-# The audit-ci gate tracks this advisory independently and goes green on its own
-# once npm ships a bundle with undici >= 6.27.0 — at which point this ignore can
-# be removed. See audit-ci.json's allowlist for the matching scoped suppression.
+# `undici` is ignored because its resolution is fully governed by the `overrides`
+# block in package.json (`undici@6.x` and `undici@7.x`), which Dependabot does not
+# edit. There are three copies in the tree:
+#   node_modules/undici                                6.28.0  <- @actions/http-client ^6.23.0
+#   node_modules/semantic-release/node_modules/undici  7.29.0  <- @semantic-release/github ^7.0.0
+#   node_modules/npm/node_modules/undici               6.27.0  <- bundled in the npm CLI tarball
+# The first two are already at the head of their major lines and are raised by
+# bumping the override floor, not by a Dependabot PR. The third is bundled inside
+# npm's own tarball and cannot be lifted by overrides at all. So every Dependabot
+# security-update attempt here is either a no-op or fails by construction — which
+# is what it did historically (see the closed PRs #84 and #85).
+#
+# audit-ci is the real gate and tracks these independently: audit-ci.json
+# allowlists the three bundled-npm undici advisories with re-check triggers.
+# Remove this ignore if undici ever becomes a direct dependency, or if the
+# overrides are dropped.
 version: 2
 updates:
   - package-ecosystem: "npm"
