@@ -11,25 +11,30 @@ env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
 
+# Least privilege by default; jobs opt into more only where they need it.
 permissions:
-  contents: write
-  issues: write
-  pull-requests: write
-  packages: write
-  security-events: write
-  actions: read
-  id-token: write
+  contents: read
+
+# Never cancel an in-flight release; queue instead.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
   test:
     name: 🧪 Test Before Release
     runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
     steps:
       - name: 📥 Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
 
       - name: 📦 Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: '22'
           cache: 'npm'
@@ -52,13 +57,20 @@ jobs:
   security-scan:
     name: 🔍 Security Scan
     runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      security-events: write
 
     steps:
       - name: 📥 Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
 
       - name: 🔒 Run Trivy vulnerability scanner
-        uses: aquasecurity/trivy-action@master
+        # Pinned to the v0.36.0 tag commit — @master is a mutable ref.
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
           scan-type: 'fs'
           scan-ref: '.'
@@ -77,7 +89,8 @@ jobs:
           docker build -t security-scan-image .
 
       - name: 🔒 Run Trivy on Docker image
-        uses: aquasecurity/trivy-action@master
+        # Pinned to the v0.36.0 tag commit — @master is a mutable ref.
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
           image-ref: 'security-scan-image'
           format: 'sarif'
@@ -93,13 +106,18 @@ jobs:
   dependency-check:
     name: 📦 Dependency Check
     runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
 
     steps:
       - name: 📥 Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
 
       - name: 📦 Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: '22'
           cache: 'npm'
@@ -118,15 +136,22 @@ jobs:
         # audit-ci respects the allowlist in audit-ci.json — advisories with no
         # reachable fix (bundled/unpatched transitive dev deps). Each entry carries
         # a rationale + re-check trigger in $allowlist-rationale.
-        run: npx audit-ci --config audit-ci.json
+        # Version-pinned so the gate itself cannot shift under us.
+        run: npx --yes audit-ci@7.1.0 --config audit-ci.json
 
   dockerfile-lint:
     name: 🐳 Dockerfile Lint
     runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      security-events: write
 
     steps:
       - name: 📥 Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
 
       - name: 🔍 Lint Dockerfile
         uses: hadolint/hadolint-action@v3.1.0
@@ -147,19 +172,25 @@ jobs:
     name: 📦 Release
     needs: [test, security-scan, dependency-check, dockerfile-lint]
     runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+      id-token: write
     outputs:
       release-version: ${{ steps.get-version.outputs.version }}
       new-release-published: ${{ steps.check-release.outputs.released }}
 
     steps:
       - name: 📥 Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: 📦 Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: '22'
           cache: 'npm'
@@ -245,23 +276,27 @@ jobs:
     name: 🐳 Build & Push Docker Images
     needs: release
     runs-on: ubuntu-latest
+    timeout-minutes: 90
+    permissions:
+      contents: read
+      packages: write
     if: needs.release.outputs.new-release-published == 'true'
 
     steps:
       - name: 📥 Checkout release tag
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           ref: v${{ needs.release.outputs.release-version }}
           fetch-depth: 0
 
       - name: 🛠️ Set up QEMU
-        uses: docker/setup-qemu-action@v3
+        uses: docker/setup-qemu-action@v4
 
       - name: 🛠️ Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
       - name: 🔑 Login to Container Registry
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
@@ -269,7 +304,7 @@ jobs:
 
       - name: 🏷️ Extract metadata
         id: meta
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@v6
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
@@ -284,7 +319,7 @@ jobs:
 
       - name: 🐳 Build and push Docker image
         id: build
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v7
         with:
           context: .
           platforms: linux/amd64,linux/arm64
