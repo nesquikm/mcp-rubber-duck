@@ -1,19 +1,22 @@
 # Trivy ignore file.
 #
-# The four advisories below all map to undici bundled inside the npm CLI tarball
-# (npm -> node-gyp -> undici). It reaches package-lock.json only via the
-# dev/release-only semantic-release toolchain and is NOT in the runtime Docker
-# image (the production stage removes the npm CLI entirely). The bundled copy
-# cannot be lifted by package overrides.
+# Currently empty — no suppressions are needed.
 #
-# STATUS: npm now bundles the patched undici 6.27.0, so the matching audit-ci.json
-# allowlist entries were removed in 9b12879 (audit-ci's allowlist today holds
-# unrelated brace-expansion/tar advisories — it no longer mirrors this file).
-# These four lines and the .github/dependabot.yml ignore survive only because
-# Trivy scans package-lock.json, which still carries an orphaned undici 6.21.0
-# entry that is absent from the installed tree (`npm ls undici`). Remove both once
-# that lock entry is gone — verify the Trivy fs scan passes without them first.
-CVE-2026-12151
-CVE-2026-9679
-CVE-2026-11525
-CVE-2026-6733
+# This file previously suppressed four undici advisories (CVE-2026-12151,
+# CVE-2026-9679, CVE-2026-11525, CVE-2026-6733). All four are fixed in undici
+# 6.27.0 / 7.28.0 / 8.5.0, and every undici copy in the tree now meets that bar
+# (node_modules/undici 6.28.0, semantic-release's 7.29.0, and npm's bundled
+# 6.27.0), so the lines matched nothing and were removed.
+#
+# Their stated removal trigger was also unreachable: the comment said to drop
+# them "once the orphaned undici 6.21.0 lock entry is gone", but no such entry
+# has ever existed in this repo's lock. The 6.21.0 in package-lock.json is
+# `undici-types` — a types-only package with no runtime code.
+#
+# Note that npm's *bundled* copies of undici, tar, brace-expansion and
+# ip-address do still carry live advisories. Those are tracked deliberately in
+# audit-ci.json's allowlist (with per-advisory rationale and re-check triggers)
+# and are stripped from the runtime Docker image, which removes the npm CLI
+# entirely (see Dockerfile). If Trivy starts reporting them against
+# package-lock.json, mirror the audit-ci.json entries here rather than
+# re-adding the undici CVEs above.

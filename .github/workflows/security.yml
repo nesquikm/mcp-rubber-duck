@@ -9,22 +9,33 @@ on:
     # Run weekly security scans
     - cron: '0 6 * * 1'
 
+# Least privilege by default; jobs opt into more only where they need it.
 permissions:
   contents: read
-  security-events: write
-  actions: read
+
+# Supersede in-flight runs for the same ref — these are checks, not releases.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   security-scan:
     name: 🔍 Security Scan
     runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      security-events: write
 
     steps:
       - name: 📥 Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
 
       - name: 🔒 Run Trivy vulnerability scanner
-        uses: aquasecurity/trivy-action@master
+        # Pinned to the v0.36.0 tag commit — @master is a mutable ref.
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
           scan-type: 'fs'
           scan-ref: '.'
@@ -46,7 +57,7 @@ jobs:
 
       - name: 🔒 Run Trivy on Docker image
         if: github.event_name != 'schedule'
-        uses: aquasecurity/trivy-action@master
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
           image-ref: 'security-scan-image'
           format: 'sarif'
@@ -63,13 +74,18 @@ jobs:
   dependency-check:
     name: 📦 Dependency Check
     runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
 
     steps:
       - name: 📥 Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
 
       - name: 📦 Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: '22'
           cache: 'npm'
@@ -88,15 +104,22 @@ jobs:
         # audit-ci respects the allowlist in audit-ci.json — advisories with no
         # reachable fix (bundled/unpatched transitive dev deps). Each entry carries
         # a rationale + re-check trigger in $allowlist-rationale.
-        run: npx audit-ci --config audit-ci.json
+        # Version-pinned so the gate itself cannot shift under us.
+        run: npx --yes audit-ci@7.1.0 --config audit-ci.json
 
   dockerfile-lint:
     name: 🐳 Dockerfile Lint
     runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      security-events: write
 
     steps:
       - name: 📥 Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
 
       - name: 🔍 Lint Dockerfile
         uses: hadolint/hadolint-action@v3.1.0
@@ -116,13 +139,18 @@ jobs:
   test:
     name: 🧪 Test Suite
     runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
 
     steps:
       - name: 📥 Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
 
       - name: 📦 Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: '22'
           cache: 'npm'
@@ -145,8 +173,11 @@ jobs:
   quality-gates:
     name: 🚀 Quality Gates
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     needs: [security-scan, dependency-check, dockerfile-lint, test]
     if: always()
+    permissions:
+      contents: read
 
     steps:
       - name: 📊 Quality Gate Summary
@@ -180,3 +211,11 @@ jobs:
 
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "📋 **View detailed results in the Security tab**" >> $GITHUB_STEP_SUMMARY
+
+      - name: 🚦 Enforce quality gates
+        # Without this the job is summary-only and always green, so a red
+        # dependency check or test suite would not fail this check.
+        if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')
+        run: |
+          echo "::error::One or more quality gates failed — see the job summary above"
+          exit 1

@@ -5,8 +5,27 @@
   "critical": true,
   "report-type": "summary",
   "$allowlist-rationale": {
-    "GHSA-mh99-v99m-4gvg": "brace-expansion DoS. Dev-only, via three paths. (1) minimatch 3 (eslint, jest) -> 1.1.16 and (2) minimatch 9 (typescript-eslint) -> 2.1.2: patched only in 5.0.8, the 1.x/2.x lines have no backport, and forcing 5.x breaks them (v5 CJS exports {expand} instead of the function itself, so minimatch 3 throws 'expand is not a function'). (3) the npm CLI bundles minimatch 10 -> brace-expansion 5.0.7, one patch short, inside its own tarball where overrides cannot reach. Re-check when eslint/jest move to minimatch 10 (clears 1+2) and when npm rebundles brace-expansion >= 5.0.8 (clears 3).",
-    "GHSA-r292-9mhp-454m": "node-tar DoS. Dev/release-only: bundled inside the npm CLI tarball pulled in by semantic-release. Patched in tar 7.5.21 (2026-07-21); the latest npm (12.0.1) still bundles 7.5.19, and bundled deps are unreachable by overrides. Clearing this needs BOTH an npm release bundling tar >= 7.5.21 AND the `npm` override in package.json raised to allow it — it currently pins ^11.16.0, so a fix that lands only in npm 12.x would not be picked up."
+    "$root-cause": "Every entry below resolves to a dependency BUNDLED INSIDE THE npm CLI TARBALL (node_modules/npm/node_modules/*). npm publishes those via bundleDependencies, so `overrides` in package.json cannot reach them — verified: the undici/ip-address/brace-expansion overrides added on 2026-08-10 lifted every other copy in the tree but left npm's bundled ones untouched. The npm CLI is dev/release-only (devDependencies -> semantic-release -> @semantic-release/npm -> npm) and is stripped from the runtime Docker image. Checked on 2026-08-10 that npm 11.18.0, 11.19.0 AND 12.0.2 all bundle the SAME stale set: undici 6.27.0, tar 7.5.19, brace-expansion 5.0.7, ip-address 10.2.0, minimatch 10.2.5 — so bumping the `npm` override clears nothing today. Note @semantic-release/npm@13.1.5 declares `npm: ^11.6.2`, so a fix landing only in npm 12.x would additionally need the `npm` override raised past ^11.16.0.",
+    "$scoping": "Entries are path-scoped (`GHSA-ID|path`) rather than bare advisory IDs so a REACHABLE reintroduction of the same advisory still fails CI. This works for ip-address: the bundled copy renders as `ip-address` while the reachable one renders as `express-rate-limit>ip-address` (the path that was failing before this fix). It does NOT discriminate for undici and brace-expansion — audit-ci renders both the bundled and a hypothetical direct copy as the bare package name — so those two remain the weak spot; re-check them by hand when the tree changes. Path-scoped entries fail CLOSED: if npm audit's graph shifts, the string stops matching and CI goes red, which is the intended prompt to revisit this file.",
+    "GHSA-mh99-v99m-4gvg": "brace-expansion DoS (unbounded expansion length). Patched in 5.0.8. Only npm's bundled 5.0.7 is still affected. The previous rationale here claimed the 1.x/2.x lines had no backport — that is now STALE: 1.1.18 and 2.1.4 shipped, and the `brace-expansion@1.x`/`@2.x` overrides pin them, clearing the eslint/jest (minimatch 3) and typescript-eslint (minimatch 9) paths. Re-check when npm rebundles brace-expansion >= 5.0.9.",
+    "GHSA-rgw5-rvv9-x895": "brace-expansion DoS (unbounded intermediate arrays, bypasses the CVE-2026-14257 mitigation). Same bundled 5.0.7 as above; patched in 5.0.9. Same re-check trigger.",
+    "GHSA-mwp4-54f8-5fhr": "ip-address: leading-zero octets decoded as decimal (SSRF / trust-boundary bypass). Patched in 10.3.1. Reachable path (express-rate-limit -> ip-address) is fixed by the `ip-address` override at ^10.3.1; only npm's bundled 10.2.0 (via its vendored socks) remains. Re-check when npm rebundles ip-address >= 10.3.1.",
+    "GHSA-4xrf-jv44-h6hh": "ip-address: a CIDR suffix suppresses special-use classification (SSRF / trust-boundary bypass). Patched in 10.2.2. Same bundled-only path and re-check trigger as GHSA-mwp4-54f8-5fhr.",
+    "GHSA-22jq-vg5j-6vgg": "ip-address: IPv4-mapped/NAT64 IPv6 misclassification (SSRF / trust-boundary bypass). Patched in 10.2.1. Same bundled-only path and re-check trigger as GHSA-mwp4-54f8-5fhr.",
+    "GHSA-8xcm-r25x-g524": "undici: downstream response desynchronization via the retry interceptor. Patched in 6.28.0 / 7.29.0. The two reachable copies (@actions/http-client -> undici ^6.23.0, and @semantic-release/github -> undici ^7.0.0) are lifted by the `undici@6.x`/`@7.x` overrides; only npm's bundled 6.27.0 (via its vendored node-gyp) remains. Re-check when npm rebundles undici >= 6.28.0.",
+    "GHSA-m8rv-5g2x-5cg5": "undici: CRLF injection via a blob-like body `type` property. Patched in 6.28.0 / 7.29.0. Same bundled-only path and re-check trigger as GHSA-8xcm-r25x-g524.",
+    "GHSA-v3r7-h72x-cjcm": "undici: cookie attribute injection via unsanitized domain and unparsed setCookie fields. Patched in 6.28.0 / 7.29.0. Same bundled-only path and re-check trigger as GHSA-8xcm-r25x-g524.",
+    "GHSA-r292-9mhp-454m": "node-tar DoS (uncontrolled recursion in mapHas/filesFilter). Patched in tar 7.5.21 (latest 7.5.22); npm 12.0.2 still bundles 7.5.19. Re-check when npm rebundles tar >= 7.5.21 — and note the `npm: ^11.16.0` override caveat in $root-cause if the fix lands only in npm 12.x."
   },
-  "allowlist": ["GHSA-mh99-v99m-4gvg", "GHSA-r292-9mhp-454m"]
+  "allowlist": [
+    "GHSA-mh99-v99m-4gvg|brace-expansion",
+    "GHSA-rgw5-rvv9-x895|brace-expansion",
+    "GHSA-mwp4-54f8-5fhr|ip-address",
+    "GHSA-4xrf-jv44-h6hh|ip-address",
+    "GHSA-22jq-vg5j-6vgg|ip-address",
+    "GHSA-8xcm-r25x-g524|undici",
+    "GHSA-m8rv-5g2x-5cg5|undici",
+    "GHSA-v3r7-h72x-cjcm|undici",
+    "GHSA-r292-9mhp-454m|semantic-release>@semantic-release/npm>npm>tar"
+  ]
 }
