@@ -1,3 +1,11 @@
+## [1.20.3](https://github.com/nesquikm/mcp-rubber-duck/compare/v1.20.2...v1.20.3) (2026-08-10)
+
+
+### Bug Fixes
+
+* **deps:** clear every override-reachable audit-ci advisory ([6aa7a4d](https://github.com/nesquikm/mcp-rubber-duck/commit/6aa7a4d57b0911e7a94da53b7c78b4bdc50dc337))
+* **security:** scope audit-ci allowlist to the bundled-npm paths ([ab9c654](https://github.com/nesquikm/mcp-rubber-duck/commit/ab9c654f1ba7747fde6ff8d827a06c1b987bc1b8))
+
 ## [1.20.2](https://github.com/nesquikm/mcp-rubber-duck/compare/v1.20.1...v1.20.2) (2026-07-27)
 
 
