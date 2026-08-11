@@ -1,5 +1,7 @@
 # MCP Rubber Duck
 
+[![MCP Toplist](https://mcptoplist.com/badge/io.github.nesquikm%2Frubber-duck.svg)](https://mcptoplist.com/server/io.github.nesquikm%2Frubber-duck)
+
 An MCP (Model Context Protocol) server that acts as a bridge to query multiple LLMs -- both OpenAI-compatible HTTP APIs and CLI coding agents. Just like rubber duck debugging, explain your problems to various AI "ducks" and get different perspectives!
 
 [![npm version](https://img.shields.io/npm/v/mcp-rubber-duck.svg)](https://www.npmjs.com/package/mcp-rubber-duck)
