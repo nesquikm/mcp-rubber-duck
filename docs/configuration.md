@@ -70,8 +70,9 @@ LOG_LEVEL=info
 
 # MCP Bridge Settings (Optional)
 MCP_BRIDGE_ENABLED=true                      # Enable ducks to access external MCP servers
-MCP_APPROVAL_MODE=trusted                    # always, trusted, or never
-MCP_APPROVAL_TIMEOUT=300                     # seconds
+MCP_APPROVAL_MODE=trusted                    # always (default), trusted, or never
+MCP_APPROVAL_TIMEOUT=300                     # seconds (default: 300)
+MCP_MAX_TOOL_ROUNDS=10                       # Tool-calling rounds per request, 1-50 (default: 10)
 
 # MCP Server: Context7 Documentation (Example)
 MCP_SERVER_CONTEXT7_TYPE=http

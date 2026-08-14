@@ -14,7 +14,7 @@ Detailed reference documentation for MCP Rubber Duck.
 | [Tools](./tools.md) | All 15 tools with input schemas and examples |
 | [Prompts](./prompts.md) | All 8 prompt templates with arguments and usage |
 | [CLI Providers](./cli-providers.md) | Coding agents as ducks: presets, custom, output formats |
-| [MCP Bridge](./mcp-bridge.md) | Connect ducks to external MCP servers |
+| [MCP Bridge](./mcp-bridge.md) | Connect ducks to external MCP servers: approval modes, trusted tools, filesystem read-access recipe |
 | [Guardrails](./guardrails.md) | Rate limiting, token limits, pattern blocking, PII redaction |
 | [Docker](./docker.md) | Multi-platform deployment, Compose profiles, Raspberry Pi |
 | [Provider Setup](./provider-setup.md) | Ollama, LM Studio, Gemini, Groq, Together AI |
