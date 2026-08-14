@@ -1,3 +1,10 @@
+## [1.20.4](https://github.com/nesquikm/mcp-rubber-duck/compare/v1.20.3...v1.20.4) (2026-08-14)
+
+
+### Bug Fixes
+
+* **mcp-bridge:** warn instead of silently ignoring a global trusted-tools "*" ([ddcb451](https://github.com/nesquikm/mcp-rubber-duck/commit/ddcb451b9b1e1c1f8991808f7e88539116fa9a86)), closes [#129](https://github.com/nesquikm/mcp-rubber-duck/issues/129)
+
 ## [1.20.3](https://github.com/nesquikm/mcp-rubber-duck/compare/v1.20.2...v1.20.3) (2026-08-10)
 
 
