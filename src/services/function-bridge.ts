@@ -54,6 +54,39 @@ export class FunctionBridge {
     Object.entries(trustedToolsByServer).forEach(([serverName, tools]) => {
       this.trustedToolsByServer.set(serverName, new Set(tools));
     });
+
+    this.warnIfGlobalWildcard();
+  }
+
+  /**
+   * A global trusted-tools list containing '*' trusts nothing: the global list is
+   * matched literally in handleFunctionCall, so every call still hits the approval
+   * gate. That fail-closed behaviour is deliberate — honouring a global wildcard
+   * would silently switch off every approval prompt on upgrade — but it is invisible
+   * to a user who believes they disabled the prompts, so say so loudly instead.
+   */
+  private warnIfGlobalWildcard(): void {
+    // In 'never' mode nothing is gated at all, so the message would be pure noise.
+    if (this.approvalMode === 'never' || !this.trustedTools.has('*')) {
+      return;
+    }
+
+    // 'always' mode never consults trusted lists, so recommending a per-server list
+    // on its own would send the user to a setting that changes nothing for them.
+    const remedy =
+      this.approvalMode === 'always'
+        ? 'This mode ignores trusted tools entirely: set MCP_APPROVAL_MODE=trusted first, then ' +
+          'use MCP_TRUSTED_TOOLS_<SERVER> (mcp_bridge.trusted_tools_by_server) to trust one ' +
+          'server — or use MCP_APPROVAL_MODE=never to skip approval entirely.'
+        : 'To trust every tool of one server use MCP_TRUSTED_TOOLS_<SERVER> ' +
+          '(mcp_bridge.trusted_tools_by_server); to skip approval entirely use ' +
+          'MCP_APPROVAL_MODE=never.';
+
+    logger.warn(
+      "Ignoring '*' in the global trusted tools list (MCP_TRUSTED_TOOLS, config key " +
+        'mcp_bridge.trusted_tools): a global wildcard is matched literally, trusts no tool, ' +
+        `and approval is still required. ${remedy}`
+    );
   }
 
   async getFunctionDefinitions(): Promise<FunctionDefinition[]> {
@@ -392,6 +425,7 @@ export class FunctionBridge {
   ): void {
     this.trustedTools = new Set(trustedTools);
     logger.info(`Updated global trusted tools list: ${Array.from(this.trustedTools).join(', ')}`);
+    this.warnIfGlobalWildcard();
 
     if (trustedToolsByServer) {
       this.trustedToolsByServer.clear();

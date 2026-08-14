@@ -2,6 +2,9 @@ import { describe, it, expect, jest, beforeEach, afterEach } from '@jest/globals
 import { ApprovalService } from '../src/services/approval';
 import { FunctionBridge } from '../src/services/function-bridge';
 import { MCPClientManager } from '../src/services/mcp-client-manager';
+// Real logger singleton: `jest.mock(path)` below is a no-op under this repo's
+// ts-jest ESM config, so warning assertions must spy on the real object.
+import { logger } from '../src/utils/logger.js';
 
 // Mock loggers to avoid console noise during tests
 jest.mock('../src/utils/logger');
@@ -315,5 +318,234 @@ describe('FunctionBridge tool-argument validation', () => {
 
     expect(result.success).toBe(true);
     expect(callToolSpy).toHaveBeenCalledWith('files', 'write_file', { anything: 123 });
+  });
+});
+
+/**
+ * FR 8WGQ4P — trusted-tool resolution (issue #129).
+ *
+ * A global `'*'` is matched literally and therefore trusts nothing; that
+ * fail-closed behaviour is deliberate and stays. What is missing is a loud
+ * warning (AC.1/AC.2). AC.3/AC.4 pin the surrounding resolution rules — the
+ * per-server list *replaces* the global one, and `always` mode ignores trust
+ * entirely — so a future refactor cannot quietly loosen them.
+ *
+ * Every case asserts both the returned result shape and the `callTool` spy, so
+ * no test can pass vacuously. Bridges are built inside each test (not in
+ * `beforeEach`) because the warning fires at construction time and the
+ * `logger.warn` spy has to be installed first.
+ */
+describe('trusted-tool resolution', () => {
+  let approvalService: ApprovalService;
+  let mcpManager: MCPClientManager;
+  let warnSpy: ReturnType<typeof jest.spyOn>;
+
+  // The wildcard warning must name both routes the global list can arrive by.
+  const ENV_KEY = 'MCP_TRUSTED_TOOLS';
+  const CONFIG_KEY = 'mcp_bridge.trusted_tools';
+
+  /** Flattened text of every logger.warn call, for substring assertions. */
+  const warnings = (): string[] =>
+    warnSpy.mock.calls.map((call) => (call as unknown[]).map((arg) => String(arg)).join(' '));
+
+  const wildcardWarnings = (): string[] =>
+    warnings().filter((text) => text.includes(ENV_KEY) || text.includes(CONFIG_KEY));
+
+  beforeEach(() => {
+    approvalService = new ApprovalService(300);
+    mcpManager = new MCPClientManager([]);
+    // Installed before any bridge is constructed, so constructor-time warnings are captured.
+    warnSpy = jest.spyOn(logger, 'warn').mockImplementation(() => logger);
+  });
+
+  afterEach(() => {
+    approvalService.shutdown();
+    jest.restoreAllMocks();
+  });
+
+  // ---- AC-8WGQ4P.1: fail closed on a global wildcard, and say so -----------
+
+  it('AC.1 refuses a call when the global list is ["*"] in trusted mode', async () => {
+    const callToolSpy = jest.spyOn(mcpManager, 'callTool').mockResolvedValue({ ok: true });
+    const bridge = new FunctionBridge(mcpManager, approvalService, ['*'], 'trusted');
+
+    const result = await bridge.handleFunctionCall('duckA', 'mcp__files__read_file', {
+      path: '/a.txt',
+      _mcp_server: 'files',
+      _mcp_tool: 'read_file',
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.needsApproval).toBe(true);
+    expect(result.approvalId).toBeDefined();
+    expect(callToolSpy).not.toHaveBeenCalled();
+  });
+
+  it('AC.1 warns exactly once at construction, naming MCP_TRUSTED_TOOLS and mcp_bridge.trusted_tools', () => {
+    new FunctionBridge(mcpManager, approvalService, ['*'], 'trusted');
+
+    const matched = wildcardWarnings();
+    expect(matched).toHaveLength(1);
+    expect(matched[0]).toContain(ENV_KEY);
+    expect(matched[0]).toContain(CONFIG_KEY);
+    // No other warning noise from construction.
+    expect(warnSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it('AC.1 emits no wildcard warning for a non-wildcard global list', () => {
+    new FunctionBridge(mcpManager, approvalService, ['read_file', 'files:write_file'], 'trusted');
+
+    expect(wildcardWarnings()).toHaveLength(0);
+  });
+
+  // ---- AC-8WGQ4P.2: the warning is mode-aware and not constructor-only -----
+
+  it('AC.2 suppresses the wildcard warning in never mode', () => {
+    new FunctionBridge(mcpManager, approvalService, ['*'], 'never');
+
+    expect(wildcardWarnings()).toHaveLength(0);
+  });
+
+  it('AC.2 warns when updateTrustedTools swaps in a global wildcard at runtime', () => {
+    const bridge = new FunctionBridge(mcpManager, approvalService, ['read_file'], 'trusted');
+    expect(wildcardWarnings()).toHaveLength(0);
+
+    bridge.updateTrustedTools(['*']);
+
+    const matched = wildcardWarnings();
+    expect(matched).toHaveLength(1);
+    expect(matched[0]).toContain(ENV_KEY);
+    expect(matched[0]).toContain(CONFIG_KEY);
+  });
+
+  // In 'always' mode the per-server remedy is inert on its own (AC.4 pins that
+  // trusted lists are ignored there), so the warning must lead with the mode switch.
+  it('AC.2 tells an always-mode user to switch mode before recommending a per-server list', () => {
+    new FunctionBridge(mcpManager, approvalService, ['*'], 'always');
+
+    const matched = wildcardWarnings();
+    expect(matched).toHaveLength(1);
+    expect(matched[0]).toContain('MCP_APPROVAL_MODE=trusted');
+    expect(matched[0]).toContain('ignores trusted tools entirely');
+  });
+
+  // ---- AC-8WGQ4P.3: per-server resolution shadows the global list ----------
+
+  it('AC.3 per-server ["*"] auto-approves any tool on that server', async () => {
+    const callToolSpy = jest.spyOn(mcpManager, 'callTool').mockResolvedValue({ ok: true });
+    const bridge = new FunctionBridge(mcpManager, approvalService, [], 'trusted', {
+      files: ['*'],
+    });
+
+    const result = await bridge.handleFunctionCall('duckA', 'mcp__files__delete_file', {
+      path: '/a.txt',
+      _mcp_server: 'files',
+      _mcp_tool: 'delete_file',
+    });
+
+    expect(result.success).toBe(true);
+    expect(result.needsApproval).toBeUndefined();
+    expect(callToolSpy).toHaveBeenCalledTimes(1);
+    expect(callToolSpy).toHaveBeenCalledWith('files', 'delete_file', { path: '/a.txt' });
+  });
+
+  it('AC.3 per-server list naming the tool exactly auto-approves it', async () => {
+    const callToolSpy = jest.spyOn(mcpManager, 'callTool').mockResolvedValue({ ok: true });
+    const bridge = new FunctionBridge(mcpManager, approvalService, [], 'trusted', {
+      files: ['read_file'],
+    });
+
+    const result = await bridge.handleFunctionCall('duckA', 'mcp__files__read_file', {
+      path: '/a.txt',
+      _mcp_server: 'files',
+      _mcp_tool: 'read_file',
+    });
+
+    expect(result.success).toBe(true);
+    expect(callToolSpy).toHaveBeenCalledWith('files', 'read_file', { path: '/a.txt' });
+  });
+
+  it('AC.3 per-server list that omits the tool requires approval', async () => {
+    const callToolSpy = jest.spyOn(mcpManager, 'callTool').mockResolvedValue({ ok: true });
+    const bridge = new FunctionBridge(mcpManager, approvalService, [], 'trusted', {
+      files: ['read_file'],
+    });
+
+    const result = await bridge.handleFunctionCall('duckA', 'mcp__files__write_file', {
+      path: '/a.txt',
+      _mcp_server: 'files',
+      _mcp_tool: 'write_file',
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.needsApproval).toBe(true);
+    expect(callToolSpy).not.toHaveBeenCalled();
+  });
+
+  it('AC.3 a per-server list replaces the global list rather than extending it', async () => {
+    const callToolSpy = jest.spyOn(mcpManager, 'callTool').mockResolvedValue({ ok: true });
+    // `write_file` is globally trusted, but `files` has its own (narrower) list.
+    const bridge = new FunctionBridge(mcpManager, approvalService, ['write_file'], 'trusted', {
+      files: ['read_file'],
+    });
+
+    const result = await bridge.handleFunctionCall('duckA', 'mcp__files__write_file', {
+      path: '/a.txt',
+      _mcp_server: 'files',
+      _mcp_tool: 'write_file',
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.needsApproval).toBe(true);
+    expect(callToolSpy).not.toHaveBeenCalled();
+  });
+
+  // ---- AC-8WGQ4P.4: global key forms, and `always` ignores trust -----------
+
+  it('AC.4 global list auto-approves a bare tool name', async () => {
+    const callToolSpy = jest.spyOn(mcpManager, 'callTool').mockResolvedValue({ ok: true });
+    const bridge = new FunctionBridge(mcpManager, approvalService, ['read_file'], 'trusted');
+
+    const result = await bridge.handleFunctionCall('duckA', 'mcp__files__read_file', {
+      path: '/a.txt',
+      _mcp_server: 'files',
+      _mcp_tool: 'read_file',
+    });
+
+    expect(result.success).toBe(true);
+    expect(result.needsApproval).toBeUndefined();
+    expect(callToolSpy).toHaveBeenCalledWith('files', 'read_file', { path: '/a.txt' });
+  });
+
+  it('AC.4 global list auto-approves a server:tool composite key', async () => {
+    const callToolSpy = jest.spyOn(mcpManager, 'callTool').mockResolvedValue({ ok: true });
+    const bridge = new FunctionBridge(mcpManager, approvalService, ['files:read_file'], 'trusted');
+
+    const result = await bridge.handleFunctionCall('duckA', 'mcp__files__read_file', {
+      path: '/a.txt',
+      _mcp_server: 'files',
+      _mcp_tool: 'read_file',
+    });
+
+    expect(result.success).toBe(true);
+    expect(callToolSpy).toHaveBeenCalledWith('files', 'read_file', { path: '/a.txt' });
+  });
+
+  it('AC.4 always mode ignores trusted lists even with a per-server wildcard', async () => {
+    const callToolSpy = jest.spyOn(mcpManager, 'callTool').mockResolvedValue({ ok: true });
+    const bridge = new FunctionBridge(mcpManager, approvalService, ['*'], 'always', {
+      files: ['*'],
+    });
+
+    const result = await bridge.handleFunctionCall('duckA', 'mcp__files__read_file', {
+      path: '/a.txt',
+      _mcp_server: 'files',
+      _mcp_tool: 'read_file',
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.needsApproval).toBe(true);
+    expect(result.approvalId).toBeDefined();
+    expect(callToolSpy).not.toHaveBeenCalled();
   });
 });
