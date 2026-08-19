@@ -3,7 +3,7 @@ import { PricingConfig } from '../config/types.js';
 /**
  * Default pricing data for common LLM providers.
  * Prices are in USD per million tokens.
- * Last updated: 2026-07-14
+ * Last updated: 2026-08-19
  *
  * To update pricing:
  * 1. Research current pricing from provider websites
@@ -14,14 +14,14 @@ import { PricingConfig } from '../config/types.js';
  * Users can override these defaults in their config.json file.
  */
 export const DEFAULT_PRICING_VERSION = 2;
-export const DEFAULT_PRICING_LAST_UPDATED = '2026-07-14';
+export const DEFAULT_PRICING_LAST_UPDATED = '2026-08-19';
 
 export const DEFAULT_PRICING: PricingConfig = {
   openai: {
     // GPT-5.6 models (released July 2026)
     'gpt-5.6-sol': { inputPricePerMillion: 5, outputPricePerMillion: 30 },
-    'gpt-5.6-terra': { inputPricePerMillion: 2.5, outputPricePerMillion: 15 },
-    'gpt-5.6-luna': { inputPricePerMillion: 1, outputPricePerMillion: 6 },
+    'gpt-5.6-terra': { inputPricePerMillion: 2, outputPricePerMillion: 12 },
+    'gpt-5.6-luna': { inputPricePerMillion: 0.2, outputPricePerMillion: 1.2 },
 
     // GPT-5.5 models (premium tier, released April 2026)
     'gpt-5.5': { inputPricePerMillion: 5, outputPricePerMillion: 30 },
@@ -135,9 +135,13 @@ export const DEFAULT_PRICING: PricingConfig = {
     'claude-fable-5': { inputPricePerMillion: 10, outputPricePerMillion: 50 },
     'claude-mythos-5': { inputPricePerMillion: 10, outputPricePerMillion: 50 },
 
+    // Claude Opus 5
+    'claude-opus-5': { inputPricePerMillion: 5, outputPricePerMillion: 25 },
+
     // Claude Sonnet 5
-    // NOTE: $2/$10 is the introductory rate, in effect through 2026-08-31.
-    // Reverts to the $3/$15 standard rate after that date - revisit on the next refresh.
+    // NOTE: $2/$10 launched as an introductory rate through 2026-08-31, but Anthropic has
+    // since made it the standard price. The scheduled 2026-09-01 increase to $3/$15 will
+    // not happen - no follow-up needed.
     'claude-sonnet-5': { inputPricePerMillion: 2, outputPricePerMillion: 10 },
 
     // Claude 4.8 models
@@ -188,8 +192,16 @@ export const DEFAULT_PRICING: PricingConfig = {
   },
 
   google: {
+    // Gemini 3.7
+    // NOTE: $0.75/$3.75 is promotional pricing through 2026-12-31, then $1.50/$7.50.
+    'gemini-3.7-flash': { inputPricePerMillion: 0.75, outputPricePerMillion: 3.75 },
+
+    // Gemini 3.6 (same promotional pricing window as 3.7 Flash)
+    'gemini-3.6-flash': { inputPricePerMillion: 0.75, outputPricePerMillion: 3.75 },
+
     // Gemini 3.5
     'gemini-3.5-flash': { inputPricePerMillion: 1.5, outputPricePerMillion: 9 },
+    'gemini-3.5-flash-lite': { inputPricePerMillion: 0.3, outputPricePerMillion: 2.5 },
     'gemini-3.5-live-translate-preview': { inputPricePerMillion: 3.5, outputPricePerMillion: 21 },
 
     // Gemini Omni
@@ -255,24 +267,25 @@ export const DEFAULT_PRICING: PricingConfig = {
     'gemini-embedding-2': { inputPricePerMillion: 0.2, outputPricePerMillion: 0 },
 
     // Robotics (preview)
+    'gemini-robotics-er-2-preview': { inputPricePerMillion: 2, outputPricePerMillion: 10 },
+    'gemini-robotics-er-2-streaming-preview': {
+      inputPricePerMillion: 2,
+      outputPricePerMillion: 10,
+    },
     'gemini-robotics-er-1.6-preview': { inputPricePerMillion: 1, outputPricePerMillion: 5 },
     'gemini-robotics-er-1.5-preview': { inputPricePerMillion: 0.3, outputPricePerMillion: 2.5 },
 
     // Gemma (free tier only - no paid-tier price published)
+    'gemma-4': { inputPricePerMillion: 0, outputPricePerMillion: 0 },
     'gemma-3': { inputPricePerMillion: 0, outputPricePerMillion: 0 },
     'gemma-3n': { inputPricePerMillion: 0, outputPricePerMillion: 0 },
   },
 
   groq: {
     // Current API model IDs (as published on the Groq console models page)
-    'meta-llama/llama-4-scout-17b-16e-instruct': {
-      inputPricePerMillion: 0.11,
-      outputPricePerMillion: 0.34,
-    },
     'openai/gpt-oss-120b': { inputPricePerMillion: 0.15, outputPricePerMillion: 0.6 },
     'openai/gpt-oss-20b': { inputPricePerMillion: 0.075, outputPricePerMillion: 0.3 },
     'openai/gpt-oss-safeguard-20b': { inputPricePerMillion: 0.075, outputPricePerMillion: 0.3 },
-    'qwen/qwen3-32b': { inputPricePerMillion: 0.29, outputPricePerMillion: 0.59 },
     'qwen/qwen3.6-27b': { inputPricePerMillion: 0.6, outputPricePerMillion: 3 },
     'meta-llama/llama-prompt-guard-2-22m': {
       inputPricePerMillion: 0.03,
@@ -283,10 +296,13 @@ export const DEFAULT_PRICING: PricingConfig = {
       outputPricePerMillion: 0.04,
     },
 
-    // Llama 3.3
+    // Delisted from the Groq models page as of 2026-08-19, kept for historical cost attribution
+    'meta-llama/llama-4-scout-17b-16e-instruct': {
+      inputPricePerMillion: 0.11,
+      outputPricePerMillion: 0.34,
+    },
+    'qwen/qwen3-32b': { inputPricePerMillion: 0.29, outputPricePerMillion: 0.59 },
     'llama-3.3-70b-versatile': { inputPricePerMillion: 0.59, outputPricePerMillion: 0.79 },
-
-    // Llama 3.1
     'llama-3.1-8b-instant': { inputPricePerMillion: 0.05, outputPricePerMillion: 0.08 },
 
     // Legacy short names kept for compatibility (not current Groq API model IDs)
@@ -308,17 +324,22 @@ export const DEFAULT_PRICING: PricingConfig = {
 
   deepseek: {
     // DeepSeek V4 (current models). Input price is the cache-miss rate.
-    'deepseek-v4-flash': { inputPricePerMillion: 0.14, outputPricePerMillion: 0.28 },
-    'deepseek-v4-pro': { inputPricePerMillion: 0.435, outputPricePerMillion: 0.87 },
+    // NOTE: these are the standard (peak-hours) rates. DeepSeek bills half these rates
+    // off-peak - peak is 01:00-04:00 and 06:00-10:00 UTC, everything else is off-peak.
+    'deepseek-v4-flash': { inputPricePerMillion: 0.44, outputPricePerMillion: 1.32 },
+    'deepseek-v4-pro': { inputPricePerMillion: 1.32, outputPricePerMillion: 3.96 },
     // Legacy aliases (deepseek-chat / deepseek-reasoner map to v4-flash non-thinking/thinking modes)
-    'deepseek-chat': { inputPricePerMillion: 0.14, outputPricePerMillion: 0.28 },
-    'deepseek-reasoner': { inputPricePerMillion: 0.14, outputPricePerMillion: 0.28 },
+    'deepseek-chat': { inputPricePerMillion: 0.44, outputPricePerMillion: 1.32 },
+    'deepseek-reasoner': { inputPricePerMillion: 0.44, outputPricePerMillion: 1.32 },
     // Older aliases kept for compatibility
     'deepseek-v3': { inputPricePerMillion: 0.28, outputPricePerMillion: 0.42 },
     'deepseek-r1': { inputPricePerMillion: 0.28, outputPricePerMillion: 0.42 },
   },
 
   mistral: {
+    // Z.ai GLM 5.2, hosted on La Plateforme (public preview since 2026-08-06)
+    'zai-glm-5-2': { inputPricePerMillion: 1.4, outputPricePerMillion: 4.4 },
+
     // Mistral Large 3 (2512 release)
     'mistral-large-latest': { inputPricePerMillion: 0.5, outputPricePerMillion: 1.5 },
     'mistral-large-2512': { inputPricePerMillion: 0.5, outputPricePerMillion: 1.5 },
@@ -406,6 +427,17 @@ export const DEFAULT_PRICING: PricingConfig = {
 
   together: {
     // Current serverless lineup
+    'thinkingmachines/Inkling': { inputPricePerMillion: 1, outputPricePerMillion: 4.05 },
+    'thinkingmachines/Inkling-Small': { inputPricePerMillion: 0.5, outputPricePerMillion: 1.2 },
+    'meta-models/Muse-Glimmer-30B': { inputPricePerMillion: 0.35, outputPricePerMillion: 1.5 },
+    'Prism-ML/Ternary-Bonsai-27B': { inputPricePerMillion: 0, outputPricePerMillion: 0 }, // Free
+    'moonshotai/Kimi-K3': { inputPricePerMillion: 3, outputPricePerMillion: 15 },
+    'Qwen/Qwen3.8-2.4T-A95B': { inputPricePerMillion: 2.5, outputPricePerMillion: 6.25 },
+    'deepseek-ai/DeepSeek-V4-Flash-0731': {
+      inputPricePerMillion: 0.14,
+      outputPricePerMillion: 0.28,
+    },
+    'deepseek-ai/DeepSeek-V4-Pro-0813': { inputPricePerMillion: 1.32, outputPricePerMillion: 3.96 },
     'MiniMaxAI/MiniMax-M3': { inputPricePerMillion: 0.3, outputPricePerMillion: 1.2 },
     'MiniMaxAI/MiniMax-M2.7': { inputPricePerMillion: 0.3, outputPricePerMillion: 1.2 },
     'MiniMaxAI/MiniMax-M2.5': { inputPricePerMillion: 0.3, outputPricePerMillion: 1.2 },
