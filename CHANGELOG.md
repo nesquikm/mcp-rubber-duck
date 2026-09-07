@@ -1,3 +1,10 @@
+## [1.20.6](https://github.com/nesquikm/mcp-rubber-duck/compare/v1.20.5...v1.20.6) (2026-09-07)
+
+
+### Bug Fixes
+
+* **deps:** clear all security advisories and empty audit-ci allowlist ([cd1bf38](https://github.com/nesquikm/mcp-rubber-duck/commit/cd1bf38f8256014b5af5b101af283aea57294f35))
+
 ## [1.20.5](https://github.com/nesquikm/mcp-rubber-duck/compare/v1.20.4...v1.20.5) (2026-08-19)
 
 
