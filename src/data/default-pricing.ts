@@ -3,7 +3,7 @@ import { PricingConfig } from '../config/types.js';
 /**
  * Default pricing data for common LLM providers.
  * Prices are in USD per million tokens.
- * Last updated: 2026-08-19
+ * Last updated: 2026-09-07
  *
  * To update pricing:
  * 1. Research current pricing from provider websites
@@ -14,7 +14,7 @@ import { PricingConfig } from '../config/types.js';
  * Users can override these defaults in their config.json file.
  */
 export const DEFAULT_PRICING_VERSION = 2;
-export const DEFAULT_PRICING_LAST_UPDATED = '2026-08-19';
+export const DEFAULT_PRICING_LAST_UPDATED = '2026-09-07';
 
 export const DEFAULT_PRICING: PricingConfig = {
   openai: {
@@ -324,13 +324,16 @@ export const DEFAULT_PRICING: PricingConfig = {
 
   deepseek: {
     // DeepSeek V4 (current models). Input price is the cache-miss rate.
-    // NOTE: these are the standard (peak-hours) rates. DeepSeek bills half these rates
-    // off-peak - peak is 01:00-04:00 and 06:00-10:00 UTC, everything else is off-peak.
-    'deepseek-v4-flash': { inputPricePerMillion: 0.44, outputPricePerMillion: 1.32 },
-    'deepseek-v4-pro': { inputPricePerMillion: 1.32, outputPricePerMillion: 3.96 },
-    // Legacy aliases (deepseek-chat / deepseek-reasoner map to v4-flash non-thinking/thinking modes)
-    'deepseek-chat': { inputPricePerMillion: 0.44, outputPricePerMillion: 1.32 },
-    'deepseek-reasoner': { inputPricePerMillion: 0.44, outputPricePerMillion: 1.32 },
+    // NOTE: these are the OFF-PEAK rates, which apply for 133 of the 168 hours in a week.
+    // Peak is exactly 2x and runs 01:00-04:00 and 06:00-10:00 UTC, Monday through Friday
+    // only - the whole weekend is off-peak. This table is time-blind (PricingService
+    // multiplies tokens by a flat rate), so anyone whose traffic lands mostly inside the
+    // peak window should double these in the `pricing.deepseek` block of config.json.
+    'deepseek-v4-flash': { inputPricePerMillion: 0.22, outputPricePerMillion: 0.66 },
+    'deepseek-v4-pro': { inputPricePerMillion: 0.66, outputPricePerMillion: 1.98 },
+    // Legacy aliases (deepseek-chat / deepseek-reasoner both bill at v4-flash rates)
+    'deepseek-chat': { inputPricePerMillion: 0.22, outputPricePerMillion: 0.66 },
+    'deepseek-reasoner': { inputPricePerMillion: 0.22, outputPricePerMillion: 0.66 },
     // Older aliases kept for compatibility
     'deepseek-v3': { inputPricePerMillion: 0.28, outputPricePerMillion: 0.42 },
     'deepseek-r1': { inputPricePerMillion: 0.28, outputPricePerMillion: 0.42 },
