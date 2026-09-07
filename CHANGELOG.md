@@ -1,3 +1,10 @@
+## [1.20.7](https://github.com/nesquikm/mcp-rubber-duck/compare/v1.20.6...v1.20.7) (2026-09-07)
+
+
+### Bug Fixes
+
+* **pricing:** default DeepSeek to off-peak rates ([d37eab5](https://github.com/nesquikm/mcp-rubber-duck/commit/d37eab5202e1046973cf58a433907ad0153a471f)), closes [#143](https://github.com/nesquikm/mcp-rubber-duck/issues/143)
+
 ## [1.20.6](https://github.com/nesquikm/mcp-rubber-duck/compare/v1.20.5...v1.20.6) (2026-09-07)
 
 
