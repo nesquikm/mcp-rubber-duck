@@ -99,7 +99,11 @@ Then make the actual edits to `src/data/default-pricing.ts`.
 ## Important Notes
 
 - Prices change frequently - always verify against official sources
-- Some providers have tiered pricing - use the standard/default tier
+- Some providers have tiered pricing - use the standard/default tier, EXCEPT for
+  time-of-day tiers (e.g. DeepSeek peak/off-peak). For those, use the tier that
+  applies for more of the week and state the window and the multiplier in a comment.
+  Do not "correct" such an entry back to the standard/peak tier: the pricing table
+  is time-blind, so the tier covering more hours is the lower-error default.
 - Free preview models should have `0` for both prices
 - Local models (Ollama) always have `0` prices
 
