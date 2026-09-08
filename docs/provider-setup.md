@@ -39,6 +39,19 @@ CUSTOM_TOGETHER_DEFAULT_MODEL=meta-llama/Llama-3.3-70B-Instruct-Turbo
 CUSTOM_TOGETHER_NICKNAME=Together Duck
 ```
 
+## DaoXE (multi-model gateway)
+1. Get API key from https://daoxe.com (sign up with GitHub, Telegram or Passkey)
+2. Configure as a custom provider:
+```env
+CUSTOM_DAOXE_API_KEY=...
+CUSTOM_DAOXE_BASE_URL=https://daoxe.com/v1
+CUSTOM_DAOXE_DEFAULT_MODEL=claude-sonnet-4-6
+CUSTOM_DAOXE_NICKNAME=DaoXE Duck
+```
+3. Model ids are account-scoped — run `curl -H "Authorization: Bearer $CUSTOM_DAOXE_API_KEY" https://daoxe.com/v1/models` once and use an exact id from the response. The catalog drifts as upstream providers ship, so don't hardcode a list across deployments.
+
+> DaoXE fronts hundreds of models from many providers behind one key, and also exposes a native Anthropic Messages endpoint for Claude-native clients. Not available in mainland China.
+
 ## Verifying OpenAI Compatibility
 
 To check if a provider is OpenAI-compatible:
