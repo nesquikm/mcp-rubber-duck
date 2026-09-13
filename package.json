@@ -74,7 +74,7 @@
     "@hono/node-server": "Major-version override (2.x) against the MCP SDK's declared ^1.19.9 — GHSA-frvp-7c67-39w9 is patched only in 2.0.5 and the 1.x line has no fix. Safe here: the SDK pulls @hono/node-server in for its server-side streamableHttp transport, which this project never imports (we use StreamableHTTPClientTransport, the client side, in src/services/mcp-client-manager.ts). v2 keeps the same serve/getRequestListener API. Revisit if this project ever serves MCP over HTTP, or drop the override once the SDK moves to ^2."
   },
   "overrides": {
-    "js-yaml": "^4.3.1",
+    "js-yaml": "^4.3.2",
     "lodash": "^4.17.23",
     "lodash-es": "^4.17.23",
     "hono": "^4.13.1",
