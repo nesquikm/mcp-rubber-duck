@@ -1,3 +1,10 @@
+## [1.20.8](https://github.com/nesquikm/mcp-rubber-duck/compare/v1.20.7...v1.20.8) (2026-09-15)
+
+
+### Bug Fixes
+
+* **deps:** bump hono to 4.13.7 and js-yaml to 4.3.2 ([58781b6](https://github.com/nesquikm/mcp-rubber-duck/commit/58781b60f68f5b495808ee83e9a93cff0ade706c))
+
 ## [1.20.7](https://github.com/nesquikm/mcp-rubber-duck/compare/v1.20.6...v1.20.7) (2026-09-07)
 
 
