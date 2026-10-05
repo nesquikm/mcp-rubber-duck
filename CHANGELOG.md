@@ -1,3 +1,10 @@
+## [1.20.9](https://github.com/nesquikm/mcp-rubber-duck/compare/v1.20.8...v1.20.9) (2026-10-05)
+
+
+### Bug Fixes
+
+* **deps:** braces has no fix and npm still ships stale undici — allowlist the unfixable ([128151d](https://github.com/nesquikm/mcp-rubber-duck/commit/128151d05ea698814eb92e5c18f2d03b71d1acfe))
+
 ## [1.20.8](https://github.com/nesquikm/mcp-rubber-duck/compare/v1.20.7...v1.20.8) (2026-09-15)
 
 
