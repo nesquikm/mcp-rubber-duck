@@ -5,10 +5,33 @@
   "critical": true,
   "report-type": "summary",
   "$allowlist-rationale": {
-    "$status": "EMPTY as of 2026-09-07 — nothing is suppressed. The notes below stay because this allowlist has filled up before and will again; they are the playbook, not a record of active exceptions.",
+    "$status": "ACTIVE as of 2026-10-05 — 20 path-scoped entries covering two unfixable classes (see $added-2026-10-05). Everything else is fixed via overrides/lockfile, so any NEW advisory or NEW dependency route still fails the gate.",
     "$root-cause": "Entries land here when an advisory resolves to a dependency BUNDLED INSIDE THE npm CLI TARBALL (node_modules/npm/node_modules/*). npm ships those via bundleDependencies, so `overrides` in package.json cannot reach them — raising the `npm` override itself is the only lever. The npm CLI is dev/release-only (devDependencies -> @semantic-release/npm -> npm) and is stripped from the runtime Docker image, which is why suppressing was acceptable while no patched npm existed. Note @semantic-release/npm@13.1.5 declares `npm: ^11.6.2`, so a fix landing only in npm 12.x would need that constraint revisited.",
+    "$added-2026-10-05": "Scheduled run 37319795785 went red. Overrides raised (fast-uri ^3.1.8, ip-address ^10.7.3, undici@6.x ^6.29.0, undici@7.x ^7.30.0, brace-expansion@1.x ^1.1.21, brace-expansion@2.x ^2.1.7) cleared every reachable copy. Two classes remain, both dev/release-only (`npm ls <pkg> --omit=dev` is empty for all of them): (1) braces 3.0.3, GHSA-vfj7-8cjw-p6xm, affected range `<=3.0.3` and 3.0.3 is the latest published braces — there is NO fixed version anywhere, so neither overrides nor `npm audit fix` can help (npm's suggested \"fix\" is a jest 30 / semantic-release major, which still resolves micromatch>braces 3.0.3). Reached only via micromatch from jest, semantic-release/@semantic-release/*, and vite-plugin-singlefile (build-time). (2) Copies BUNDLED in the npm CLI: undici 6.28.0 (GHSA-3wwx-pv8p-q78v, GHSA-r53p-7pc4-xj5r, GHSA-rfgv-xxqx-mfg5; fixed 6.28.1), ip-address 10.5.0 (GHSA-rpw4-54j3-4h4q, GHSA-2vr4-cq9g-pvrc, GHSA-j6r3-76f7-8jcv, GHSA-h3mg-xc3c-68pw; fixed 10.7.1+), brace-expansion 5.0.9 (GHSA-6j4f-fj2g-mc7p, GHSA-qhr7-859c-m2p7, GHSA-q2hr-2g5m-vwhr; fixed 5.0.12), http-cache-semantics 4.2.0 (GHSA-ch52-4w7c-c8xp). Verified by UNPACKING the tarballs: npm 11.21.0 (latest 11.x) and 12.2.0 (latest) both still vendor exactly these versions, so raising `overrides.npm` gains nothing. Re-check triggers: (a) a braces release >3.0.3 or micromatch dropping braces — then delete the GHSA-vfj7 entries; (b) any new npm 11.x/12.x release — unpack it and check node_modules/{undici,ip-address,brace-expansion,http-cache-semantics}; once patched, raise `overrides.npm` and delete those entries (12.x additionally needs @semantic-release/npm to accept npm 12).",
+    "$braces-wildcards-2026-10-05": "braces renders as 33 distinct effects-chain paths (one per jest/semantic-release package in the chain), so it is allowlisted with wildcards ANCHORED on the dev-only root families instead of 33 literals that every jest bump would churn. Each record still requires the path to START with a known dev root (jest*, @jest/*, expect>, create-jest>, @types/jest>, semantic-release>, @semantic-release/*, vite-plugin-singlefile>) or be the bare `micromatch>braces` chain, so braces arriving via a new production root still fails CI. Do NOT collapse this to `GHSA-vfj7-8cjw-p6xm|*` or a bare ID. The bundled-npm entries are literal; note `undici` and `brace-expansion` render bare for reachable copies too (see $scoping), so those two are effectively advisory-wide — acceptable only while every reachable copy is pinned past the fix by overrides.",
     "$cleared-2026-09-07": "npm 11.19.1 rebundled the entire stale set at patched versions in one release — tar 7.5.22 (needed >=7.5.21), undici 6.28.0, ip-address 10.5.0, brace-expansion 5.0.9 — clearing GHSA-r292-9mhp-454m, GHSA-8xcm-r25x-g524, GHSA-m8rv-5g2x-5cg5, GHSA-v3r7-h72x-cjcm, GHSA-mwp4-54f8-5fhr, GHSA-4xrf-jv44-h6hh, GHSA-22jq-vg5j-6vgg, GHSA-mh99-v99m-4gvg and GHSA-rgw5-rvv9-x895 together. `overrides.npm` is now pinned at `^11.19.1` (raised from `^11.16.0`), so this repo DECLARES 11.19.1 as its minimum rather than merely happening to install it. $root-cause names that key as the only lever over the bundled set, and the pin is what makes the lever declarative instead of incidental. Two things to keep in proportion: resolution takes the highest match, so the installed npm would be >=11.19.1 anyway and `npm ci` reads the lockfile regardless — the pin buys intent, not a behaviour change; and with the allowlist empty, any regression fails the gate loudly rather than being silently suppressed. Going forward, re-derive this floor rather than trusting it. A floor that was correct when written goes stale the moment npm rebundles again, and a stale floor mistaken for a vetted one is precisely how `^11.16.0` outlived its own rationale. Always check whether a newer npm rebundles the package before adding an entry back.",
     "$scoping": "If an entry is ever needed again, path-scope it (`GHSA-ID|path`) rather than using a bare advisory ID, so a REACHABLE reintroduction of the same advisory still fails CI. Render the path the way audit-ci does — from npm audit's `effects` chain, NOT the full path to the root: npm's bundled tar renders as `npm>tar`, and a package nothing depends on renders as its bare name. This bit CI on 2026-09-07: the entry read `semantic-release>@semantic-release/npm>npm>tar` and silently stopped matching once the graph shifted. audit-ci only prints `Consider not allowlisting path: ...` for a stale entry and still exits 0, so that warning is a real signal — an advisory you believe is suppressed no longer is."
   },
-  "allowlist": []
+  "allowlist": [
+    "GHSA-vfj7-8cjw-p6xm|jest*",
+    "GHSA-vfj7-8cjw-p6xm|@jest/*",
+    "GHSA-vfj7-8cjw-p6xm|@types/jest>*",
+    "GHSA-vfj7-8cjw-p6xm|create-jest>*",
+    "GHSA-vfj7-8cjw-p6xm|expect>*",
+    "GHSA-vfj7-8cjw-p6xm|micromatch>braces*",
+    "GHSA-vfj7-8cjw-p6xm|semantic-release>*",
+    "GHSA-vfj7-8cjw-p6xm|@semantic-release/*",
+    "GHSA-vfj7-8cjw-p6xm|vite-plugin-singlefile>*",
+    "GHSA-3wwx-pv8p-q78v|undici",
+    "GHSA-r53p-7pc4-xj5r|undici",
+    "GHSA-rfgv-xxqx-mfg5|undici",
+    "GHSA-rpw4-54j3-4h4q|ip-address",
+    "GHSA-2vr4-cq9g-pvrc|ip-address",
+    "GHSA-j6r3-76f7-8jcv|ip-address",
+    "GHSA-h3mg-xc3c-68pw|ip-address",
+    "GHSA-6j4f-fj2g-mc7p|brace-expansion",
+    "GHSA-qhr7-859c-m2p7|brace-expansion",
+    "GHSA-q2hr-2g5m-vwhr|brace-expansion",
+    "GHSA-ch52-4w7c-c8xp|http-cache-semantics"
+  ]
 }
