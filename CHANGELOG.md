@@ -1,3 +1,11 @@
+## [1.20.10](https://github.com/nesquikm/mcp-rubber-duck/compare/v1.20.9...v1.20.10) (2026-10-13)
+
+
+### Bug Fixes
+
+* **deps:** allowlist npm-bundled postcss-selector-parser ([839daff](https://github.com/nesquikm/mcp-rubber-duck/commit/839daff43cae87a29264c266fa10be70b61594c1))
+* **deps:** raise mcp sdk to ^1.31.0 and refresh lockfile ([fea2e08](https://github.com/nesquikm/mcp-rubber-duck/commit/fea2e0831acef626fb4a6b3c03b39053147bf856))
+
 ## [1.20.9](https://github.com/nesquikm/mcp-rubber-duck/compare/v1.20.8...v1.20.9) (2026-10-05)
 
 
