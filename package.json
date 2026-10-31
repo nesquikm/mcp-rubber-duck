@@ -81,7 +81,7 @@
     "@hono/node-server": "^2.0.5",
     "fast-uri": "^3.1.8",
     "postcss": "^8.5.18",
-    "ip-address": "^10.7.3",
+    "ip-address": "^10.7.5",
     "express-rate-limit": "^8.6.2",
     "qs": "^6.15.2",
     "npm": "^11.19.1",
