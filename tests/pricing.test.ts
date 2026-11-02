@@ -21,9 +21,9 @@ describe('PricingService', () => {
 
     it('should have pricing for common providers', () => {
       expect(service.getPricing('openai', 'gpt-4o')).toBeDefined();
-      expect(service.getPricing('anthropic', 'claude-3-5-sonnet-20241022')).toBeDefined();
-      expect(service.getPricing('google', 'gemini-1.5-pro')).toBeDefined();
-      expect(service.getPricing('groq', 'llama-3.3-70b-versatile')).toBeDefined();
+      expect(service.getPricing('anthropic', 'claude-sonnet-4-6')).toBeDefined();
+      expect(service.getPricing('google', 'gemini-2.5-pro')).toBeDefined();
+      expect(service.getPricing('groq', 'openai/gpt-oss-120b')).toBeDefined();
     });
 
     it('should return undefined for unknown provider', () => {
@@ -115,7 +115,7 @@ describe('PricingService', () => {
 
       // Default providers should still exist
       expect(service.getPricing('openai', 'gpt-4o')).toBeDefined();
-      expect(service.getPricing('anthropic', 'claude-3-5-sonnet-20241022')).toBeDefined();
+      expect(service.getPricing('anthropic', 'claude-sonnet-4-6')).toBeDefined();
     });
 
     it('should handle empty config override object', () => {
@@ -271,7 +271,7 @@ describe('PricingService', () => {
     it('should list models for google provider', () => {
       const models = service.getModelsForProvider('google');
       expect(models).toContain('gemini-2.5-flash');
-      expect(models).toContain('gemini-1.5-pro');
+      expect(models).toContain('gemini-2.5-pro');
     });
 
     it('should not resolve "gemini" as a provider (alias removed)', () => {
