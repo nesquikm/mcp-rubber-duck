@@ -1,3 +1,10 @@
+## [1.20.13](https://github.com/nesquikm/mcp-rubber-duck/compare/v1.20.12...v1.20.13) (2026-11-02)
+
+
+### Bug Fixes
+
+* duck-live's findings, rounded to the nearest micro-dollar ([e2d3256](https://github.com/nesquikm/mcp-rubber-duck/commit/e2d325629fa5086d1cb64d59a7fb9f67fe6a071c))
+
 ## [1.20.12](https://github.com/nesquikm/mcp-rubber-duck/compare/v1.20.11...v1.20.12) (2026-11-02)
 
 
