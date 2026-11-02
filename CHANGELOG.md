@@ -1,3 +1,10 @@
+## [1.20.14](https://github.com/nesquikm/mcp-rubber-duck/compare/v1.20.13...v1.20.14) (2026-11-02)
+
+
+### Bug Fixes
+
+* **chat:** count each message once ([fb2cfaa](https://github.com/nesquikm/mcp-rubber-duck/commit/fb2cfaabceb519336c4c7167a709ffada49a6b57))
+
 ## [1.20.13](https://github.com/nesquikm/mcp-rubber-duck/compare/v1.20.12...v1.20.13) (2026-11-02)
 
 
