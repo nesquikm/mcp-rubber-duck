@@ -123,7 +123,13 @@ describe('listDucksTool', () => {
     const result = await listDucksTool(mockProviderManager, mockHealthMonitor, {});
 
     expect(result.content[0].text).toContain('Found 0 duck(s)');
-    expect(result.content[0].text).toContain('0/0 ducks are healthy');
+    expect(result.content[0].text).toContain('health not checked yet');
+  });
+
+  it('should not claim 0 healthy ducks when health was never checked', async () => {
+    const result = await listDucksTool(mockProviderManager, mockHealthMonitor, {});
+    expect(result.content[0].text).not.toMatch(/0\/\d+ ducks are healthy/);
+    expect(result.content[0].text).toContain('health not checked yet');
   });
 
   it('should display provider without API key correctly', async () => {

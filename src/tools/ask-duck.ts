@@ -1,6 +1,6 @@
 import { ProviderManager } from '../providers/manager.js';
 import { ImageInput, buildContent } from '../config/types.js';
-import { formatDuckResponse } from '../utils/ascii-art.js';
+import { formatDuckReply, formatDuckFooter } from '../utils/ascii-art.js';
 import { logger } from '../utils/logger.js';
 
 export async function askDuckTool(providerManager: ProviderManager, args: Record<string, unknown>) {
@@ -30,17 +30,7 @@ export async function askDuckTool(providerManager: ProviderManager, args: Record
     temperature,
   });
 
-  // Format the response
-  const formattedResponse = formatDuckResponse(response.nickname, response.content, response.model);
-
-  // Add usage info if available
-  let usageInfo = '';
-  if (response.usage) {
-    usageInfo = `\n\n📊 Tokens used: ${response.usage.total_tokens} (${response.usage.prompt_tokens} prompt, ${response.usage.completion_tokens} completion)`;
-  }
-
-  // Add latency info
-  const metaInfo = `\n⏱️ Latency: ${response.latency}ms`;
+  const text = `${formatDuckReply(response)}\n\n${formatDuckFooter(response)}`;
 
   logger.info(`Duck ${response.nickname} responded to query`);
 
@@ -48,7 +38,7 @@ export async function askDuckTool(providerManager: ProviderManager, args: Record
     content: [
       {
         type: 'text',
-        text: formattedResponse + usageInfo + metaInfo,
+        text,
       },
     ],
   };

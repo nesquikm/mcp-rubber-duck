@@ -71,6 +71,20 @@ export class ProviderManager {
     if (this.providers.size === 0) {
       throw new Error('No providers could be initialized');
     }
+
+    if (this.defaultProvider && !this.providers.has(this.defaultProvider)) {
+      const fallback = this.providers.keys().next().value as string;
+      logger.warn(
+        `DEFAULT_PROVIDER "${this.defaultProvider}" is not a configured provider ` +
+          `(available: ${Array.from(this.providers.keys()).join(', ')}); using "${fallback}"`
+      );
+      this.defaultProvider = fallback;
+    }
+  }
+
+  /** The provider used when a tool call names none: DEFAULT_PROVIDER, else the first configured duck. */
+  getDefaultProviderName(): string {
+    return this.defaultProvider ?? (this.providers.keys().next().value as string);
   }
 
   async checkHealth(providerName?: string): Promise<ProviderHealth[]> {
@@ -279,7 +293,7 @@ export class ProviderManager {
   }
 
   getProvider(name?: string): IDuckProvider {
-    const providerName = name || this.defaultProvider;
+    const providerName = name || this.getDefaultProviderName();
 
     if (!providerName) {
       throw new Error('No provider specified and no default provider configured');

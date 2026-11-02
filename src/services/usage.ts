@@ -221,6 +221,7 @@ export class UsageService {
           if (cost) {
             totalCost += cost.totalCost;
             costByProvider[provider] += cost.totalCost;
+            agg.estimatedCostUSD = (agg.estimatedCostUSD ?? 0) + cost.totalCost;
             hasCostData = true;
           }
         }
@@ -238,8 +239,19 @@ export class UsageService {
     };
 
     if (hasCostData) {
-      result.totals.estimatedCostUSD = totalCost;
-      result.costByProvider = costByProvider;
+      // Round to micro-dollars so float accumulation noise (0.21411099999999997) never leaks out
+      const round = (n: number) => Math.round(n * 1e6) / 1e6;
+      result.totals.estimatedCostUSD = round(totalCost);
+      result.costByProvider = Object.fromEntries(
+        Object.entries(costByProvider).map(([p, c]) => [p, round(c)])
+      );
+      for (const models of Object.values(aggregated)) {
+        for (const stats of Object.values(models)) {
+          if (stats.estimatedCostUSD !== undefined) {
+            stats.estimatedCostUSD = round(stats.estimatedCostUSD);
+          }
+        }
+      }
     }
 
     return result;

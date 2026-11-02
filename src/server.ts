@@ -45,7 +45,7 @@ import { GuardrailsService } from './guardrails/service.js';
 import { TaskManager } from './services/task-manager.js';
 import { createProgressReporter } from './services/progress.js';
 import { logger } from './utils/logger.js';
-import { getRandomDuckMessage } from './utils/ascii-art.js';
+import { getRandomDuckMessage, formatDuckReply, formatDuckFooter } from './utils/ascii-art.js';
 import { printWelcomeBanner } from './utils/banner.js';
 
 // Import tools
@@ -708,6 +708,7 @@ export class RubberDuckServer {
                 nickname: z.string(),
                 position: z.enum(['pro', 'con', 'neutral']),
                 content: z.string(),
+                error: z.string().optional(),
               })
             )
           ),
@@ -784,6 +785,7 @@ export class RubberDuckServer {
                 promptTokens: z.number(),
                 completionTokens: z.number(),
                 errors: z.number(),
+                estimatedCostUSD: z.number().optional(),
               })
             )
           ),
@@ -1133,7 +1135,7 @@ export class RubberDuckServer {
       toolRoundsUsed?: number;
     }
   ): string {
-    let formatted = `🦆 **${response.nickname}** (${response.provider})\n─────────────────────────────────────\n${response.content}`;
+    let formatted = formatDuckReply(response);
 
     // Add pending approvals if any
     if (response.pendingApprovals && response.pendingApprovals.length > 0) {
@@ -1153,15 +1155,7 @@ export class RubberDuckServer {
       formatted += `\n\n🔧 **Used MCP Tools:** ${response.mcpResults.length} tool call(s)${roundInfo}`;
     }
 
-    // Add model and performance info
-    formatted += `\n\n📍 Model: ${response.model}`;
-    if (response.usage) {
-      formatted += ` | 📊 Tokens: ${response.usage.total_tokens}`;
-    }
-    formatted += ` | ⏱️ ${response.latency}ms`;
-    if (response.mcpResults) {
-      formatted += ' | 🔄 MCP Enhanced';
-    }
+    formatted += `\n\n${formatDuckFooter(response, response.mcpResults ? ['🔄 MCP Enhanced'] : [])}`;
 
     return formatted;
   }

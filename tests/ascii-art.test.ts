@@ -1,20 +1,26 @@
 import { describe, it, expect } from '@jest/globals';
-import { formatDuckResponse, getRandomDuckMessage, duckMessages } from '../src/utils/ascii-art';
+import { formatDuckReply, formatDuckFooter, getRandomDuckMessage, duckMessages } from '../src/utils/ascii-art';
 
-describe('formatDuckResponse', () => {
-  it('should format response without model', () => {
-    const result = formatDuckResponse('GPT Duck', 'Hello world');
-    expect(result).toBe('🦆 [GPT Duck]: Hello world');
+describe('formatDuckReply / formatDuckFooter', () => {
+  const base = { nickname: 'GPT Duck', provider: 'openai', content: 'Hello world', latency: 42 };
+
+  it('formats header and body', () => {
+    expect(formatDuckReply(base)).toBe(
+      '🦆 **GPT Duck** (openai)\n─────────────────────────────────────\nHello world'
+    );
   });
 
-  it('should format response with model', () => {
-    const result = formatDuckResponse('GPT Duck', 'Hello world', 'gpt-4o-mini');
-    expect(result).toBe('🦆 [GPT Duck | gpt-4o-mini]: Hello world');
+  it('formats footer with model, tokens and latency', () => {
+    const footer = formatDuckFooter({
+      ...base,
+      model: 'gpt-5.4',
+      usage: { total_tokens: 30, prompt_tokens: 10, completion_tokens: 20 },
+    });
+    expect(footer).toBe('📍 Model: gpt-5.4 | 📊 Tokens: 30 (10 prompt, 20 completion) | ⏱️ 42ms');
   });
 
-  it('should handle undefined model', () => {
-    const result = formatDuckResponse('GPT Duck', 'Hello world', undefined);
-    expect(result).toBe('🦆 [GPT Duck]: Hello world');
+  it('omits missing model/usage and appends extras', () => {
+    expect(formatDuckFooter(base, ['🔄 MCP Enhanced'])).toBe('⏱️ 42ms | 🔄 MCP Enhanced');
   });
 });
 

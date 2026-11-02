@@ -64,7 +64,7 @@ CLI_CUSTOM_MYTOOL_PROCESS_TIMEOUT=60000      # Optional: ms (default: 120000)
 CLI_CUSTOM_MYTOOL_WORKING_DIRECTORY=/tmp     # Optional: working directory
 
 # Global Settings
-DEFAULT_PROVIDER=openai                       # Provider key: openai, google, groq, ollama, or a custom name (not "gemini")
+DEFAULT_PROVIDER=openai                       # Provider key: openai, google, groq, ollama, or a custom name (not "gemini"); an unknown key falls back to the first duck with a warning
 DEFAULT_TEMPERATURE=0.7
 LOG_LEVEL=info
 

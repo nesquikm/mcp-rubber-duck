@@ -1,7 +1,7 @@
 import { ProviderManager } from '../providers/manager.js';
 import { ConversationManager } from '../services/conversation.js';
 import { ImageInput, buildContent } from '../config/types.js';
-import { formatDuckResponse } from '../utils/ascii-art.js';
+import { formatDuckReply, formatDuckFooter } from '../utils/ascii-art.js';
 import { logger } from '../utils/logger.js';
 
 export async function chatDuckTool(
@@ -26,7 +26,7 @@ export async function chatDuckTool(
 
   if (!conversation) {
     // Create new conversation with specified or default provider
-    const providerName = provider || providerManager.getProviderNames()[0];
+    const providerName = provider || providerManager.getDefaultProviderName();
     conversation = conversationManager.createConversation(conversation_id, providerName);
     logger.info(`Created new conversation: ${conversation_id} with ${providerName}`);
   } else if (provider && provider !== conversation.provider) {
@@ -61,12 +61,10 @@ export async function chatDuckTool(
     provider: providerToUse,
   });
 
-  // Format response
-  const formattedResponse = formatDuckResponse(response.nickname, response.content, response.model);
-
-  // Add conversation info
-  const conversationInfo = `\n\n💬 Conversation: ${conversation_id} | Messages: ${messages.length + 1}`;
-  const latencyInfo = `\n⏱️ Latency: ${response.latency}ms`;
+  const text =
+    `${formatDuckReply(response)}\n\n` +
+    `💬 Conversation: ${conversation_id} | Messages: ${messages.length + 1}\n` +
+    formatDuckFooter(response);
 
   logger.info(`Duck ${response.nickname} responded in conversation ${conversation_id}`);
 
@@ -74,7 +72,7 @@ export async function chatDuckTool(
     content: [
       {
         type: 'text',
-        text: formattedResponse + conversationInfo + latencyInfo,
+        text,
       },
     ],
   };

@@ -244,7 +244,9 @@ export class DuckProvider implements IDuckProvider {
 
       for await (const model of response) {
         models.push({
-          id: model.id,
+          // Google's OpenAI-compatible endpoint returns ids as "models/<id>"; normalize so they
+          // match configured model names (and the default marker) and can be passed back as-is.
+          id: model.id.replace(/^models\//, ''),
           created: model.created,
           owned_by: model.owned_by,
           object: model.object,

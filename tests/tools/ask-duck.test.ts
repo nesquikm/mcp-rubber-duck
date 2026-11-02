@@ -55,7 +55,7 @@ describe('askDuckTool', () => {
       prompt: 'Test prompt',
     });
 
-    expect(result.content[0].text).toContain('Tokens used: 30');
+    expect(result.content[0].text).toContain('Tokens: 30');
     expect(result.content[0].text).toContain('10 prompt');
     expect(result.content[0].text).toContain('20 completion');
   });
@@ -118,7 +118,7 @@ describe('askDuckTool', () => {
       prompt: 'Test',
     });
 
-    expect(result.content[0].text).not.toContain('Tokens used');
+    expect(result.content[0].text).not.toContain('Tokens:');
   });
 
   it('should warn when model is not valid for provider', async () => {

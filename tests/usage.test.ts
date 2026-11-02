@@ -236,6 +236,19 @@ describe('UsageService', () => {
       newService.shutdown();
     });
 
+    it('reports per-model cost and rounds totals to micro-dollars', () => {
+      // 7 x 1 prompt token at $5/M accumulates float noise without rounding
+      for (let i = 0; i < 7; i++) usageService.recordUsage('testprovider', 'test-model', 1, 0);
+      usageService.recordUsage('testprovider', 'test-model', 1000, 500);
+
+      const stats = usageService.getStats('today');
+      const modelCost = stats.usage['testprovider']['test-model'].estimatedCostUSD;
+      expect(modelCost).toBeCloseTo(0.012535, 6);
+      for (const n of [modelCost!, stats.totals.estimatedCostUSD!, stats.costByProvider!['testprovider']]) {
+        expect(Math.round(n * 1e6) / 1e6).toBe(n);
+      }
+    });
+
     it('should include cost data when pricing available', () => {
       usageService.recordUsage('testprovider', 'test-model', 1000, 500);
 

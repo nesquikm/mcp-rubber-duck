@@ -65,6 +65,69 @@ describe('duckDebateTool', () => {
     provider2['client'].chat.completions.create = mockCreate;
   });
 
+  describe('participant failures', () => {
+    const ok = (provider: string, content: string) => ({
+      provider,
+      nickname: provider,
+      model: 'm',
+      content,
+      latency: 1,
+    });
+
+    it('keeps debating when one participant fails, and leaves the failure out of later prompts', async () => {
+      const prompts: string[] = [];
+      jest.spyOn(mockProviderManager, 'askDuck').mockImplementation(async (name, prompt) => {
+        prompts.push(String(prompt));
+        if (name === 'google') throw new Error('400 boom');
+        return ok(String(name), `argument from ${name}`);
+      });
+
+      const result = await duckDebateTool(mockProviderManager, {
+        prompt: 'Tabs or spaces?',
+        format: 'oxford',
+        rounds: 2,
+      });
+
+      expect(result.isError).toBeUndefined();
+      const sc = result.structuredContent as {
+        rounds: { provider: string; error?: string }[][];
+        synthesizer: string;
+      };
+      expect(sc.rounds[0].find((a) => a.provider === 'google')?.error).toContain('400 boom');
+      expect(sc.rounds[0].find((a) => a.provider === 'openai')?.error).toBeUndefined();
+      expect(sc.synthesizer).toBe('openai');
+      // Round-2 and synthesis prompts must not quote the failure text
+      expect(prompts.slice(2).some((p) => p.includes('400 boom'))).toBe(false);
+    });
+
+    it('falls back to another synthesizer when the chosen one fails', async () => {
+      let calls = 0;
+      jest.spyOn(mockProviderManager, 'askDuck').mockImplementation(async (name) => {
+        calls++;
+        // 2 arguments succeed, then the requested synthesizer (google) fails
+        if (calls === 3 && name === 'google') throw new Error('synth down');
+        return ok(String(name), `text from ${name}`);
+      });
+
+      const result = await duckDebateTool(mockProviderManager, {
+        prompt: 'Topic',
+        format: 'oxford',
+        rounds: 1,
+        synthesizer: 'google',
+      });
+
+      expect((result.structuredContent as { synthesizer: string }).synthesizer).toBe('openai');
+    });
+
+    it('aborts when every participant fails in a round', async () => {
+      jest.spyOn(mockProviderManager, 'askDuck').mockRejectedValue(new Error('all down'));
+
+      await expect(
+        duckDebateTool(mockProviderManager, { prompt: 'Topic', format: 'oxford', rounds: 1 })
+      ).rejects.toThrow('every participant failed in round 1');
+    });
+  });
+
   it('should throw error when prompt is missing', async () => {
     await expect(
       duckDebateTool(mockProviderManager, { format: 'oxford' })

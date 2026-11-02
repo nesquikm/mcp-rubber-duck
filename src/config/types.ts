@@ -336,6 +336,8 @@ export interface DebateArgument {
   position: DebatePosition;
   content: string;
   timestamp: Date;
+  /** Set when this participant's call failed; failed arguments are excluded from later prompts. */
+  error?: string;
 }
 
 export interface DebateResult {
@@ -354,6 +356,8 @@ export interface ModelUsageStats {
   promptTokens: number;
   completionTokens: number;
   errors: number;
+  /** Only set in aggregated stats results when pricing is known (never persisted). */
+  estimatedCostUSD?: number;
 }
 
 export interface DailyUsage {

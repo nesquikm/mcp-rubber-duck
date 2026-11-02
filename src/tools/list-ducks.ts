@@ -58,7 +58,11 @@ export async function listDucksTool(
 
   // Add summary
   const healthyCount = Array.from(healthStatus.values()).filter((h) => h.healthy).length;
-  response += `\n📊 Summary: ${healthyCount}/${providers.length} ducks are healthy and ready!`;
+  if (healthStatus.size === 0) {
+    response += `\n📊 Summary: ${providers.length} ducks configured — health not checked yet (use check_health: true)`;
+  } else {
+    response += `\n📊 Summary: ${healthyCount}/${providers.length} ducks are healthy and ready!`;
+  }
 
   logger.info(`Listed ${providers.length} ducks, ${healthyCount} healthy`);
 
