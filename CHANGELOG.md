@@ -1,3 +1,11 @@
+## [1.20.11](https://github.com/nesquikm/mcp-rubber-duck/compare/v1.20.10...v1.20.11) (2026-11-02)
+
+
+### Bug Fixes
+
+* **deps:** move to zod 4 and refresh the audit allowlist ([01860c1](https://github.com/nesquikm/mcp-rubber-duck/commit/01860c11ebda2f0735f8525e3987b74ef142ceea))
+* **pricing:** refresh rates for 2026-11-02 ([d14aa2b](https://github.com/nesquikm/mcp-rubber-duck/commit/d14aa2b856f6a3dc57e214b2ac5ecd7ec06b506c))
+
 ## [1.20.10](https://github.com/nesquikm/mcp-rubber-duck/compare/v1.20.9...v1.20.10) (2026-10-13)
 
 
