@@ -22,7 +22,7 @@ Each preset comes with sensible defaults for command, arguments, prompt delivery
 
 ```bash
 CLI_CLAUDE_NICKNAME=My Claude Agent
-CLI_CLAUDE_DEFAULT_MODEL=claude-sonnet-5
+CLI_CLAUDE_DEFAULT_MODEL=claude-sonnet-5-5
 CLI_CLAUDE_CLI_ARGS=--max-turns,5,--verbose
 CLI_CLAUDE_SYSTEM_PROMPT=Be concise and technical
 ```
@@ -106,8 +106,8 @@ CLI providers can also be configured via `config/config.json`. Set `"type": "cli
     "openai": {
       "api_key": "sk-...",
       "base_url": "https://api.openai.com/v1",
-      "models": ["gpt-5.1"],
-      "default_model": "gpt-5.1",
+      "models": ["gpt-5.4"],
+      "default_model": "gpt-5.4",
       "nickname": "GPT Duck"
     },
     "cli-claude": {

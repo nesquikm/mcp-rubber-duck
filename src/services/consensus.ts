@@ -287,7 +287,9 @@ IMPORTANT:
     output += `─────────────────────────────────────\n`;
 
     for (const vote of result.votes) {
-      if (vote.choice) {
+      if (vote.error) {
+        output += `🦆 **${vote.nickname}**: ⚠️ Vote failed: ${vote.error}\n`;
+      } else if (vote.choice) {
         output += `🦆 **${vote.nickname}** voted: **${vote.choice}**`;
         output += ` (confidence: ${vote.confidence}%)\n`;
         if (vote.reasoning) {

@@ -81,6 +81,10 @@ Two things about the global list are easy to get wrong:
   the default `always` ignores trusted lists entirely; to drop approvals entirely use
   `MCP_APPROVAL_MODE="never"`.
 
+## Model Compatibility
+
+The bridge works by attaching the connected servers' tools to each duck's request, so the duck's model must support function tools over Chat Completions. OpenAI's **gpt-5.6 and gpt-6** families currently don't (`400 Function tools with reasoning_effort are not supported ... use /v1/responses`) — use `gpt-5.4` / `gpt-5.4-mini` for OpenAI ducks while the bridge is enabled. Responses API support is tracked in [#166](https://github.com/nesquikm/mcp-rubber-duck/issues/166).
+
 ## MCP Server Configuration
 
 Configure MCP servers using environment variables:

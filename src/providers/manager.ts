@@ -190,6 +190,7 @@ export class ProviderManager {
             model: '',
             content: `Error: ${error instanceof Error ? error.message : String(error)}`,
             latency: 0,
+            error: error instanceof Error ? error.message : String(error),
           }))
         : Promise.resolve({
             provider: 'unknown',
@@ -229,6 +230,7 @@ export class ProviderManager {
               model: '',
               content: `Error: ${error instanceof Error ? error.message : String(error)}`,
               latency: 0,
+              error: error instanceof Error ? error.message : String(error),
             }))
             .then((result) => {
               completed++;

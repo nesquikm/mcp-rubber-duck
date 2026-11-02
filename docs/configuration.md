@@ -13,11 +13,11 @@ Create a `.env` file in the project root:
 ```env
 # OpenAI
 OPENAI_API_KEY=sk-...
-OPENAI_DEFAULT_MODEL=gpt-5.1  # Optional: defaults to gpt-5.1
+OPENAI_DEFAULT_MODEL=gpt-5.4  # Optional: defaults to gpt-5.4
 
 # Google Gemini
 GEMINI_API_KEY=...
-GEMINI_DEFAULT_MODEL=gemini-3.5-flash  # Optional: defaults to gemini-3.5-flash
+GEMINI_DEFAULT_MODEL=gemini-3.8-flash  # Optional: defaults to gemini-3.8-flash
 
 # Groq
 GROQ_API_KEY=gsk_...
@@ -51,7 +51,7 @@ CLI_AIDER_ENABLED=true                       # Aider
 
 # Optional overrides for preset CLI agents
 CLI_CLAUDE_NICKNAME=My Claude                # Optional: display name
-CLI_CLAUDE_DEFAULT_MODEL=claude-sonnet-5     # Optional: model override
+CLI_CLAUDE_DEFAULT_MODEL=claude-sonnet-5-5   # Optional: model override
 CLI_CLAUDE_SYSTEM_PROMPT=Be concise          # Optional: system prompt
 CLI_CLAUDE_CLI_ARGS=--max-turns,5,--verbose  # Optional: extra CLI args
 
@@ -64,7 +64,7 @@ CLI_CUSTOM_MYTOOL_PROCESS_TIMEOUT=60000      # Optional: ms (default: 120000)
 CLI_CUSTOM_MYTOOL_WORKING_DIRECTORY=/tmp     # Optional: working directory
 
 # Global Settings
-DEFAULT_PROVIDER=openai
+DEFAULT_PROVIDER=openai                       # Provider key: openai, google, groq, ollama, or a custom name (not "gemini")
 DEFAULT_TEMPERATURE=0.7
 LOG_LEVEL=info
 

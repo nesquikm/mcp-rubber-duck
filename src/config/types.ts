@@ -250,6 +250,8 @@ export interface DuckResponse {
     totalTokens?: number;
   };
   latency: number;
+  /** Set when the provider call failed; `content` then carries a human-readable error. */
+  error?: string;
 }
 
 // Consensus & Voting Types
@@ -260,6 +262,8 @@ export interface VoteResult {
   confidence: number;
   reasoning: string;
   rawResponse: string;
+  /** Set when the voter's provider call failed; such votes are never counted. */
+  error?: string;
 }
 
 export interface AggregatedVote {

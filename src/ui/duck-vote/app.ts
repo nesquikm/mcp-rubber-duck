@@ -14,6 +14,7 @@ interface VoteData {
     choice: string;
     confidence: number;
     reasoning: string;
+    error?: string;
   }[];
   totalVoters: number;
   validVotes: number;
@@ -105,6 +106,9 @@ function render(data: VoteData) {
       if (v.reasoning) {
         html += `<details class="reasoning"><summary>Reasoning</summary><p>${esc(v.reasoning)}</p></details>`;
       }
+    } else if (v.error) {
+      html += `<div class="voter-choice invalid">Vote failed</div>`;
+      html += `<details class="reasoning"><summary>Error</summary><p>${esc(v.error)}</p></details>`;
     } else {
       html += `<div class="voter-choice invalid">Invalid vote</div>`;
     }

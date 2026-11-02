@@ -227,7 +227,48 @@ describe('duckVoteTool', () => {
     // One valid vote, one error
     const text = result.content[0].text;
     expect(text).toContain('Option A');
-    expect(text).toContain('Invalid vote'); // Error response should be marked invalid
+    expect(text).toMatch(/Vote failed: .*API Error/);
+    expect(text).toContain('1/2 valid votes');
+    const sc = result.structuredContent as { votes: { voter: string; error?: string; confidence: number }[] };
+    const failedVote = sc.votes.find((v) => v.error);
+    expect(failedVote?.error).toContain('API Error');
+    expect(failedVote?.confidence).toBe(0);
+  });
+
+  it('should not count a provider error that mentions an option as a vote', async () => {
+    mockCreate
+      .mockResolvedValueOnce({
+        choices: [{
+          message: { content: '{"choice": "Option A", "confidence": 85}' },
+          finish_reason: 'stop',
+        }],
+        usage: { prompt_tokens: 10, completion_tokens: 20, total_tokens: 30 },
+        model: 'gpt-4',
+      })
+      .mockRejectedValueOnce(new Error('400 Option B is not a supported value'));
+
+    const result = await duckVoteTool(mockProviderManager, {
+      question: 'Test?',
+      options: ['Option A', 'Option B'],
+    });
+
+    const sc = result.structuredContent as { tally: Record<string, number>; validVotes: number };
+    expect(sc.tally['Option B']).toBe(0);
+    expect(sc.validVotes).toBe(1);
+  });
+
+  it('should return isError when every voter fails', async () => {
+    mockCreate.mockRejectedValue(new Error('upstream down'));
+
+    const result = await duckVoteTool(mockProviderManager, {
+      question: 'Test?',
+      options: ['Option A', 'Option B'],
+    });
+
+    expect(result.isError).toBe(true);
+    expect(result.content[0].text).toContain('all voters failed');
+    expect(result.content[0].text).toContain('upstream down');
+    mockCreate.mockReset();
   });
 
   it('should work without reasoning requirement', async () => {

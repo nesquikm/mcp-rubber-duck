@@ -3,16 +3,16 @@
     "openai": {
       "api_key": "${OPENAI_API_KEY}",
       "base_url": "https://api.openai.com/v1",
-      "models": ["gpt-5.1", "gpt-4.1", "gpt-4o"],
-      "default_model": "gpt-5.1",
+      "models": ["gpt-5.4", "gpt-5.4-mini"],
+      "default_model": "gpt-5.4",
       "nickname": "GPT Duck",
       "temperature": 0.7
     },
     "gemini": {
       "api_key": "${GEMINI_API_KEY}",
       "base_url": "https://generativelanguage.googleapis.com/v1beta/openai/",
-      "models": ["gemini-3.5-flash", "gemini-3.1-pro-preview", "gemini-3.1-flash-lite"],
-      "default_model": "gemini-3.5-flash",
+      "models": ["gemini-3.8-flash", "gemini-4-argon", "gemini-3.1-flash-lite"],
+      "default_model": "gemini-3.8-flash",
       "nickname": "Gemini Duck",
       "temperature": 0.7
     },
@@ -27,25 +27,17 @@
     "together": {
       "api_key": "${TOGETHER_API_KEY}",
       "base_url": "https://api.together.xyz/v1",
-      "models": ["meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo", "mistralai/Mixtral-8x7B-Instruct-v0.1"],
-      "default_model": "meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo",
+      "models": ["zai-org/GLM-5.3", "Qwen/Qwen3.8-Flash"],
+      "default_model": "zai-org/GLM-5.3",
       "nickname": "Together Duck",
       "temperature": 0.7
     },
     "perplexity": {
       "api_key": "${PERPLEXITY_API_KEY}",
       "base_url": "https://api.perplexity.ai",
-      "models": ["llama-3.1-sonar-small-128k-online", "llama-3.1-sonar-large-128k-online"],
-      "default_model": "llama-3.1-sonar-small-128k-online",
+      "models": ["sonar", "sonar-pro"],
+      "default_model": "sonar",
       "nickname": "Perplexity Duck",
-      "temperature": 0.7
-    },
-    "anyscale": {
-      "api_key": "${ANYSCALE_API_KEY}",
-      "base_url": "https://api.endpoints.anyscale.com/v1",
-      "models": ["meta-llama/Llama-3-70b-chat-hf", "mistralai/Mixtral-8x7B-Instruct-v0.1"],
-      "default_model": "meta-llama/Llama-3-70b-chat-hf",
-      "nickname": "Anyscale Duck",
       "temperature": 0.7
     },
     "azure_openai": {

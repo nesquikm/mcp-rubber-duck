@@ -118,6 +118,8 @@ Have multiple ducks vote on options with reasoning and confidence scores. Render
 
 Returns vote tally, confidence scores, and consensus level (unanimous, majority, plurality, split, none).
 
+If a voter's provider call fails, it is reported as a failed vote (`error` field in `votes[]`, shown as "Vote failed") and is not counted — it never becomes a guessed choice. `totalVoters` still includes it, so a vote where only some ducks answered is never reported as unanimous. If every voter fails, the tool returns an error instead of a result.
+
 ### duck_judge
 Have one duck evaluate and rank other ducks' responses. Use after `duck_council`.
 

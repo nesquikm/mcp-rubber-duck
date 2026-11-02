@@ -132,8 +132,8 @@ export class ConfigManager {
         type: 'http' as const,
         api_key: process.env.OPENAI_API_KEY,
         base_url: 'https://api.openai.com/v1',
-        models: ['gpt-5.1', 'gpt-4.1', 'gpt-4o'],
-        default_model: process.env.OPENAI_DEFAULT_MODEL || 'gpt-5.1',
+        models: ['gpt-5.4', 'gpt-5.4-mini'],
+        default_model: process.env.OPENAI_DEFAULT_MODEL || 'gpt-5.4',
         nickname: process.env.OPENAI_NICKNAME || 'GPT Duck',
       };
     }
@@ -144,8 +144,8 @@ export class ConfigManager {
         type: 'http' as const,
         api_key: process.env.GEMINI_API_KEY,
         base_url: 'https://generativelanguage.googleapis.com/v1beta/openai/',
-        models: ['gemini-3.5-flash', 'gemini-3.1-pro-preview', 'gemini-3.1-flash-lite'],
-        default_model: process.env.GEMINI_DEFAULT_MODEL || 'gemini-3.5-flash',
+        models: ['gemini-3.8-flash', 'gemini-4-argon', 'gemini-3.1-flash-lite'],
+        default_model: process.env.GEMINI_DEFAULT_MODEL || 'gemini-3.8-flash',
         nickname: process.env.GEMINI_NICKNAME || 'Google Duck',
       };
     }

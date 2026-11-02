@@ -166,7 +166,7 @@ export class FunctionBridge {
       return { valid: true };
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : String(error);
-      logger.warn(`Failed to validate schema for ${toolKey}:`, errorMessage);
+      logger.warn(`Failed to validate schema for ${toolKey}: ${errorMessage}`);
       return { valid: true }; // Skip validation on error
     }
   }
@@ -367,7 +367,7 @@ export class FunctionBridge {
         throw error;
       }
       const errorMessage = error instanceof Error ? error.message : String(error);
-      logger.error(`Function call failed for ${functionName}:`, errorMessage);
+      logger.error(`Function call failed for ${functionName}: ${errorMessage}`);
       return {
         success: false,
         error: `MCP tool execution failed: ${errorMessage}`,

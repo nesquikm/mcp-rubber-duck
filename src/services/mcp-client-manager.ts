@@ -3,6 +3,7 @@ import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js'
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
 import { logger } from '../utils/logger.js';
 import { SafeLogger } from '../utils/safe-logger.js';
+import { getPackageVersion } from '../utils/version.js';
 
 export interface MCPServerConfig {
   name: string;
@@ -97,7 +98,7 @@ export class MCPClientManager {
         const client = new Client(
           {
             name: 'mcp-rubber-duck',
-            version: '1.0.0',
+            version: getPackageVersion(),
           },
           {
             capabilities: {},
@@ -182,7 +183,7 @@ export class MCPClientManager {
         logger.info(`Disconnected from MCP server: ${name}`);
       } catch (error: unknown) {
         const errorMessage = error instanceof Error ? error.message : String(error);
-        logger.error(`Error disconnecting from MCP server ${name}:`, errorMessage);
+        logger.error(`Error disconnecting from MCP server ${name}: ${errorMessage}`);
       }
     });
 
@@ -239,7 +240,7 @@ export class MCPClientManager {
         }
       } catch (error: unknown) {
         const errorMessage = error instanceof Error ? error.message : String(error);
-        logger.error(`Failed to list tools from ${serverName}:`, errorMessage);
+        logger.error(`Failed to list tools from ${serverName}: ${errorMessage}`);
       }
     }
 
