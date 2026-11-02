@@ -1,3 +1,11 @@
+## [1.20.12](https://github.com/nesquikm/mcp-rubber-duck/compare/v1.20.11...v1.20.12) (2026-11-02)
+
+
+### Bug Fixes
+
+* **models:** fresh ducks for November, and no more ghost votes ([071ecf0](https://github.com/nesquikm/mcp-rubber-duck/commit/071ecf0d528b2305bfb267b15e73abc8feeadaf5)), closes [#166](https://github.com/nesquikm/mcp-rubber-duck/issues/166)
+* **models:** keep gpt-6.1-sol out of the default list until [#166](https://github.com/nesquikm/mcp-rubber-duck/issues/166) lands ([69c3e4e](https://github.com/nesquikm/mcp-rubber-duck/commit/69c3e4e1d57a9bd6d92694695ff8d32230eb4ed2))
+
 ## [1.20.11](https://github.com/nesquikm/mcp-rubber-duck/compare/v1.20.10...v1.20.11) (2026-11-02)
 
 
