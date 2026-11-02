@@ -178,6 +178,13 @@ describe('chatDuckTool', () => {
     mockConversationManager.getConversationContext.mockReturnValue([
       { role: 'user' as const, content: 'Hello', timestamp: new Date() },
     ]);
+    mockConversationManager.addMessage.mockReturnValue({
+      ...mockConversation,
+      messages: [
+        { role: 'user' as const, content: 'Hello', timestamp: new Date() },
+        { role: 'assistant' as const, content: 'Hi', timestamp: new Date() },
+      ],
+    });
 
     const result = await chatDuckTool(mockProviderManager, mockConversationManager, {
       conversation_id: 'test-conv',
@@ -186,7 +193,7 @@ describe('chatDuckTool', () => {
 
     expect(result.content[0].text).toContain('OpenAI Duck');
     expect(result.content[0].text).toContain('test-conv');
-    expect(result.content[0].text).toContain('Messages: 2'); // context (1) + 1 new
+    expect(result.content[0].text).toContain('Messages: 2'); // user + assistant
     expect(result.content[0].text).toContain('150ms');
   });
 
@@ -200,5 +207,21 @@ describe('chatDuckTool', () => {
     });
 
     expect(mockConversationManager.createConversation).toHaveBeenCalledWith('new-conv', 'groq');
+  });
+
+  it('counts each message once with a real ConversationManager (regression: live array + 1)', async () => {
+    const realManager = new ConversationManager();
+
+    const first = await chatDuckTool(mockProviderManager, realManager, {
+      conversation_id: 'count-conv',
+      message: 'Remember teal',
+    });
+    expect(first.content[0].text).toContain('Messages: 2');
+
+    const second = await chatDuckTool(mockProviderManager, realManager, {
+      conversation_id: 'count-conv',
+      message: 'What word?',
+    });
+    expect(second.content[0].text).toContain('Messages: 4');
   });
 });

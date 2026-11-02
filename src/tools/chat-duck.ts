@@ -54,7 +54,7 @@ export async function chatDuckTool(
   });
 
   // Add assistant response to conversation
-  conversationManager.addMessage(conversation_id, {
+  const updated = conversationManager.addMessage(conversation_id, {
     role: 'assistant',
     content: response.content,
     timestamp: new Date(),
@@ -63,7 +63,7 @@ export async function chatDuckTool(
 
   const text =
     `${formatDuckReply(response)}\n\n` +
-    `💬 Conversation: ${conversation_id} | Messages: ${messages.length + 1}\n` +
+    `💬 Conversation: ${conversation_id} | Messages: ${updated.messages.length}\n` +
     formatDuckFooter(response);
 
   logger.info(`Duck ${response.nickname} responded in conversation ${conversation_id}`);
