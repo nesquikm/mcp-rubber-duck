@@ -270,11 +270,11 @@ export class RubberDuckServer {
         try {
           if (this.mcpEnabled && this.enhancedProviderManager) {
             return this.toolResult(
-              await this.handleAskDuckWithMCP(args as Record<string, unknown>)
+              await this.handleAskDuckWithMCP(args)
             );
           }
           return this.toolResult(
-            await askDuckTool(this.providerManager, args as Record<string, unknown>)
+            await askDuckTool(this.providerManager, args)
           );
         } catch (error) {
           return this.toolErrorResult(error);
@@ -308,7 +308,7 @@ export class RubberDuckServer {
             await chatDuckTool(
               this.providerManager,
               this.conversationManager,
-              args as Record<string, unknown>
+              args
             )
           );
         } catch (error) {
@@ -361,7 +361,7 @@ export class RubberDuckServer {
             await listDucksTool(
               this.providerManager,
               this.healthMonitor,
-              args as Record<string, unknown>
+              args
             )
           );
         } catch (error) {
@@ -393,7 +393,7 @@ export class RubberDuckServer {
       async (args) => {
         try {
           return this.toolResult(
-            await listModelsTool(this.providerManager, args as Record<string, unknown>)
+            await listModelsTool(this.providerManager, args)
           );
         } catch (error) {
           return this.toolErrorResult(error);
@@ -456,11 +456,11 @@ export class RubberDuckServer {
           );
           if (this.mcpEnabled && this.enhancedProviderManager) {
             return this.toolResult(
-              await this.handleCompareDucksWithMCP(args as Record<string, unknown>, progress)
+              await this.handleCompareDucksWithMCP(args, progress)
             );
           }
           return this.toolResult(
-            await compareDucksTool(this.providerManager, args as Record<string, unknown>, progress)
+            await compareDucksTool(this.providerManager, args, progress)
           );
         } catch (error) {
           return this.toolErrorResult(error);
@@ -495,11 +495,11 @@ export class RubberDuckServer {
           );
           if (this.mcpEnabled && this.enhancedProviderManager) {
             return this.toolResult(
-              await this.handleDuckCouncilWithMCP(args as Record<string, unknown>, progress)
+              await this.handleDuckCouncilWithMCP(args, progress)
             );
           }
           return this.toolResult(
-            await duckCouncilTool(this.providerManager, args as Record<string, unknown>, progress)
+            await duckCouncilTool(this.providerManager, args, progress)
           );
         } catch (error) {
           return this.toolErrorResult(error);
@@ -566,7 +566,7 @@ export class RubberDuckServer {
             extra.sendNotification
           );
           return this.toolResult(
-            await duckVoteTool(this.providerManager, args as Record<string, unknown>, progress)
+            await duckVoteTool(this.providerManager, args, progress)
           );
         } catch (error) {
           return this.toolErrorResult(error);
@@ -613,7 +613,7 @@ export class RubberDuckServer {
       async (args) => {
         try {
           return this.toolResult(
-            await duckJudgeTool(this.providerManager, args as Record<string, unknown>)
+            await duckJudgeTool(this.providerManager, args)
           );
         } catch (error) {
           return this.toolErrorResult(error);
@@ -669,7 +669,7 @@ export class RubberDuckServer {
             return this.toolResult(
               await duckIterateTool(
                 this.providerManager,
-                args as Record<string, unknown>,
+                args,
                 progress,
                 signal
               )
@@ -764,7 +764,7 @@ export class RubberDuckServer {
             return this.toolResult(
               await duckDebateTool(
                 this.providerManager,
-                args as Record<string, unknown>,
+                args,
                 progress,
                 signal
               )
@@ -832,7 +832,7 @@ export class RubberDuckServer {
       (args) => {
         try {
           return this.toolResult(
-            getUsageStatsTool(this.usageService, args as Record<string, unknown>)
+            getUsageStatsTool(this.usageService, args)
           );
         } catch (error) {
           return this.toolErrorResult(error);
@@ -862,7 +862,7 @@ export class RubberDuckServer {
               throw new Error('MCP bridge not enabled');
             }
             return this.toolResult(
-              getPendingApprovalsTool(this.approvalService, args as Record<string, unknown>)
+              getPendingApprovalsTool(this.approvalService, args)
             );
           } catch (error) {
             return this.toolErrorResult(error);
@@ -894,7 +894,7 @@ export class RubberDuckServer {
               throw new Error('MCP bridge not enabled');
             }
             return this.toolResult(
-              approveMCPRequestTool(this.approvalService, args as Record<string, unknown>)
+              approveMCPRequestTool(this.approvalService, args)
             );
           } catch (error) {
             return this.toolErrorResult(error);

@@ -8,7 +8,7 @@
 
 import { InMemoryTaskMessageQueue } from '@modelcontextprotocol/sdk/experimental';
 import type { TaskStore, TaskMessageQueue } from '@modelcontextprotocol/sdk/experimental';
-import type { CallToolResult, Result } from '@modelcontextprotocol/sdk/types.js';
+import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import { RetentionTaskStore } from './retention-task-store.js';
 import { logger } from '../utils/logger.js';
 
@@ -86,7 +86,7 @@ export class TaskManager {
         const result = await work(controller.signal);
 
         if (!controller.signal.aborted) {
-          await this.taskStore.storeTaskResult(taskId, 'completed', result as Result);
+          await this.taskStore.storeTaskResult(taskId, 'completed', result);
         } else {
           // Work completed but cancellation was requested mid-execution.
           // Mark as cancelled so the task doesn't stay stuck in 'working'.
@@ -110,7 +110,7 @@ export class TaskManager {
             await this.taskStore.storeTaskResult(taskId, 'failed', {
               content: [{ type: 'text', text: `Error: ${message}` }],
               isError: true,
-            } as Result);
+            });
           } catch {
             // Defensive: a still-'working' task is immortal under RetentionTaskStore,
             // so this should not fail via TTL eviction — guard only against a
