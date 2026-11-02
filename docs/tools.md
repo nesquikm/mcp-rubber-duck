@@ -27,7 +27,7 @@ Have a conversation with context maintained across messages. Supports [vision in
 {
   "conversation_id": "debug-session-1",
   "message": "Can you help me debug this code?",
-  "provider": "groq",  // Optional, can switch providers mid-conversation
+  "provider": "groq",  // Optional: new conversations use DEFAULT_PROVIDER; pass to switch mid-conversation
   "images": [           // Optional
     { "data": "<base64>", "mimeType": "image/png" }
   ]
@@ -96,7 +96,7 @@ Get usage statistics and estimated costs for your duck queries. Renders an [inte
 }
 ```
 
-Returns requests, tokens (prompt/completion), errors, and estimated costs broken down by provider and model.
+Returns requests, tokens (prompt/completion), errors, and estimated costs broken down by provider and model (`usage[provider][model].estimatedCostUSD`). Costs are rounded to $0.000001.
 
 Usage data is stored in `~/.mcp-rubber-duck/data/usage.json`.
 
@@ -165,6 +165,8 @@ Formats:
 - **oxford**: Structured pro/con arguments
 - **socratic**: Question-based philosophical exploration
 - **adversarial**: One defends, others attack weaknesses
+
+If a participant's call fails, its turn is recorded as a failed argument (`error` field in `rounds[][]`) and left out of later prompts, and the debate continues. The debate aborts only when every participant fails in the same round. If the synthesizer fails, the other participants are tried in turn.
 
 ## Vision Input
 

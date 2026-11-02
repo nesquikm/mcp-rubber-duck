@@ -21,6 +21,7 @@ interface UsageData {
         promptTokens: number;
         completionTokens: number;
         errors: number;
+        estimatedCostUSD?: number;
       }
     >
   >;
@@ -113,7 +114,7 @@ function render(data: UsageData) {
 
       // Model detail table
       html += `<table class="model-table"><thead><tr>`;
-      html += `<th>Model</th><th>Requests</th><th>Prompt</th><th>Completion</th><th>Errors</th>`;
+      html += `<th>Model</th><th>Requests</th><th>Prompt</th><th>Completion</th><th>Errors</th><th>Cost</th>`;
       html += `</tr></thead><tbody>`;
       for (const [model, stats] of Object.entries(models)) {
         html += `<tr>`;
@@ -122,6 +123,7 @@ function render(data: UsageData) {
         html += `<td>${fmt(stats.promptTokens)}</td>`;
         html += `<td>${fmt(stats.completionTokens)}</td>`;
         html += `<td>${stats.errors > 0 ? `<span class="err-text">${fmt(stats.errors)}</span>` : '0'}</td>`;
+        html += `<td>${stats.estimatedCostUSD !== undefined ? '$' + formatCost(stats.estimatedCostUSD) : '—'}</td>`;
         html += `</tr>`;
       }
       html += `</tbody></table></details>`;

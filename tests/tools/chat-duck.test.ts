@@ -32,6 +32,7 @@ describe('chatDuckTool', () => {
     mockProviderManager = {
       askDuck: jest.fn().mockResolvedValue(mockResponse),
       getProviderNames: jest.fn().mockReturnValue(['openai', 'groq']),
+      getDefaultProviderName: jest.fn().mockReturnValue('openai'),
     } as unknown as jest.Mocked<ProviderManager>;
 
     mockConversationManager = {
@@ -53,6 +54,18 @@ describe('chatDuckTool', () => {
     await expect(
       chatDuckTool(mockProviderManager, mockConversationManager, { conversation_id: 'test' })
     ).rejects.toThrow('conversation_id and message are required');
+  });
+
+  it('should start a new conversation on DEFAULT_PROVIDER, not the first duck', async () => {
+    mockConversationManager.getConversation.mockReturnValue(undefined);
+    mockProviderManager.getDefaultProviderName.mockReturnValueOnce('groq');
+
+    await chatDuckTool(mockProviderManager, mockConversationManager, {
+      conversation_id: 'default-conv',
+      message: 'Hello',
+    });
+
+    expect(mockConversationManager.createConversation).toHaveBeenCalledWith('default-conv', 'groq');
   });
 
   it('should create new conversation if not exists', async () => {

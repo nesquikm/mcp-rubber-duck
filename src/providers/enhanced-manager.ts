@@ -85,7 +85,7 @@ export class EnhancedProviderManager extends ProviderManager {
       throw new Error('MCP bridge is not enabled');
     }
 
-    const providerName = name || this.configManager.getConfig().default_provider;
+    const providerName = name || this.getDefaultProviderName();
 
     if (!providerName) {
       throw new Error('No provider specified and no default provider configured');
@@ -117,7 +117,7 @@ export class EnhancedProviderManager extends ProviderManager {
     }
 
     // Resolve provider name
-    const resolvedName = providerName || this.configManager.getConfig().default_provider;
+    const resolvedName = providerName || this.getDefaultProviderName();
 
     // Check if this is a CLI provider (not in enhanced providers map)
     // CLI providers don't support MCP bridge, fall back to regular askDuck

@@ -77,9 +77,29 @@ export function getRandomDuckMessage(type: keyof typeof duckMessages): string {
   return messages[Math.floor(Math.random() * messages.length)];
 }
 
-export function formatDuckResponse(provider: string, message: string, model?: string): string {
-  if (model) {
-    return `🦆 [${provider} | ${model}]: ${message}`;
+interface DuckReplyLike {
+  nickname: string;
+  provider: string;
+  content: string;
+  model?: string;
+  latency: number;
+  usage?: { total_tokens: number; prompt_tokens: number; completion_tokens: number };
+}
+
+/** Header + body shared by every single-duck reply (ask_duck and chat_with_duck, bridge on or off). */
+export function formatDuckReply(response: DuckReplyLike): string {
+  return `🦆 **${response.nickname}** (${response.provider})\n─────────────────────────────────────\n${response.content}`;
+}
+
+/** One-line footer: model, tokens, latency, plus any extra markers. */
+export function formatDuckFooter(response: DuckReplyLike, extras: string[] = []): string {
+  const parts: string[] = [];
+  if (response.model) parts.push(`📍 Model: ${response.model}`);
+  if (response.usage) {
+    parts.push(
+      `📊 Tokens: ${response.usage.total_tokens} (${response.usage.prompt_tokens} prompt, ${response.usage.completion_tokens} completion)`
+    );
   }
-  return `🦆 [${provider}]: ${message}`;
+  parts.push(`⏱️ ${response.latency}ms`, ...extras);
+  return parts.join(' | ');
 }

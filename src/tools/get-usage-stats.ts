@@ -51,6 +51,9 @@ export function getUsageStatsTool(usageService: UsageService, args: Record<strin
         if (modelStats.errors > 0) {
           output += `    Errors: ${modelStats.errors.toLocaleString()}\n`;
         }
+        if (modelStats.estimatedCostUSD !== undefined) {
+          output += `    Cost: $${formatCost(modelStats.estimatedCostUSD)}\n`;
+        }
       }
 
       if (stats.costByProvider && stats.costByProvider[provider] !== undefined) {

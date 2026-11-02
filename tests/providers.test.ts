@@ -568,7 +568,7 @@ describe('ProviderManager Error Cases', () => {
     expect(() => manager.getProvider('test1')).not.toThrow();
   });
 
-  it('should throw error when getProvider called without name and no default', () => {
+  it('should fall back to the first provider when no default is configured', () => {
     const mockConfigManager = {
       getConfig: jest.fn().mockReturnValue({
         providers: {
@@ -588,9 +588,26 @@ describe('ProviderManager Error Cases', () => {
 
     const manager = new ProviderManager(mockConfigManager);
 
-    expect(() => manager.getProvider()).toThrow(
-      'No provider specified and no default provider configured'
-    );
+    expect(manager.getDefaultProviderName()).toBe('test1');
+    expect(manager.getProvider()).toBe(manager.getProvider('test1'));
+  });
+
+  it('should fall back with a warning when DEFAULT_PROVIDER names no configured provider', () => {
+    const mockConfigManager = {
+      getConfig: jest.fn().mockReturnValue({
+        providers: {
+          openai: { api_key: 'k', base_url: 'https://a/v1', default_model: 'm', nickname: 'A' },
+          google: { api_key: 'k', base_url: 'https://b/v1', default_model: 'm', nickname: 'B' },
+        },
+        default_provider: 'gemini', // legacy name, no longer a provider key
+        enable_failover: false,
+        default_temperature: 0.7,
+      }),
+    } as any;
+
+    const manager = new ProviderManager(mockConfigManager);
+    expect(manager.getDefaultProviderName()).toBe('openai');
+    expect(() => manager.getProvider()).not.toThrow();
   });
 });
 
@@ -866,6 +883,17 @@ describe('DuckProvider listModels', () => {
       model: 'test-model',
       availableModels: ['model-a', 'model-b'],
     });
+  });
+
+  it('should strip the "models/" prefix Google returns on model ids', async () => {
+    const asyncIterator = (async function* () {
+      yield { id: 'models/gemini-3.8-flash', created: 1, owned_by: 'google', object: 'model' };
+      yield { id: 'gemini-plain', created: 1, owned_by: 'google', object: 'model' };
+    })();
+    provider['client'].models = { list: jest.fn().mockResolvedValue(asyncIterator) } as any;
+
+    const models = await provider.listModels();
+    expect(models.map((m) => m.id)).toEqual(['gemini-3.8-flash', 'gemini-plain']);
   });
 
   it('should return models from API on success', async () => {

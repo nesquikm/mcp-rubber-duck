@@ -102,16 +102,30 @@ export async function duckDebateTool(
         participants
       );
 
-      const response = await providerManager.askDuck(participant.provider, argumentPrompt);
-
-      roundArguments.push({
-        round: roundNum,
-        provider: participant.provider,
-        nickname: participant.nickname,
-        position: participant.position,
-        content: response.content,
-        timestamp: new Date(),
-      });
+      try {
+        const response = await providerManager.askDuck(participant.provider, argumentPrompt);
+        roundArguments.push({
+          round: roundNum,
+          provider: participant.provider,
+          nickname: participant.nickname,
+          position: participant.position,
+          content: response.content,
+          timestamp: new Date(),
+        });
+      } catch (error) {
+        // One duck failing should not sink the whole debate
+        const message = error instanceof Error ? error.message : String(error);
+        logger.warn(`Debate round ${roundNum}: ${participant.provider} failed: ${message}`);
+        roundArguments.push({
+          round: roundNum,
+          provider: participant.provider,
+          nickname: participant.nickname,
+          position: participant.position,
+          content: `⚠️ ${participant.nickname} couldn't argue this round: ${message}`,
+          timestamp: new Date(),
+          error: message,
+        });
+      }
 
       completedSteps++;
       if (progress) {
@@ -123,6 +137,13 @@ export async function duckDebateTool(
       }
     }
 
+    if (roundArguments.every((arg) => arg.error)) {
+      const details = roundArguments.map((a) => `- ${a.nickname} (${a.provider}): ${a.error}`);
+      throw new Error(
+        `Debate aborted: every participant failed in round ${roundNum}\n${details.join('\n')}`
+      );
+    }
+
     debateRounds.push(roundArguments);
   }
 
@@ -131,9 +152,26 @@ export async function duckDebateTool(
   }
 
   // Generate synthesis
-  const synthesizerProvider = synthesizer || debateProviders[0];
   const synthesisPrompt = buildSynthesisPrompt(prompt, format, debateRounds, participants);
-  const synthesisResponse = await providerManager.askDuck(synthesizerProvider, synthesisPrompt);
+  // Try the requested synthesizer first, then fall back to the other participants
+  const synthesisCandidates = [...new Set([synthesizer || debateProviders[0], ...debateProviders])];
+  let synthesizerProvider = synthesisCandidates[0];
+  let synthesisResponse: Awaited<ReturnType<typeof providerManager.askDuck>> | undefined;
+  const synthesisErrors: string[] = [];
+  for (const candidate of synthesisCandidates) {
+    try {
+      synthesisResponse = await providerManager.askDuck(candidate, synthesisPrompt);
+      synthesizerProvider = candidate;
+      break;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      logger.warn(`Debate synthesis by ${candidate} failed: ${message}`);
+      synthesisErrors.push(`- ${candidate}: ${message}`);
+    }
+  }
+  if (!synthesisResponse) {
+    throw new Error(`Debate synthesis failed for every candidate\n${synthesisErrors.join('\n')}`);
+  }
 
   if (progress) {
     void progress.report(totalSteps, totalSteps, 'Synthesis complete');
@@ -171,6 +209,7 @@ export async function duckDebateTool(
         nickname: arg.nickname,
         position: arg.position,
         content: arg.content,
+        ...(arg.error ? { error: arg.error } : {}),
       }))
     ),
     synthesis: result.synthesis,
@@ -252,7 +291,7 @@ function buildPreviousContext(previousRounds: DebateArgument[][]): string {
 
   let context = '\n\nPREVIOUS ARGUMENTS:\n';
   for (const round of previousRounds) {
-    for (const arg of round) {
+    for (const arg of round.filter((a) => !a.error)) {
       const posLabel =
         arg.position === 'pro' ? '[PRO]' : arg.position === 'con' ? '[CON]' : '[NEUTRAL]';
       context += `\n--- Round ${arg.round} - ${arg.nickname} ${posLabel} ---\n`;
@@ -361,7 +400,7 @@ function buildSynthesisPrompt(
 ): string {
   let transcript = '';
   for (const round of rounds) {
-    for (const arg of round) {
+    for (const arg of round.filter((a) => !a.error)) {
       const posLabel =
         arg.position === 'pro' ? '[PRO]' : arg.position === 'con' ? '[CON]' : '[NEUTRAL]';
       transcript += `\n--- Round ${arg.round} - ${arg.nickname} ${posLabel} ---\n`;
