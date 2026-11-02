@@ -22,7 +22,7 @@ Each preset comes with sensible defaults for command, arguments, prompt delivery
 
 ```bash
 CLI_CLAUDE_NICKNAME=My Claude Agent
-CLI_CLAUDE_DEFAULT_MODEL=claude-sonnet-5
+CLI_CLAUDE_DEFAULT_MODEL=claude-sonnet-5-5
 CLI_CLAUDE_CLI_ARGS=--max-turns,5,--verbose
 CLI_CLAUDE_SYSTEM_PROMPT=Be concise and technical
 ```

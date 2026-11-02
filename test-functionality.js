@@ -66,7 +66,7 @@ async function runTests() {
     try {
       const geminiResult = await askDuckTool(providerManager, {
         prompt: 'What is 3+3? Answer in one word.',
-        provider: 'gemini'
+        provider: 'google'
       });
       console.log(geminiResult.content[0].text);
     } catch (error) {
@@ -125,7 +125,7 @@ async function runTests() {
       const modelResult = await askDuckTool(providerManager, {
         prompt: 'Say hello',
         provider: 'openai',
-        model: 'gpt-4o-mini'
+        model: 'gpt-5.4-mini'
       });
       console.log(modelResult.content[0].text);
     } catch (error) {

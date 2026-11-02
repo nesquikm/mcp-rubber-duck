@@ -104,7 +104,10 @@ Create a `.env` file or `config/config.json`. Key environment variables:
 | `OPENAI_API_KEY` | OpenAI API key |
 | `GEMINI_API_KEY` | Google Gemini API key |
 | `GROQ_API_KEY` | Groq API key |
-| `DEFAULT_PROVIDER` | Default provider (e.g., `openai`) |
+| `OPENAI_DEFAULT_MODEL` | OpenAI model (default: `gpt-5.4`) |
+| `GEMINI_DEFAULT_MODEL` | Gemini model (default: `gemini-3.8-flash`) |
+| `GROQ_DEFAULT_MODEL` | Groq model (default: `openai/gpt-oss-120b`) |
+| `DEFAULT_PROVIDER` | Default provider key: `openai`, `google`, `groq`, `ollama`, or a custom name |
 | `DEFAULT_TEMPERATURE` | Default temperature (e.g., `0.7`) |
 | `LOG_LEVEL` | `debug`, `info`, `warn`, `error` |
 | `MCP_SERVER` | Set to `true` for MCP server mode |
@@ -221,6 +224,9 @@ npm run typecheck  # Type check without emit
 2. Verify endpoint URL is correct
 3. Run health check: `list_ducks({ check_health: true })`
 4. Check logs for detailed error messages
+
+### OpenAI gpt-5.6 / gpt-6 Models Fail With the MCP Bridge
+OpenAI's Chat Completions API rejects function tools for the gpt-5.6 and gpt-6 families (`400 Function tools with reasoning_effort are not supported ... use /v1/responses`). They work for plain calls, but with `MCP_BRIDGE_ENABLED=true` the ducks attach tools and those requests fail. Use `gpt-5.4` (the default) or `gpt-5.4-mini` until Responses API support lands ([#166](https://github.com/nesquikm/mcp-rubber-duck/issues/166)).
 
 ### Connection Issues
 - For local providers (Ollama, LM Studio), ensure they're running
