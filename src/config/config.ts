@@ -132,7 +132,7 @@ export class ConfigManager {
         type: 'http' as const,
         api_key: process.env.OPENAI_API_KEY,
         base_url: 'https://api.openai.com/v1',
-        models: ['gpt-5.4', 'gpt-5.4-mini', 'gpt-6.1-sol'],
+        models: ['gpt-5.4', 'gpt-5.4-mini'],
         default_model: process.env.OPENAI_DEFAULT_MODEL || 'gpt-5.4',
         nickname: process.env.OPENAI_NICKNAME || 'GPT Duck',
       };
