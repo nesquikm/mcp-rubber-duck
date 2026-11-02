@@ -49,7 +49,7 @@
     "dotenv": "^16.4.0",
     "openai": "^4.0.0",
     "winston": "^3.11.0",
-    "zod": "^3.23.0"
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@eslint/js": "^9.0.0",
@@ -89,6 +89,8 @@
     "undici@6.x": "^6.29.0",
     "undici@7.x": "^7.30.0",
     "brace-expansion@1.x": "^1.1.21",
-    "brace-expansion@2.x": "^2.1.7"
+    "brace-expansion@2.x": "^2.1.7",
+    "minimatch@10.x": "^11.0.4",
+    "glob@13.x": "^14.0.3"
   }
 }

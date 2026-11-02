@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll, afterAll, jest } from '@jest/globals';
-import { zodToJsonSchema } from 'zod-to-json-schema';
+import { z } from 'zod';
 
 // Mock logger to suppress output during tests
 jest.unstable_mockModule('../../src/utils/logger', () => ({
@@ -70,10 +70,7 @@ describe('Dynamic Provider Enum in Tool Schemas', () => {
     if (!tool?.inputSchema) {
       throw new Error(`Tool "${toolName}" not found or has no inputSchema`);
     }
-    return zodToJsonSchema(tool.inputSchema as Parameters<typeof zodToJsonSchema>[0]) as Record<
-      string,
-      unknown
-    >;
+    return z.toJSONSchema(tool.inputSchema as z.ZodType) as Record<string, unknown>;
   }
 
   /**
@@ -220,7 +217,7 @@ describe('Dynamic Provider Enum in Tool Schemas', () => {
       const originalFn = server.providerManager.getProviderNames;
       server.providerManager.getProviderNames = () => [];
 
-      const schema = zodToJsonSchema(server.providerEnum()) as Record<string, unknown>;
+      const schema = z.toJSONSchema(server.providerEnum()) as Record<string, unknown>;
 
       // Should be plain string, no enum
       expect(schema.type).toBe('string');
@@ -231,7 +228,7 @@ describe('Dynamic Provider Enum in Tool Schemas', () => {
     });
 
     it('providerEnum() returns z.enum() when providers exist', () => {
-      const schema = zodToJsonSchema(server.providerEnum()) as Record<string, unknown>;
+      const schema = z.toJSONSchema(server.providerEnum()) as Record<string, unknown>;
 
       // Should have enum
       expect(schema.enum).toBeDefined();
