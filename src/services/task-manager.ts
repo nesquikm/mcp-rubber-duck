@@ -105,7 +105,7 @@ export class TaskManager {
           }
         } else {
           const message = error instanceof Error ? error.message : String(error);
-          logger.error(`Task ${taskId} failed:`, message);
+          logger.error(`Task ${taskId} failed: ${message}`);
           try {
             await this.taskStore.storeTaskResult(taskId, 'failed', {
               content: [{ type: 'text', text: `Error: ${message}` }],

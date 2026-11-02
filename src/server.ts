@@ -71,6 +71,7 @@ import { getUsageStatsTool } from './tools/get-usage-stats.js';
 
 // Import prompts
 import { PROMPTS } from './prompts/index.js';
+import { getPackageVersion } from './utils/version.js';
 
 export class RubberDuckServer {
   private server: McpServer;
@@ -98,7 +99,7 @@ export class RubberDuckServer {
     this.server = new McpServer(
       {
         name: 'mcp-rubber-duck',
-        version: '1.0.0',
+        version: getPackageVersion(),
       },
       {
         capabilities: {
@@ -269,13 +270,9 @@ export class RubberDuckServer {
       async (args) => {
         try {
           if (this.mcpEnabled && this.enhancedProviderManager) {
-            return this.toolResult(
-              await this.handleAskDuckWithMCP(args)
-            );
+            return this.toolResult(await this.handleAskDuckWithMCP(args));
           }
-          return this.toolResult(
-            await askDuckTool(this.providerManager, args)
-          );
+          return this.toolResult(await askDuckTool(this.providerManager, args));
         } catch (error) {
           return this.toolErrorResult(error);
         }
@@ -291,7 +288,9 @@ export class RubberDuckServer {
         inputSchema: {
           conversation_id: z.string().describe('Conversation ID (creates new if not exists)'),
           message: z.string().describe('Your message to the duck'),
-          provider: this.providerEnum().optional().describe('Provider to use (can switch mid-conversation)'),
+          provider: this.providerEnum()
+            .optional()
+            .describe('Provider to use (can switch mid-conversation)'),
           model: z.string().optional().describe('Specific model to use (optional)'),
           images: z
             .array(ImageInputSchema)
@@ -305,11 +304,7 @@ export class RubberDuckServer {
       async (args) => {
         try {
           return this.toolResult(
-            await chatDuckTool(
-              this.providerManager,
-              this.conversationManager,
-              args
-            )
+            await chatDuckTool(this.providerManager, this.conversationManager, args)
           );
         } catch (error) {
           return this.toolErrorResult(error);
@@ -358,11 +353,7 @@ export class RubberDuckServer {
       async (args) => {
         try {
           return this.toolResult(
-            await listDucksTool(
-              this.providerManager,
-              this.healthMonitor,
-              args
-            )
+            await listDucksTool(this.providerManager, this.healthMonitor, args)
           );
         } catch (error) {
           return this.toolErrorResult(error);
@@ -392,9 +383,7 @@ export class RubberDuckServer {
       },
       async (args) => {
         try {
-          return this.toolResult(
-            await listModelsTool(this.providerManager, args)
-          );
+          return this.toolResult(await listModelsTool(this.providerManager, args));
         } catch (error) {
           return this.toolErrorResult(error);
         }
@@ -455,13 +444,9 @@ export class RubberDuckServer {
             extra.sendNotification
           );
           if (this.mcpEnabled && this.enhancedProviderManager) {
-            return this.toolResult(
-              await this.handleCompareDucksWithMCP(args, progress)
-            );
+            return this.toolResult(await this.handleCompareDucksWithMCP(args, progress));
           }
-          return this.toolResult(
-            await compareDucksTool(this.providerManager, args, progress)
-          );
+          return this.toolResult(await compareDucksTool(this.providerManager, args, progress));
         } catch (error) {
           return this.toolErrorResult(error);
         }
@@ -494,13 +479,9 @@ export class RubberDuckServer {
             extra.sendNotification
           );
           if (this.mcpEnabled && this.enhancedProviderManager) {
-            return this.toolResult(
-              await this.handleDuckCouncilWithMCP(args, progress)
-            );
+            return this.toolResult(await this.handleDuckCouncilWithMCP(args, progress));
           }
-          return this.toolResult(
-            await duckCouncilTool(this.providerManager, args, progress)
-          );
+          return this.toolResult(await duckCouncilTool(this.providerManager, args, progress));
         } catch (error) {
           return this.toolErrorResult(error);
         }
@@ -547,6 +528,7 @@ export class RubberDuckServer {
               choice: z.string(),
               confidence: z.number(),
               reasoning: z.string(),
+              error: z.string().optional(),
             })
           ),
           totalVoters: z.number(),
@@ -565,9 +547,7 @@ export class RubberDuckServer {
             extra._meta?.progressToken,
             extra.sendNotification
           );
-          return this.toolResult(
-            await duckVoteTool(this.providerManager, args, progress)
-          );
+          return this.toolResult(await duckVoteTool(this.providerManager, args, progress));
         } catch (error) {
           return this.toolErrorResult(error);
         }
@@ -612,9 +592,7 @@ export class RubberDuckServer {
       },
       async (args) => {
         try {
-          return this.toolResult(
-            await duckJudgeTool(this.providerManager, args)
-          );
+          return this.toolResult(await duckJudgeTool(this.providerManager, args));
         } catch (error) {
           return this.toolErrorResult(error);
         }
@@ -667,12 +645,7 @@ export class RubberDuckServer {
           );
           this.taskManager.startBackground(task.taskId, async (signal) => {
             return this.toolResult(
-              await duckIterateTool(
-                this.providerManager,
-                args,
-                progress,
-                signal
-              )
+              await duckIterateTool(this.providerManager, args, progress, signal)
             );
           });
           return { task };
@@ -762,12 +735,7 @@ export class RubberDuckServer {
           );
           this.taskManager.startBackground(task.taskId, async (signal) => {
             return this.toolResult(
-              await duckDebateTool(
-                this.providerManager,
-                args,
-                progress,
-                signal
-              )
+              await duckDebateTool(this.providerManager, args, progress, signal)
             );
           });
           return { task };
@@ -819,9 +787,7 @@ export class RubberDuckServer {
               })
             )
           ),
-          costByProvider: z
-            .record(z.string(), z.number())
-            .optional(),
+          costByProvider: z.record(z.string(), z.number()).optional(),
         },
         annotations: {
           readOnlyHint: true,
@@ -831,9 +797,7 @@ export class RubberDuckServer {
       },
       (args) => {
         try {
-          return this.toolResult(
-            getUsageStatsTool(this.usageService, args)
-          );
+          return this.toolResult(getUsageStatsTool(this.usageService, args));
         } catch (error) {
           return this.toolErrorResult(error);
         }
@@ -861,9 +825,7 @@ export class RubberDuckServer {
             if (!this.approvalService) {
               throw new Error('MCP bridge not enabled');
             }
-            return this.toolResult(
-              getPendingApprovalsTool(this.approvalService, args)
-            );
+            return this.toolResult(getPendingApprovalsTool(this.approvalService, args));
           } catch (error) {
             return this.toolErrorResult(error);
           }
@@ -893,9 +855,7 @@ export class RubberDuckServer {
             if (!this.approvalService) {
               throw new Error('MCP bridge not enabled');
             }
-            return this.toolResult(
-              approveMCPRequestTool(this.approvalService, args)
-            );
+            return this.toolResult(approveMCPRequestTool(this.approvalService, args));
           } catch (error) {
             return this.toolErrorResult(error);
           }
@@ -959,7 +919,7 @@ export class RubberDuckServer {
             return { messages };
           } catch (error: unknown) {
             const errorMessage = error instanceof Error ? error.message : String(error);
-            logger.error(`Prompt error for ${name}:`, errorMessage);
+            logger.error(`Prompt error for ${name}: ${errorMessage}`);
             throw error;
           }
         }

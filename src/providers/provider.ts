@@ -48,7 +48,9 @@ export class DuckProvider implements IDuckProvider {
       !model.startsWith('o3') &&
       !model.includes('o3-') &&
       !model.startsWith('gpt-5') &&
-      !model.includes('gpt-5')
+      !model.includes('gpt-5') &&
+      !model.startsWith('gpt-6') &&
+      !model.includes('gpt-6')
     );
   }
 

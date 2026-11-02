@@ -38,6 +38,7 @@ The 2026-07-28 MCP RC ([SEP-2577](https://github.com/modelcontextprotocol/modelc
 | 3 | ~~Multi-round tool calling loop~~ ✅ | [#69](https://github.com/nesquikm/mcp-rubber-duck/issues/69) | High | Medium |
 | 4 | Streamable HTTP transport + Streaming responses | [#57](https://github.com/nesquikm/mcp-rubber-duck/issues/57), [#47](https://github.com/nesquikm/mcp-rubber-duck/issues/47) | High | Medium |
 | 5 | MCP Resources + resource_link | [#48](https://github.com/nesquikm/mcp-rubber-duck/issues/48), [#56](https://github.com/nesquikm/mcp-rubber-duck/issues/56) | Medium-High | Medium |
+| 5b | OpenAI Responses API path (unblocks gpt-5.6 / gpt-6 with MCP Bridge tools; then move OpenAI default to gpt-6) | [#166](https://github.com/nesquikm/mcp-rubber-duck/issues/166) | High | Medium |
 
 ### Tier 2 - Differentiation
 

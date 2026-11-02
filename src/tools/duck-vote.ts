@@ -57,6 +57,18 @@ export async function duckVoteTool(
 
   // Parse votes
   const votes: VoteResult[] = responses.map((response) => {
+    if (response.error) {
+      // A failed call is not a vote: never fallback-parse an error message into a choice.
+      return {
+        voter: response.provider,
+        nickname: response.nickname,
+        choice: '',
+        confidence: 0,
+        reasoning: '',
+        rawResponse: '',
+        error: response.error,
+      };
+    }
     return consensusService.parseVote(
       response.content,
       response.provider,
@@ -64,6 +76,16 @@ export async function duckVoteTool(
       options
     );
   });
+
+  const failed = votes.filter((v) => v.error);
+  if (failed.length === votes.length) {
+    const details = failed.map((v) => `- ${v.nickname} (${v.voter}): ${v.error}`).join('\n');
+    logger.warn(`Vote aborted: all ${failed.length} voter(s) failed`);
+    return {
+      content: [{ type: 'text', text: `Error: all voters failed, no vote was taken.\n${details}` }],
+      isError: true,
+    };
+  }
 
   // Aggregate results
   const aggregatedResult = consensusService.aggregateVotes(question, options, votes);
@@ -90,6 +112,7 @@ export async function duckVoteTool(
       choice: v.choice,
       confidence: v.confidence,
       reasoning: v.reasoning,
+      ...(v.error ? { error: v.error } : {}),
     })),
     totalVoters: aggregatedResult.totalVoters,
     validVotes: aggregatedResult.validVotes,

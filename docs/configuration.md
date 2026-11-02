@@ -13,11 +13,11 @@ Create a `.env` file in the project root:
 ```env
 # OpenAI
 OPENAI_API_KEY=sk-...
-OPENAI_DEFAULT_MODEL=gpt-5.1  # Optional: defaults to gpt-5.1
+OPENAI_DEFAULT_MODEL=gpt-5.4  # Optional: defaults to gpt-5.4
 
 # Google Gemini
 GEMINI_API_KEY=...
-GEMINI_DEFAULT_MODEL=gemini-3.5-flash  # Optional: defaults to gemini-3.5-flash
+GEMINI_DEFAULT_MODEL=gemini-3.8-flash  # Optional: defaults to gemini-3.8-flash
 
 # Groq
 GROQ_API_KEY=gsk_...

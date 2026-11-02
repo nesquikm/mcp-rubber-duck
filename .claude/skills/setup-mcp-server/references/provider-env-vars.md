@@ -13,13 +13,13 @@ Quick reference for all environment variables used by mcp-rubber-duck.
 | Variable | Required | Format | Where to get it |
 |----------|----------|--------|-----------------|
 | `OPENAI_API_KEY` | If using OpenAI | `sk-...` | [platform.openai.com/api-keys](https://platform.openai.com/api-keys) |
-| `OPENAI_DEFAULT_MODEL` | No | String | Default: `gpt-5.1` |
+| `OPENAI_DEFAULT_MODEL` | No | String | Default: `gpt-5.4` |
 | `OPENAI_NICKNAME` | No | String | Default: `GPT Duck` |
 | `GEMINI_API_KEY` | If using Gemini | String | [aistudio.google.com/apikey](https://aistudio.google.com/apikey) |
-| `GEMINI_DEFAULT_MODEL` | No | String | Default: `gemini-2.5-flash` |
-| `GEMINI_NICKNAME` | No | String | Default: `Gemini Duck` |
+| `GEMINI_DEFAULT_MODEL` | No | String | Default: `gemini-3.8-flash` |
+| `GEMINI_NICKNAME` | No | String | Default: `Google Duck` |
 | `GROQ_API_KEY` | If using Groq | `gsk_...` | [console.groq.com/keys](https://console.groq.com/keys) |
-| `GROQ_DEFAULT_MODEL` | No | String | Default: `llama-3.3-70b-versatile` |
+| `GROQ_DEFAULT_MODEL` | No | String | Default: `openai/gpt-oss-120b` |
 | `GROQ_NICKNAME` | No | String | Default: `Groq Duck` |
 
 ## Local Providers

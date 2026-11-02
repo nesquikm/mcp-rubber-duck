@@ -106,8 +106,8 @@ CLI providers can also be configured via `config/config.json`. Set `"type": "cli
     "openai": {
       "api_key": "sk-...",
       "base_url": "https://api.openai.com/v1",
-      "models": ["gpt-5.1"],
-      "default_model": "gpt-5.1",
+      "models": ["gpt-5.4"],
+      "default_model": "gpt-5.4",
       "nickname": "GPT Duck"
     },
     "cli-claude": {

@@ -161,6 +161,29 @@ describe('DuckProvider', () => {
     );
   });
 
+  it.each(['gpt-6.1-sol', 'gpt-6-luna'])(
+    'should not send temperature to %s (only the default is supported)',
+    async (model) => {
+      mockCreate.mockClear();
+      const testProvider = new DuckProvider('test', 'Test Duck', {
+        apiKey: 'test-key',
+        baseURL: 'https://api.test.com/v1',
+        model,
+        temperature: 0.7,
+      });
+      testProvider['client'].chat.completions.create = mockCreate;
+
+      await testProvider.chat({
+        messages: [{ role: 'user', content: 'Hello', timestamp: new Date() }],
+        model,
+      });
+
+      const callParams = (mockCreate as any).mock.calls[0][0];
+      expect(callParams).not.toHaveProperty('temperature');
+      expect(callParams.model).toBe(model);
+    }
+  );
+
   it('should use correct parameters for non-o1 models', async () => {
     mockCreate.mockClear();
 

@@ -48,7 +48,7 @@ Any provider with an OpenAI-compatible API endpoint, including:
 - **Groq** (fast inference for open-weight models)
 - **Together AI** (broad open-weight model catalog)
 - **Perplexity** (online models with web search)
-- **Anyscale**, **Azure OpenAI**, **Ollama**, **LM Studio**, **Custom**
+- **Azure OpenAI**, **Ollama**, **LM Studio**, **Custom**
 
 ### CLI Providers (Coding Agents)
 
