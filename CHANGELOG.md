@@ -1,3 +1,10 @@
+## [1.20.15](https://github.com/nesquikm/mcp-rubber-duck/compare/v1.20.14...v1.20.15) (2026-11-23)
+
+
+### Bug Fixes
+
+* **deps:** bump @hono/node-server to 2.1.11 and evict 46 stale allowlist ghosts ([5d8229a](https://github.com/nesquikm/mcp-rubber-duck/commit/5d8229ace50667e075187bba86936b8c5d3d2342))
+
 ## [1.20.14](https://github.com/nesquikm/mcp-rubber-duck/compare/v1.20.13...v1.20.14) (2026-11-02)
 
 
