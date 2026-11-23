@@ -71,14 +71,14 @@
     "vite-plugin-singlefile": "^2.3.0"
   },
   "$overrides-rationale": {
-    "@hono/node-server": "Major-version override (2.x) against the MCP SDK's declared ^1.19.9 — GHSA-frvp-7c67-39w9 is patched only in 2.0.5 and the 1.x line has no fix. Safe here: the SDK pulls @hono/node-server in for its server-side streamableHttp transport, which this project never imports (we use StreamableHTTPClientTransport, the client side, in src/services/mcp-client-manager.ts). v2 keeps the same serve/getRequestListener API. Revisit if this project ever serves MCP over HTTP, or drop the override once the SDK moves to ^2."
+    "@hono/node-server": "Major-version override (2.x) against the MCP SDK's declared ^1.19.9 — GHSA-frvp-7c67-39w9 is patched only in 2.0.5 and the 1.x line has no fix; floor raised to 2.1.6 on 2026-11-23 for GHSA-qv5m-9pm6-hqp3 and GHSA-jpvv-r467-5p4w. Safe here: the SDK pulls @hono/node-server in for its server-side streamableHttp transport, which this project never imports (we use StreamableHTTPClientTransport, the client side, in src/services/mcp-client-manager.ts). v2 keeps the same serve/getRequestListener API. Revisit if this project ever serves MCP over HTTP, or drop the override once the SDK moves to ^2."
   },
   "overrides": {
     "js-yaml": "^4.3.1",
     "lodash": "^4.17.23",
     "lodash-es": "^4.17.23",
     "hono": "^4.13.1",
-    "@hono/node-server": "^2.0.5",
+    "@hono/node-server": "^2.1.6",
     "fast-uri": "^3.1.8",
     "postcss": "^8.5.18",
     "ip-address": "^10.7.3",
