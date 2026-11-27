@@ -53,6 +53,7 @@ import { GuardrailsService } from './guardrails/service.js';
 import { createProgressReporter, type ProgressReporter } from './services/progress.js';
 import { TaskManager } from './services/task-manager.js';
 import { isTerminal } from './services/retention-task-store.js';
+import { serveHttp, type HttpServerHandle } from './transport/http.js';
 import { logger } from './utils/logger.js';
 import { getRandomDuckMessage, formatDuckReply, formatDuckFooter } from './utils/ascii-art.js';
 import { printWelcomeBanner } from './utils/banner.js';
@@ -84,6 +85,7 @@ import { getPackageVersion } from './utils/version.js';
 
 export class RubberDuckServer {
   private stdioHandle?: StdioServerHandle;
+  private httpHandle?: HttpServerHandle;
   private configManager: ConfigManager;
   private pricingService: PricingService;
   private usageService: UsageService;
@@ -1291,7 +1293,16 @@ export class RubberDuckServer {
 
     // Serve stdio: each connection gets its own McpServer from the factory
     // (serveStdio may discard a server/discover probe and call it again).
-    this.stdioHandle = serveStdio(() => this.buildMcpServer());
+    const transport = this.configManager.getConfig().transport;
+    if (transport?.mode === 'http') {
+      this.httpHandle = await serveHttp(() => this.buildMcpServer(), {
+        ...transport,
+        onerror: (error) => logger.error('HTTP transport error:', error.message),
+      });
+      logger.info(`Serving MCP over HTTP at http://${transport.host}:${transport.port}/mcp`);
+    } else {
+      this.stdioHandle = serveStdio(() => this.buildMcpServer());
+    }
 
     if (this.mcpEnabled) {
       logger.info('🦆 MCP Rubber Duck server with MCP bridge started successfully!');
@@ -1323,6 +1334,8 @@ export class RubberDuckServer {
     // Stop the server
     await this.stdioHandle?.close();
     this.stdioHandle = undefined;
+    await this.httpHandle?.close();
+    this.httpHandle = undefined;
 
     logger.info('Server stopped');
   }

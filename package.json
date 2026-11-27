@@ -18,7 +18,8 @@
     "lint": "eslint src",
     "format": "prettier --write \"src/**/*.ts\"",
     "typecheck": "tsc --noEmit",
-    "release": "semantic-release"
+    "release": "semantic-release",
+    "version": "node scripts/sync-server-json-version.mjs"
   },
   "keywords": [
     "mcp",
@@ -49,6 +50,7 @@
   "dependencies": {
     "@modelcontextprotocol/client": "~2.4.0",
     "@modelcontextprotocol/ext-apps": "^2.0.4",
+    "@modelcontextprotocol/node": "~2.1.2",
     "@modelcontextprotocol/server": "~2.4.0",
     "ajv": "^8.17.1",
     "dotenv": "^16.4.0",

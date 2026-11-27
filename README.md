@@ -112,6 +112,11 @@ Create a `.env` file or `config/config.json`. Key environment variables:
 | `LOG_LEVEL` | `debug`, `info`, `warn`, `error` |
 | `MCP_SERVER` | Set to `true` for MCP server mode |
 | `MCP_BRIDGE_ENABLED` | Enable MCP Bridge (ducks access external MCP servers) |
+| `MCP_TRANSPORT` | Server transport: `stdio` (default) or `http` |
+| `MCP_HTTP_HOST` | HTTP bind host (default: `127.0.0.1`) |
+| `MCP_HTTP_PORT` | HTTP port, an integer 1-65535 (default: `3000`) |
+| `MCP_HTTP_TOKEN` | Bearer token required on HTTP requests |
+| `MCP_HTTP_ALLOWED_ORIGINS` | Comma-separated extra origins allowed to call the HTTP endpoint |
 | `CUSTOM_{NAME}_*` | Custom HTTP providers |
 | `CLI_{AGENT}_ENABLED` | Enable CLI agents (`CLAUDE`, `CODEX`, `GEMINI`, `GROK`, `AIDER`) |
 

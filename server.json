@@ -6,12 +6,12 @@
     "url": "https://github.com/nesquikm/mcp-rubber-duck",
     "source": "github"
   },
-  "version": "1.18.0",
+  "version": "1.20.15",
   "packages": [
     {
       "registryType": "npm",
       "identifier": "mcp-rubber-duck",
-      "version": "1.18.0",
+      "version": "1.20.15",
       "transport": {
         "type": "stdio"
       },
