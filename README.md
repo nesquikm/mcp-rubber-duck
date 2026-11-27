@@ -117,6 +117,7 @@ Create a `.env` file or `config/config.json`. Key environment variables:
 | `MCP_HTTP_PORT` | HTTP port, an integer 1-65535 (default: `3000`) |
 | `MCP_HTTP_TOKEN` | Bearer token required on HTTP requests |
 | `MCP_HTTP_ALLOWED_ORIGINS` | Comma-separated extra origins allowed to call the HTTP endpoint |
+| `MCP_HTTP_ALLOWED_HOSTS` | Comma-separated extra `Host` header values (hostnames) the HTTP endpoint accepts |
 | `CUSTOM_{NAME}_*` | Custom HTTP providers |
 | `CLI_{AGENT}_ENABLED` | Enable CLI agents (`CLAUDE`, `CODEX`, `GEMINI`, `GROK`, `AIDER`) |
 
@@ -133,7 +134,7 @@ MCP_TRANSPORT=http MCP_HTTP_TOKEN=$(openssl rand -hex 32) npx mcp-rubber-duck
 ```
 
 - **Token.** When `MCP_HTTP_TOKEN` is set, every request needs `Authorization: Bearer <token>`; anything else gets `401`. Binding to anything other than loopback (`127.x`, `localhost`, `::1`) **without** a token refuses to start.
-- **Host and Origin.** Requests whose `Host` is not localhost or the configured host, or whose `Origin` is not localhost or listed in `MCP_HTTP_ALLOWED_ORIGINS` (comma-separated hostnames), get `403`. Requests with no `Origin` (non-browser clients) are served. The allowed `Host` set is localhost plus `MCP_HTTP_HOST` itself, so when binding `0.0.0.0` (as in Docker) only clients that reach the server as `localhost` (for example through a published port on the same machine or a reverse proxy that rewrites `Host`) pass; there is no setting for extra allowed hostnames yet.
+- **Host and Origin.** Requests whose `Host` is not localhost, the configured host or listed in `MCP_HTTP_ALLOWED_HOSTS`, or whose `Origin` is not localhost or listed in `MCP_HTTP_ALLOWED_ORIGINS` (comma-separated hostnames), get `403`. Requests with no `Origin` (non-browser clients) are served. The allowed `Host` set is localhost, `MCP_HTTP_HOST` itself, and any hostnames listed in `MCP_HTTP_ALLOWED_HOSTS` (comma-separated). When binding `0.0.0.0` (as in Docker), add the hostname clients use to reach the server to `MCP_HTTP_ALLOWED_HOSTS`; otherwise only clients that reach it as `localhost` pass.
 - **Progress** streams as `notifications/progress` on the response SSE stream.
 
 ### Breaking changes in 2.0

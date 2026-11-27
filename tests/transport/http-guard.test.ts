@@ -11,7 +11,7 @@ import { guardHttpFetch, validateHttpBind } from '../../src/transport/http.js';
  * Contract under test (src/transport/http.ts):
  * - `validateHttpBind({ host, token? })` returns an error message (string) when
  *   the bind is refused and `undefined` when it is allowed.
- * - `guardHttpFetch(next, { host, port, token?, allowed_origins })` returns a
+ * - `guardHttpFetch(next, { host, port, token?, allowed_origins, allowed_hosts? })` returns a
  *   `(req, opts?) => Promise<Response>` that runs, in order, the bearer check,
  *   Host validation and Origin validation, then calls `next(req, opts)`.
  */
@@ -215,5 +215,38 @@ describe('AC-R2JF6A.5: Host and Origin validation', () => {
     const opts = { parsedBody: { marker: 1 } };
     await guardHttpFetch(next, options)(request, opts);
     expect(next.mock.calls).toEqual([[request, opts]]);
+  });
+});
+
+describe('AC-R2JF6A.5: MCP_HTTP_ALLOWED_HOSTS extends the allowed Host set', () => {
+  // A 0.0.0.0 / Docker bind: the configured host is not a name clients send.
+  const options = {
+    host: '0.0.0.0',
+    port: 3000,
+    token: 's3cret-token',
+    allowed_origins: [] as string[],
+    allowed_hosts: ['duck.example.com'],
+  };
+  const auth = { authorization: 'Bearer s3cret-token' };
+
+  it('a Host listed in allowed_hosts is served', async () => {
+    const next = makeNext();
+    const response = await guardHttpFetch(
+      next,
+      options
+    )(mcpRequest({ ...auth, host: 'duck.example.com:3000' }));
+    expect(await outcome(response)).toEqual({ status: 200, body: SERVED });
+  });
+
+  it('a Host not listed in allowed_hosts still gets 403', async () => {
+    const next = makeNext();
+    const response = await guardHttpFetch(
+      next,
+      options
+    )(mcpRequest({ ...auth, host: 'evil.example' }));
+    expect({ status: response.status, calls: next.mock.calls.length }).toEqual({
+      status: 403,
+      calls: 0,
+    });
   });
 });

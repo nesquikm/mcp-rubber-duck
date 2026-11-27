@@ -40,7 +40,6 @@ describe.each([
   let initializeProviders: ReturnType<typeof jest.spyOn>;
   let bridgeConnect: ReturnType<typeof jest.spyOn>;
   let factory: ReturnType<typeof jest.spyOn>;
-  let providersAfterConstruction = 0;
 
   beforeAll(async () => {
     isolateEnv({ OPENAI_API_KEY: 'test-key', ...(bridge ? { MCP_BRIDGE_ENABLED: 'true' } : {}) });
@@ -53,7 +52,6 @@ describe.each([
     factory = jest.spyOn(RubberDuckServer.prototype, 'buildMcpServer');
 
     server = new RubberDuckServer();
-    providersAfterConstruction = initializeProviders.mock.calls.length;
 
     stdin = new PassThrough();
     const stdout = new PassThrough();
@@ -140,16 +138,11 @@ describe.each([
     expect(loadConfig).toHaveBeenCalledTimes(1);
   });
 
-  if (!bridge) {
-    it('constructed providers exactly once', () => {
-      expect(initializeProviders).toHaveBeenCalledTimes(1);
-    });
-  } else {
-    it('constructed no providers in the per-connection factory', () => {
-      expect(providersAfterConstruction).toBeGreaterThan(0);
-      expect(initializeProviders).toHaveBeenCalledTimes(providersAfterConstruction);
-    });
+  it('constructed providers exactly once', () => {
+    expect(initializeProviders).toHaveBeenCalledTimes(1);
+  });
 
+  if (bridge) {
     it('connected the MCP Bridge exactly once', () => {
       expect(bridgeConnect).toHaveBeenCalledTimes(1);
     });

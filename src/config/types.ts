@@ -148,6 +148,7 @@ export const TransportConfigSchema = z.object({
   port: z.number().int().min(1).max(65535).default(3000),
   token: z.string().min(1).optional(),
   allowed_origins: z.array(z.string()).default([]),
+  allowed_hosts: z.array(z.string()).default([]),
 });
 
 export const ConfigSchema = z.object({

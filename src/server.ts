@@ -119,17 +119,16 @@ export class RubberDuckServer {
       this.guardrailsService = new GuardrailsService(config.guardrails);
     }
 
-    // Initialize provider manager with usage tracking and guardrails
-    this.providerManager = new ProviderManager(
-      this.configManager,
-      this.usageService,
-      this.guardrailsService
-    );
-    this.conversationManager = new ConversationManager();
-    this.healthMonitor = new HealthMonitor(this.providerManager);
-
     // Initialize MCP bridge if enabled
     this.initializeMCPBridge();
+
+    // EnhancedProviderManager extends ProviderManager, so with the bridge on it
+    // serves both roles and providers are constructed once per process.
+    this.providerManager =
+      this.enhancedProviderManager ??
+      new ProviderManager(this.configManager, this.usageService, this.guardrailsService);
+    this.conversationManager = new ConversationManager();
+    this.healthMonitor = new HealthMonitor(this.providerManager);
   }
 
   /**

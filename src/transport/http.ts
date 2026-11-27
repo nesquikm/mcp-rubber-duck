@@ -20,6 +20,7 @@ export interface HttpBindOptions {
 export interface HttpGuardOptions extends HttpBindOptions {
   port: number;
   allowed_origins: string[];
+  allowed_hosts?: string[];
 }
 
 export type FetchHandler = (req: Request, opts?: unknown) => Promise<Response>;
@@ -59,7 +60,11 @@ function hasValidBearer(req: Request, token: string): boolean {
 }
 
 export function guardHttpFetch(next: FetchHandler, options: HttpGuardOptions): FetchHandler {
-  const allowedHosts = [...localhostAllowedHostnames(), options.host];
+  const allowedHosts = [
+    ...localhostAllowedHostnames(),
+    options.host,
+    ...(options.allowed_hosts ?? []),
+  ];
   const allowedOrigins = [...localhostAllowedOrigins(), ...options.allowed_origins];
   return async (req, opts) => {
     if (options.token && !hasValidBearer(req, options.token)) {

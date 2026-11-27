@@ -10,8 +10,10 @@ import { ConfigSchema } from '../src/config/types.js';
  * `config.transport` and validated by the Zod ConfigSchema.
  *
  * Contract: `getConfig().transport` is
- * `{ mode: 'stdio' | 'http', host: string, port: number, token?: string, allowed_origins: string[] }`
- * with defaults `mode 'stdio'`, `host '127.0.0.1'`, `port 3000`, `allowed_origins []`.
+ * `{ mode: 'stdio' | 'http', host: string, port: number, token?: string,
+ *    allowed_origins: string[], allowed_hosts: string[] }`
+ * with defaults `mode 'stdio'`, `host '127.0.0.1'`, `port 3000`, `allowed_origins []`,
+ * `allowed_hosts []` (MCP_HTTP_ALLOWED_HOSTS, operator decision 2026-11-27).
  */
 const TRANSPORT_VARS = [
   'MCP_TRANSPORT',
@@ -19,6 +21,7 @@ const TRANSPORT_VARS = [
   'MCP_HTTP_PORT',
   'MCP_HTTP_TOKEN',
   'MCP_HTTP_ALLOWED_ORIGINS',
+  'MCP_HTTP_ALLOWED_HOSTS',
 ];
 
 let originalEnv: NodeJS.ProcessEnv;
@@ -52,6 +55,7 @@ describe('AC-R2JF6A.8: ConfigManager parses the transport variables', () => {
       host: '127.0.0.1',
       port: 3000,
       allowed_origins: [],
+      allowed_hosts: [],
     });
   });
 
@@ -69,6 +73,7 @@ describe('AC-R2JF6A.8: ConfigManager parses the transport variables', () => {
     process.env.MCP_HTTP_PORT = '8123';
     process.env.MCP_HTTP_TOKEN = 's3cret-token';
     process.env.MCP_HTTP_ALLOWED_ORIGINS = ' app.example.com , tools.example.org ';
+    process.env.MCP_HTTP_ALLOWED_HOSTS = 'duck.example.com';
     const transport = (load().getConfig() as Record<string, unknown>).transport;
     expect(transport).toEqual({
       mode: 'http',
@@ -76,7 +81,33 @@ describe('AC-R2JF6A.8: ConfigManager parses the transport variables', () => {
       port: 8123,
       token: 's3cret-token',
       allowed_origins: ['app.example.com', 'tools.example.org'],
+      allowed_hosts: ['duck.example.com'],
     });
+  });
+
+  it('MCP_HTTP_ALLOWED_HOSTS defaults to an empty list', () => {
+    const transport = (load().getConfig() as Record<string, unknown>).transport as {
+      allowed_hosts?: unknown;
+    };
+    expect(transport?.allowed_hosts).toEqual([]);
+  });
+
+  it('MCP_HTTP_ALLOWED_HOSTS is a trimmed comma list', () => {
+    process.env.MCP_TRANSPORT = 'http';
+    process.env.MCP_HTTP_ALLOWED_HOSTS = ' duck.example.com , ducks.internal ';
+    const transport = (load().getConfig() as Record<string, unknown>).transport as {
+      allowed_hosts?: unknown;
+    };
+    expect(transport?.allowed_hosts).toEqual(['duck.example.com', 'ducks.internal']);
+  });
+
+  it('MCP_HTTP_ALLOWED_HOSTS drops empty entries', () => {
+    process.env.MCP_TRANSPORT = 'http';
+    process.env.MCP_HTTP_ALLOWED_HOSTS = 'duck.example.com,, ,ducks.internal,';
+    const transport = (load().getConfig() as Record<string, unknown>).transport as {
+      allowed_hosts?: unknown;
+    };
+    expect(transport?.allowed_hosts).toEqual(['duck.example.com', 'ducks.internal']);
   });
 
   it('an unknown MCP_TRANSPORT value fails startup', () => {
@@ -115,7 +146,26 @@ describe('AC-R2JF6A.8: the Zod ConfigSchema validates transport', () => {
       host: '127.0.0.1',
       port: 3000,
       allowed_origins: [],
+      allowed_hosts: [],
     });
+  });
+
+  it('keeps allowed_hosts from a config block (not silently stripped)', () => {
+    const parsed = ConfigSchema.parse({
+      providers: {},
+      transport: { mode: 'http', allowed_hosts: ['duck.example.com'] },
+    }) as Record<string, unknown>;
+    expect((parsed.transport as { allowed_hosts?: unknown }).allowed_hosts).toEqual([
+      'duck.example.com',
+    ]);
+  });
+
+  it('rejects a non-string allowed_hosts entry', () => {
+    const parsed = ConfigSchema.safeParse({
+      providers: {},
+      transport: { mode: 'http', allowed_hosts: [42] },
+    });
+    expect(parsed.success).toBe(false);
   });
 });
 

@@ -138,6 +138,11 @@ export class ConfigManager {
         .map((origin) => origin.trim())
         .filter((origin) => origin.length > 0);
     }
+    if (process.env.MCP_HTTP_ALLOWED_HOSTS) {
+      transport.allowed_hosts = process.env.MCP_HTTP_ALLOWED_HOSTS.split(',')
+        .map((host) => host.trim())
+        .filter((host) => host.length > 0);
+    }
     return transport;
   }
 

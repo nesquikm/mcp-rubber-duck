@@ -62,8 +62,8 @@ ENV MCP_HTTP_HOST=0.0.0.0
 # the published port is reachable, which makes MCP_HTTP_TOKEN required in HTTP
 # mode (the server refuses to start without it), e.g.:
 #   docker run -p 3000:3000 -e MCP_TRANSPORT=http -e MCP_HTTP_TOKEN=... <image>
-# Requests must reach it as localhost (Host header) -- e.g. via the published
-# port on the same machine or a Host-rewriting reverse proxy.
+# The Host header must be localhost or a name listed in MCP_HTTP_ALLOWED_HOSTS,
+# e.g. -e MCP_HTTP_ALLOWED_HOSTS=duck.example.com
 EXPOSE 3000
 
 # Add healthcheck for monitoring
