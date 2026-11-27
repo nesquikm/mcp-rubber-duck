@@ -53,7 +53,7 @@ import { GuardrailsService } from './guardrails/service.js';
 import { createProgressReporter, type ProgressReporter } from './services/progress.js';
 import { TaskManager } from './services/task-manager.js';
 import { isTerminal } from './services/retention-task-store.js';
-import { serveHttp, type HttpServerHandle } from './transport/http.js';
+import { serveHttp, validateHttpBind, type HttpServerHandle } from './transport/http.js';
 import { logger } from './utils/logger.js';
 import { getRandomDuckMessage, formatDuckReply, formatDuckFooter } from './utils/ascii-art.js';
 import { printWelcomeBanner } from './utils/banner.js';
@@ -228,6 +228,12 @@ export class RubberDuckServer {
   private skipOutputValidationForTasks(server: McpServer): void {
     type Validator = (tool: unknown, result: unknown, toolName: string) => Promise<void>;
     const target = server as unknown as { validateToolOutput: Validator };
+    if (typeof target.validateToolOutput !== 'function') {
+      throw new Error(
+        'McpServer.validateToolOutput not found: the tasks extension relies on this private ' +
+          'hook of @modelcontextprotocol/server ~2.4.x; re-check it after an SDK upgrade.'
+      );
+    }
     const original = target.validateToolOutput.bind(server);
     target.validateToolOutput = async (tool, result, toolName) => {
       if ((result as { resultType?: unknown } | undefined)?.resultType === 'task') return;
@@ -276,7 +282,12 @@ export class RubberDuckServer {
       const task = await requireTask(taskId);
       this.taskManager.cancel(taskId);
       if (!isTerminal(task.status)) {
-        await store.updateTaskStatus(taskId, 'cancelled', 'Task was cancelled');
+        try {
+          await store.updateTaskStatus(taskId, 'cancelled', 'Task was cancelled');
+        } catch {
+          // The work reached a terminal state between the read and this write;
+          // cancellation of a finished task is still acknowledged.
+        }
       }
       return {};
     });
@@ -1266,6 +1277,14 @@ export class RubberDuckServer {
     // safe to print in every mode — stdout stays reserved for framed JSON-RPC.
     printWelcomeBanner();
 
+    // Refuse an unsafe HTTP bind before anything else starts (guardrails, MCP
+    // Bridge connections), not just before listen (AC-R2JF6A.3).
+    const transport = this.configManager.getConfig().transport;
+    if (transport?.mode === 'http') {
+      const refusal = validateHttpBind(transport);
+      if (refusal) throw new Error(refusal);
+    }
+
     // Initialize guardrails service if configured
     if (this.guardrailsService) {
       try {
@@ -1291,9 +1310,8 @@ export class RubberDuckServer {
       }
     }
 
-    // Serve stdio: each connection gets its own McpServer from the factory
-    // (serveStdio may discard a server/discover probe and call it again).
-    const transport = this.configManager.getConfig().transport;
+    // Serve: HTTP builds an McpServer per request; stdio pins one per connection
+    // (serveStdio may discard a server/discover probe and call the factory again).
     if (transport?.mode === 'http') {
       this.httpHandle = await serveHttp(() => this.buildMcpServer(), {
         ...transport,

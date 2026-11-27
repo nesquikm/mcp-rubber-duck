@@ -2,8 +2,8 @@
  * Task lifecycle manager for the hand-built `io.modelcontextprotocol/tasks`
  * extension (SEP-2663): background execution, cancellation and retention.
  *
- * SDK-free apart from the `CallToolResult` type; the task store and message
- * queue contracts are local (see `retention-task-store.ts`).
+ * SDK-free apart from the `CallToolResult` type; the task store contract is
+ * local (see `retention-task-store.ts`).
  */
 
 import type { CallToolResult } from '@modelcontextprotocol/server';
@@ -11,55 +11,11 @@ import { RetentionTaskStore } from './retention-task-store.js';
 import type { TaskStore } from './retention-task-store.js';
 import { logger } from '../utils/logger.js';
 
-/** Per-task message queue contract (local copy of the removed v1 SDK type). */
-export interface TaskMessageQueue {
-  enqueue(taskId: string, message: unknown, sessionId?: string, maxSize?: number): Promise<void>;
-  dequeue(taskId: string, sessionId?: string): Promise<unknown>;
-  dequeueAll(taskId: string, sessionId?: string): Promise<unknown[]>;
-}
-
-/** In-memory FIFO `TaskMessageQueue` (local replacement for the removed v1 SDK class). */
-export class InMemoryTaskMessageQueue implements TaskMessageQueue {
-  private queues = new Map<string, unknown[]>();
-
-  private key(taskId: string, sessionId?: string): string {
-    return sessionId ? `${sessionId}:${taskId}` : taskId;
-  }
-
-  enqueue(taskId: string, message: unknown, sessionId?: string, maxSize?: number): Promise<void> {
-    const k = this.key(taskId, sessionId);
-    const queue = this.queues.get(k) ?? [];
-    if (maxSize !== undefined && queue.length >= maxSize) {
-      return Promise.reject(
-        new Error(
-          `Task message queue overflow: queue size (${queue.length}) exceeds maximum (${maxSize})`
-        )
-      );
-    }
-    queue.push(message);
-    this.queues.set(k, queue);
-    return Promise.resolve();
-  }
-
-  dequeue(taskId: string, sessionId?: string): Promise<unknown> {
-    return Promise.resolve(this.queues.get(this.key(taskId, sessionId))?.shift());
-  }
-
-  dequeueAll(taskId: string, sessionId?: string): Promise<unknown[]> {
-    const k = this.key(taskId, sessionId);
-    const queue = this.queues.get(k) ?? [];
-    this.queues.delete(k);
-    return Promise.resolve(queue);
-  }
-}
-
 export interface TaskManagerConfig {
   /** Time-to-live for completed task results (milliseconds). */
   defaultTtl: number;
   /** Suggested interval between client polls (milliseconds). */
   pollInterval: number;
-  /** Maximum messages per task queue (prevents unbounded growth). */
-  maxQueueSize: number;
   /** Interval for cleanup/monitoring sweep (milliseconds). */
   cleanupInterval: number;
 }
@@ -67,7 +23,6 @@ export interface TaskManagerConfig {
 const DEFAULT_CONFIG: TaskManagerConfig = {
   defaultTtl: 1_800_000, // 30 minutes
   pollInterval: 2_000, // 2 seconds
-  maxQueueSize: 100,
   cleanupInterval: 60_000, // 1 minute
 };
 
@@ -75,13 +30,12 @@ const DEFAULT_CONFIG: TaskManagerConfig = {
  * Manages MCP task lifecycle: creation, background execution, cancellation, and cleanup.
  *
  * - Owns the process-scoped `RetentionTaskStore` read by the server's
- *   `tasks/*` handlers, plus an `InMemoryTaskMessageQueue`.
+ *   `tasks/*` handlers.
  * - Tracks active background work via `AbortController` per task for cancellation.
  * - Handles graceful shutdown (cancels active tasks, clears timers).
  */
 export class TaskManager {
   readonly taskStore: TaskStore;
-  readonly taskMessageQueue: TaskMessageQueue;
   readonly config: TaskManagerConfig;
 
   /**
@@ -102,7 +56,6 @@ export class TaskManager {
     // than becoming an immortal terminal entry.
     this.retentionStore = new RetentionTaskStore(this.config.defaultTtl);
     this.taskStore = this.retentionStore;
-    this.taskMessageQueue = new InMemoryTaskMessageQueue();
     this.startCleanup();
   }
 

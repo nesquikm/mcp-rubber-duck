@@ -102,7 +102,7 @@ The 2026-07-28 MCP spec ([SEP-2577](https://github.com/modelcontextprotocol/mode
 - [Multi-Agent Collaboration Survey](https://arxiv.org/abs/2501.06322)
 - [Tree of Thoughts](https://arxiv.org/abs/2305.10601) - 74% vs 4% success on hard problems
 - [KVCOMM](https://arxiv.org/abs/2510.12872) - KV-cache sharing, 70%+ reuse rate
-- [MCP 2026-07-28 specification](https://blog.modelcontextprotocol.io/posts/2026-07-28-release-candidate/) (release-candidate announcement) - stateless core; Sampling/Roots/Logging deprecated ([SEP-2577](https://github.com/modelcontextprotocol/modelcontextprotocol/pull/2577))
+- [MCP 2026-07-28 specification](https://blog.modelcontextprotocol.io/posts/2026-07-28-release-candidate/) - final spec; stateless core; Sampling/Roots/Logging deprecated ([SEP-2577](https://github.com/modelcontextprotocol/modelcontextprotocol/pull/2577))
 - [Judging LLM-as-a-Judge (MT-Bench)](https://arxiv.org/abs/2306.05685) - position/verbosity/self-enhancement bias in LLM judges (backs #119)
 - [LLMs are not Fair Evaluators](https://arxiv.org/abs/2305.17926) - Balanced Position Calibration / swap-and-average (backs #119)
 - [Multi-Agent Verification](https://arxiv.org/abs/2502.20379) - aspect verifiers / BoN-MAV (backs #120)
