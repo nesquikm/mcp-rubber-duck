@@ -9,6 +9,7 @@ import { RubberDuckServer } from '../src/server.js';
 import {
   isolateEnv,
   mockProviderEnv,
+  redirectUsageStore,
   startMockOpenAI,
   type MockOpenAI,
 } from './helpers/mock-openai.js';
@@ -240,6 +241,7 @@ describe('AC-K1F5Q5.6: progress notifications in both eras', () => {
     home = mkdtempSync(join(tmpdir(), 'duck-progress-'));
     isolateEnv({ ...mockProviderEnv(mock.baseUrl), HOME: home });
     server = new RubberDuckServer();
+    redirectUsageStore(server, home);
   });
 
   afterAll(async () => {

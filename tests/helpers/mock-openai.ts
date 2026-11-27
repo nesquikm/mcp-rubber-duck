@@ -1,5 +1,6 @@
 import { createServer, type Server } from 'http';
 import type { AddressInfo } from 'net';
+import { join } from 'path';
 
 /**
  * Local OpenAI-compatible chat-completions server for tests. Never forwards to a
@@ -170,4 +171,17 @@ export async function waitFor(
       throw new Error(`Timed out after ${timeoutMs}ms waiting for ${what}`);
     await new Promise((r) => setTimeout(r, 20));
   }
+}
+
+/**
+ * Point a RubberDuckServer's usage store at `dir` instead of the real
+ * ~/.mcp-rubber-duck/data/usage.json. Needed for in-process tests: under Jest,
+ * `process.env` is a sandboxed copy, so `HOME` set via isolateEnv never reaches
+ * the native os.homedir() that UsageService uses for its default data path, and
+ * tool calls would otherwise record mock-provider usage in the user's real file.
+ */
+export function redirectUsageStore(server: unknown, dir: string): void {
+  const usage = (server as { usageService: { usagePath: string; data: unknown } }).usageService;
+  usage.usagePath = join(dir, 'usage.json');
+  usage.data = { version: 1, daily: {} };
 }

@@ -1,4 +1,13 @@
-import { describe, it, expect, jest, beforeAll, afterAll, beforeEach, afterEach } from '@jest/globals';
+import {
+  describe,
+  it,
+  expect,
+  jest,
+  beforeAll,
+  afterAll,
+  beforeEach,
+  afterEach,
+} from '@jest/globals';
 import { readFileSync, mkdtempSync, rmSync } from 'fs';
 import { join } from 'path';
 import { tmpdir } from 'os';
@@ -10,6 +19,7 @@ import { RubberDuckServer } from '../src/server.js';
 import {
   isolateEnv,
   mockProviderEnv,
+  redirectUsageStore,
   startMockOpenAI,
   type MockOpenAI,
 } from './helpers/mock-openai.js';
@@ -50,7 +60,10 @@ interface ToolLike {
 }
 const debateOutputSchema = (
   JSON.parse(
-    readFileSync(join(process.cwd(), 'tests', 'fixtures', 'mcp-surface', 'tools-bridge-off.json'), 'utf-8')
+    readFileSync(
+      join(process.cwd(), 'tests', 'fixtures', 'mcp-surface', 'tools-bridge-off.json'),
+      'utf-8'
+    )
   ) as ToolLike[]
 ).find((t) => t.name === 'duck_debate')!.outputSchema!;
 
@@ -58,8 +71,7 @@ type AjvClass = new (opts: { strict: boolean }) => {
   compile: (schema: object) => (data: unknown) => boolean;
 };
 // ajv is CommonJS; under ESM the class may sit on `.default`.
-const AjvCtor = ((Ajv as unknown as { default?: AjvClass }).default ??
-  (Ajv as unknown as AjvClass));
+const AjvCtor = (Ajv as unknown as { default?: AjvClass }).default ?? (Ajv as unknown as AjvClass);
 const validateDebate = new AjvCtor({ strict: false }).compile(debateOutputSchema);
 
 /** Only `Date` is faked: real timers keep the transport and the mock HTTP server running. */
@@ -175,6 +187,7 @@ beforeAll(async () => {
   home = mkdtempSync(join(tmpdir(), 'duck-tasks-'));
   isolateEnv({ ...mockProviderEnv(mock.baseUrl), HOME: home });
   server = new RubberDuckServer();
+  redirectUsageStore(server, home);
 });
 
 afterAll(async () => {
@@ -240,7 +253,9 @@ describe('AC-R2JF69.3: tasks/get', () => {
     const { rpc } = await tasksSession();
     const task = await createTask(rpc, 'duck_iterate', ITERATE_ARGS);
     const done = await pollTask(rpc, task.taskId as string, isTerminalResponse, 'iterate terminal');
-    const result = done.result?.result as { content?: { type: string; text: string }[] } | undefined;
+    const result = done.result?.result as
+      | { content?: { type: string; text: string }[] }
+      | undefined;
     expect({
       status: done.result?.status,
       firstText: result?.content?.[0]?.text.includes('Iterative Refinement Results'),
@@ -404,7 +419,8 @@ describe('FR R2JF69 Technical Design: task progress surfaces through statusMessa
     expect({
       status: response.result?.status,
       statusMessage:
-        typeof response.result?.statusMessage === 'string' && response.result.statusMessage.length > 0,
+        typeof response.result?.statusMessage === 'string' &&
+        response.result.statusMessage.length > 0,
     }).toEqual({ status: 'working', statusMessage: true });
   });
 
