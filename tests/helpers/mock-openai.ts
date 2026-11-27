@@ -16,16 +16,37 @@ export const MOCK_REPLY = JSON.stringify({
   summary: 'mock summary',
 });
 
+/**
+ * How the mock answers POST /chat/completions:
+ * - `reply` (default): answers at once with MOCK_REPLY;
+ * - `hold`: leaves the request open until `release()` (or until the client
+ *   aborts it, which `aborted()` counts);
+ * - `fail`: answers 400 (the OpenAI SDK does not retry a 400), so the
+ *   provider call throws.
+ */
+export type MockCompletionMode = 'reply' | 'hold' | 'fail';
+
 export interface MockOpenAI {
   /** Base URL ending in /v1, suitable for CUSTOM_<NAME>_BASE_URL. */
   baseUrl: string;
   /** Number of chat-completion requests served so far. */
   completions: () => number;
+  /** Switch how later chat-completion requests are answered. */
+  setMode: (mode: MockCompletionMode) => void;
+  /** Number of chat-completion requests currently held open (`hold` mode). */
+  held: () => number;
+  /** Number of held requests whose client closed the connection before an answer. */
+  aborted: () => number;
+  /** Answer every held request with MOCK_REPLY. */
+  release: () => void;
   close: () => Promise<void>;
 }
 
 export async function startMockOpenAI(): Promise<MockOpenAI> {
   let completions = 0;
+  let mode: MockCompletionMode = 'reply';
+  let aborted = 0;
+  const heldReplies = new Set<() => void>();
   const server: Server = createServer((req, res) => {
     const chunks: Buffer[] = [];
     req.on('data', (c: Buffer) => chunks.push(c));
@@ -43,22 +64,37 @@ export async function startMockOpenAI(): Promise<MockOpenAI> {
       }
       if (req.method === 'POST' && url.endsWith('/chat/completions')) {
         completions++;
-        res.end(
-          JSON.stringify({
-            id: `chatcmpl-mock-${completions}`,
-            object: 'chat.completion',
-            created: 0,
-            model: MOCK_MODEL,
-            choices: [
-              {
-                index: 0,
-                message: { role: 'assistant', content: MOCK_REPLY },
-                finish_reason: 'stop',
-              },
-            ],
-            usage: { prompt_tokens: 1, completion_tokens: 1, total_tokens: 2 },
-          })
-        );
+        if (mode === 'fail') {
+          res.statusCode = 400;
+          res.end(JSON.stringify({ error: { message: 'mock: forced failure', type: 'mock' } }));
+          return;
+        }
+        const id = completions;
+        const answer = () =>
+          res.end(
+            JSON.stringify({
+              id: `chatcmpl-mock-${id}`,
+              object: 'chat.completion',
+              created: 0,
+              model: MOCK_MODEL,
+              choices: [
+                {
+                  index: 0,
+                  message: { role: 'assistant', content: MOCK_REPLY },
+                  finish_reason: 'stop',
+                },
+              ],
+              usage: { prompt_tokens: 1, completion_tokens: 1, total_tokens: 2 },
+            })
+          );
+        if (mode === 'hold') {
+          heldReplies.add(answer);
+          res.on('close', () => {
+            if (heldReplies.delete(answer) && !res.writableEnded) aborted++;
+          });
+          return;
+        }
+        answer();
         return;
       }
       res.statusCode = 404;
@@ -70,7 +106,22 @@ export async function startMockOpenAI(): Promise<MockOpenAI> {
   return {
     baseUrl: `http://127.0.0.1:${port}/v1`,
     completions: () => completions,
-    close: () => new Promise<void>((resolve) => server.close(() => resolve())),
+    setMode: (next) => {
+      mode = next;
+    },
+    held: () => heldReplies.size,
+    aborted: () => aborted,
+    release: () => {
+      const pending = [...heldReplies];
+      heldReplies.clear();
+      for (const answer of pending) answer();
+    },
+    close: () =>
+      new Promise<void>((resolve) => {
+        heldReplies.clear();
+        server.closeAllConnections();
+        server.close(() => resolve());
+      }),
   };
 }
 

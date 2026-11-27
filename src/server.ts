@@ -1,4 +1,9 @@
-import { McpServer } from '@modelcontextprotocol/server';
+import {
+  McpServer,
+  CLIENT_CAPABILITIES_META_KEY,
+  ProtocolError,
+  ProtocolErrorCode,
+} from '@modelcontextprotocol/server';
 import type { CallToolResult, ServerContext } from '@modelcontextprotocol/server';
 import { serveStdio, type StdioServerHandle } from '@modelcontextprotocol/server/stdio';
 import { z } from 'zod';
@@ -22,6 +27,9 @@ import { PricingService } from './services/pricing.js';
 import { UsageService } from './services/usage.js';
 import { DuckResponse, ImageInput, buildContent } from './config/types.js';
 
+/** Extension id of the hand-built tasks extension (SEP-2663). */
+const TASKS_EXTENSION = 'io.modelcontextprotocol/tasks';
+
 // Shared schema for image inputs used across multiple tools
 // Accepts either base64 data+mimeType OR a url (or both)
 const ImageInputSchema = z
@@ -43,6 +51,8 @@ import { ApprovalService } from './services/approval.js';
 import { FunctionBridge } from './services/function-bridge.js';
 import { GuardrailsService } from './guardrails/service.js';
 import { createProgressReporter, type ProgressReporter } from './services/progress.js';
+import { TaskManager } from './services/task-manager.js';
+import { isTerminal } from './services/retention-task-store.js';
 import { logger } from './utils/logger.js';
 import { getRandomDuckMessage, formatDuckReply, formatDuckFooter } from './utils/ascii-art.js';
 import { printWelcomeBanner } from './utils/banner.js';
@@ -88,6 +98,8 @@ export class RubberDuckServer {
   private approvalService?: ApprovalService;
   private functionBridge?: FunctionBridge;
   private mcpEnabled: boolean = false;
+  // Process-scoped: tasks outlive the per-connection McpServer instances.
+  private taskManager = new TaskManager();
 
   // Services are built once per process; buildMcpServer() is the cheap
   // per-connection factory that only registers tools/prompts/resources.
@@ -129,7 +141,15 @@ export class RubberDuckServer {
       version: getPackageVersion(),
     });
 
+    // Hand-built tasks extension (SEP-2663): advertised in capabilities.extensions,
+    // which 2026-07-28 clients see on server/discover. No legacy `tasks` key.
+    server.server.registerCapabilities({
+      extensions: { [TASKS_EXTENSION]: {} },
+    });
+
     this.registerTools(server);
+    this.skipOutputValidationForTasks(server);
+    this.registerTaskHandlers(server);
     this.registerPrompts(server);
     this.registerUIResources(server);
 
@@ -195,6 +215,127 @@ export class RubberDuckServer {
     isError?: boolean;
   }): CallToolResult {
     return result as CallToolResult;
+  }
+
+  /**
+   * McpServer validates every tools/call result against the tool's outputSchema,
+   * which a CreateTaskResult (resultType 'task') never satisfies. The SDK has no
+   * hook for this, so wrap its private validator on this instance to let task
+   * results through; the real result is validated by shape when it completes.
+   */
+  private skipOutputValidationForTasks(server: McpServer): void {
+    type Validator = (tool: unknown, result: unknown, toolName: string) => Promise<void>;
+    const target = server as unknown as { validateToolOutput: Validator };
+    const original = target.validateToolOutput.bind(server);
+    target.validateToolOutput = async (tool, result, toolName) => {
+      if ((result as { resultType?: unknown } | undefined)?.resultType === 'task') return;
+      return original(tool, result, toolName);
+    };
+  }
+
+  /** tasks/get, tasks/cancel and tasks/update; an unknown taskId is -32602 on all three. */
+  private registerTaskHandlers(server: McpServer): void {
+    const store = this.taskManager.taskStore;
+    const taskIdParams = { params: z.object({ taskId: z.string() }) };
+    const requireTask = async (taskId: string) => {
+      const task = await store.getTask(taskId);
+      if (!task) {
+        throw new ProtocolError(ProtocolErrorCode.InvalidParams, `Unknown task: ${taskId}`);
+      }
+      return task;
+    };
+    // tasks/get: the DetailedTask, with `result` once completed or `error` once failed.
+    server.server.setRequestHandler('tasks/get', taskIdParams, async ({ taskId }) => {
+      const task = await requireTask(taskId);
+      const detailed: Record<string, unknown> = {
+        taskId: task.taskId,
+        status: task.status,
+        createdAt: task.createdAt,
+        lastUpdatedAt: task.lastUpdatedAt,
+        ttlMs: task.ttl,
+        ...(task.pollInterval !== undefined && { pollIntervalMs: task.pollInterval }),
+        ...(task.statusMessage !== undefined && { statusMessage: task.statusMessage }),
+      };
+      if (task.status === 'completed') {
+        detailed.result = await store.getTaskResult(taskId);
+      } else if (task.status === 'failed') {
+        const failed = (await store.getTaskResult(taskId)) as {
+          content?: { text?: string }[];
+        };
+        detailed.error = {
+          code: ProtocolErrorCode.InternalError,
+          message: failed.content?.[0]?.text ?? 'Task failed',
+        };
+      }
+      return detailed;
+    });
+    // tasks/cancel: abort the running work, mark the task cancelled, empty ack.
+    server.server.setRequestHandler('tasks/cancel', taskIdParams, async ({ taskId }) => {
+      const task = await requireTask(taskId);
+      this.taskManager.cancel(taskId);
+      if (!isTerminal(task.status)) {
+        await store.updateTaskStatus(taskId, 'cancelled', 'Task was cancelled');
+      }
+      return {};
+    });
+    // tasks/update: the SDK lifts inputResponses into ctx.mcpReq.inputResponses, so the
+    // params carry only taskId. No duck task asks for input, so every key is ignored.
+    server.server.setRequestHandler('tasks/update', taskIdParams, async ({ taskId }) => {
+      await requireTask(taskId);
+      return {};
+    });
+  }
+
+  /** True when this request's envelope declares the io.modelcontextprotocol/tasks extension. */
+  private tasksRequested(ctx: ServerContext): boolean {
+    const envelope = ctx.mcpReq.envelope as Record<string, unknown> | undefined;
+    const caps = envelope?.[CLIENT_CAPABILITIES_META_KEY] as
+      | { extensions?: Record<string, unknown> }
+      | undefined;
+    return caps?.extensions?.[TASKS_EXTENSION] !== undefined;
+  }
+
+  /**
+   * Create a task, start `work` in the background and return the CreateTaskResult.
+   * The work never sees the finished request's notify, only the task's own signal
+   * and a reporter that surfaces progress as the task's statusMessage and lastUpdatedAt.
+   */
+  private async startToolTask(
+    name: string,
+    args: Record<string, unknown>,
+    ctx: ServerContext,
+    work: (signal: AbortSignal, progress: ProgressReporter) => Promise<CallToolResult>
+  ): Promise<CallToolResult> {
+    const task = await this.taskManager.taskStore.createTask(
+      {
+        ttl: this.taskManager.config.defaultTtl,
+        pollInterval: this.taskManager.config.pollInterval,
+      },
+      ctx.mcpReq.id,
+      { method: 'tools/call', params: { name, arguments: args } }
+    );
+    // A throw from `work` marks the task failed; tasks/get reports it as a JSON-RPC error.
+    const store = this.taskManager.taskStore;
+    const progress: ProgressReporter = {
+      enabled: true,
+      report: async (_current, _total, message) => {
+        try {
+          await store.updateTaskStatus(task.taskId, 'working', message);
+        } catch {
+          // The task already reached a terminal state (e.g. cancelled); drop the update.
+        }
+      },
+    };
+    this.taskManager.startBackground(task.taskId, (signal) => work(signal, progress));
+    return {
+      resultType: 'task',
+      taskId: task.taskId,
+      status: task.status,
+      createdAt: task.createdAt,
+      lastUpdatedAt: task.lastUpdatedAt,
+      ttlMs: task.ttl ?? this.taskManager.config.defaultTtl,
+      pollIntervalMs: task.pollInterval ?? this.taskManager.config.pollInterval,
+    } as unknown as CallToolResult;
   }
 
   /** Progress reporter bound to a tool call's progress token (no-op without one). */
@@ -615,6 +756,11 @@ export class RubberDuckServer {
         },
       },
       async (args, ctx) => {
+        if (this.tasksRequested(ctx)) {
+          return this.startToolTask('duck_iterate', args, ctx, async (signal, progress) =>
+            this.toolResult(await duckIterateTool(this.providerManager, args, progress, signal))
+          );
+        }
         try {
           const progress = this.progressFor(ctx);
           return this.toolResult(
@@ -688,6 +834,11 @@ export class RubberDuckServer {
         _meta: { ui: { resourceUri: 'ui://rubber-duck/duck-debate' } },
       },
       async (args, ctx) => {
+        if (this.tasksRequested(ctx)) {
+          return this.startToolTask('duck_debate', args, ctx, async (signal, progress) =>
+            this.toolResult(await duckDebateTool(this.providerManager, args, progress, signal))
+          );
+        }
         try {
           const progress = this.progressFor(ctx);
           return this.toolResult(
@@ -1150,6 +1301,8 @@ export class RubberDuckServer {
   }
 
   async stop() {
+    this.taskManager.shutdown();
+
     // Cleanup usage service (flush pending writes)
     this.usageService.shutdown();
 

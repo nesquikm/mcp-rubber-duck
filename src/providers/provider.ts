@@ -96,7 +96,7 @@ export class DuckProvider implements IDuckProvider {
         baseParams.temperature = options.temperature ?? this.options.temperature ?? 0.7;
       }
 
-      const response = await this.createChatCompletion(baseParams);
+      const response = await this.createChatCompletion(baseParams, options.signal);
       const choice = response.choices[0];
       let content = choice.message?.content || '';
 
@@ -140,10 +140,11 @@ export class DuckProvider implements IDuckProvider {
   }
 
   protected async createChatCompletion(
-    baseParams: Partial<OpenAIChatParams>
+    baseParams: Partial<OpenAIChatParams>,
+    signal?: AbortSignal
   ): Promise<OpenAIChatResponse> {
     const params = { ...baseParams } as OpenAIChatParams;
-    return await this.client.chat.completions.create(params);
+    return await this.client.chat.completions.create(params, signal ? { signal } : undefined);
   }
 
   async healthCheck(): Promise<boolean> {

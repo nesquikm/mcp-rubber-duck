@@ -2,7 +2,14 @@ import { describe, it, expect, jest, beforeEach, afterEach } from '@jest/globals
 
 import { TaskManager } from '../../src/services/task-manager.js';
 import { logger } from '../../src/utils/logger.js';
-import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
+
+// FR R2JF69: the task store is SDK-free; a minimal local result shape stands in
+// for the removed v1 `@modelcontextprotocol/sdk/types.js` CallToolResult.
+interface CallToolResult {
+  content: { type: 'text'; text: string }[];
+  isError?: boolean;
+  [key: string]: unknown;
+}
 
 // Under this repo's ESM Jest config (ts-jest default-esm, isolatedModules),
 // `jest.mock(path, factory)` is a no-op. Spy on the real winston singleton

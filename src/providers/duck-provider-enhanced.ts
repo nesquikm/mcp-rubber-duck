@@ -111,7 +111,7 @@ export class EnhancedDuckProvider extends DuckProvider {
       }
 
       // First API call
-      const response = await this.createChatCompletion(baseParams);
+      const response = await this.createChatCompletion(baseParams, options.signal);
       const choice = response.choices[0];
 
       // Check if the model wants to call functions

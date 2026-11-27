@@ -103,7 +103,9 @@ export async function duckDebateTool(
       );
 
       try {
-        const response = await providerManager.askDuck(participant.provider, argumentPrompt);
+        const response = await providerManager.askDuck(participant.provider, argumentPrompt, {
+          signal,
+        });
         roundArguments.push({
           round: roundNum,
           provider: participant.provider,
@@ -160,7 +162,7 @@ export async function duckDebateTool(
   const synthesisErrors: string[] = [];
   for (const candidate of synthesisCandidates) {
     try {
-      synthesisResponse = await providerManager.askDuck(candidate, synthesisPrompt);
+      synthesisResponse = await providerManager.askDuck(candidate, synthesisPrompt, { signal });
       synthesizerProvider = candidate;
       break;
     } catch (error) {

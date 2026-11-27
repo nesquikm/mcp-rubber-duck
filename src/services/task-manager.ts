@@ -1,9 +1,9 @@
 /**
- * Task lifecycle adapter wrapping the MCP SDK's experimental Tasks API.
+ * Task lifecycle manager for the hand-built `io.modelcontextprotocol/tasks`
+ * extension (SEP-2663): background execution, cancellation and retention.
  *
- * This module isolates all direct usage of `@modelcontextprotocol/sdk/experimental`
- * behind a single adapter class so that future breaking changes in the experimental
- * API only require updates here.
+ * SDK-free apart from the `CallToolResult` type; the task store and message
+ * queue contracts are local (see `retention-task-store.ts`).
  */
 
 import type { CallToolResult } from '@modelcontextprotocol/server';
@@ -74,8 +74,8 @@ const DEFAULT_CONFIG: TaskManagerConfig = {
 /**
  * Manages MCP task lifecycle: creation, background execution, cancellation, and cleanup.
  *
- * - Provides `RetentionTaskStore` and `InMemoryTaskMessageQueue` instances for
- *   `McpServer`'s `ProtocolOptions`.
+ * - Owns the process-scoped `RetentionTaskStore` read by the server's
+ *   `tasks/*` handlers, plus an `InMemoryTaskMessageQueue`.
  * - Tracks active background work via `AbortController` per task for cancellation.
  * - Handles graceful shutdown (cancels active tasks, clears timers).
  */

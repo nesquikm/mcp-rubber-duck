@@ -1,14 +1,17 @@
 import { describe, it, expect, jest, beforeEach, afterEach } from '@jest/globals';
 
-import { RetentionTaskStore } from '../../src/services/retention-task-store.js';
+import { RetentionTaskStore, isTerminal } from '../../src/services/retention-task-store.js';
 import { logger } from '../../src/utils/logger.js';
-import type { CallToolResult, Result } from '@modelcontextprotocol/sdk/types.js';
+
+// FR R2JF69: the store is SDK-free, so the result type is taken from the store
+// itself rather than from any @modelcontextprotocol/* package.
+type StoredResult = Parameters<RetentionTaskStore['storeTaskResult']>[2];
 
 // A minimal request object mirroring the shape used in task-manager.test.ts.
 const REQUEST = { method: 'tools/call', params: { name: 'test', arguments: {} } };
 
-function makeResult(text: string): Result {
-  return { content: [{ type: 'text', text }] } as CallToolResult as Result;
+function makeResult(text: string): StoredResult {
+  return { content: [{ type: 'text', text }] } as unknown as StoredResult;
 }
 
 // Under this repo's ESM Jest config (ts-jest default-esm, isolatedModules),
@@ -176,5 +179,17 @@ describe('RetentionTaskStore', () => {
 
     // No error-level "failed" line for an ordinary retention eviction.
     expect(collectErrorMessages().filter((msg) => /failed/i.test(msg))).toHaveLength(0);
+  });
+
+  // AC-R2JF69.8 — the store defines its own isTerminal over the five SEP-2663
+  // statuses; input_required is a live (non-terminal) state.
+  it.each([
+    ['working', false],
+    ['input_required', false],
+    ['completed', true],
+    ['failed', true],
+    ['cancelled', true],
+  ] as [Parameters<typeof isTerminal>[0], boolean][])('AC-R2JF69.8: isTerminal(%s) is %s', (status, terminal) => {
+    expect(isTerminal(status)).toBe(terminal);
   });
 });
