@@ -118,12 +118,13 @@ describe('UI build output', () => {
         expect(html).not.toMatch(/<script[^>]+src="[^"]+\.js"/);
       });
 
-      it('should contain ext-apps App class usage', () => {
+      it('should subscribe to tool results via addEventListener("toolresult", …)', () => {
         const html = readFileSync(requireArtifact(entry), 'utf-8');
 
-        // The bundled JS should contain App class instantiation
-        // (from @modelcontextprotocol/ext-apps)
-        expect(html).toContain('ontoolresult');
+        // ext-apps 2 deprecates the ontoolresult setter; the View subscribes
+        // with app.addEventListener('toolresult', handler). The method name and
+        // the string literal survive minification.
+        expect(html).toMatch(/\.addEventListener\(\s*["'`]toolresult["'`]\s*,/);
       });
     });
   }

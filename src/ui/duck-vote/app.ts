@@ -31,7 +31,7 @@ const consensusConfig: Record<string, { color: string; label: string }> = {
 
 const app = new App({ name: 'DuckVote', version: '1.0.0' }, {});
 
-app.ontoolresult = (params) => {
+app.addEventListener('toolresult', (params) => {
   const container = document.getElementById('app')!;
   if (params.isError) {
     container.innerHTML = `<div class="error-banner">Tool execution failed</div>`;
@@ -50,7 +50,7 @@ app.ontoolresult = (params) => {
   } catch {
     container.innerHTML = `<div class="error-banner">Failed to parse vote data</div>`;
   }
-};
+});
 
 function render(data: VoteData) {
   const container = document.getElementById('app')!;

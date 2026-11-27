@@ -104,9 +104,9 @@ describe('Dynamic Provider Enum in Tool Schemas', () => {
       // Dynamic import to pick up env vars
       const { RubberDuckServer } = await import('../../src/server.js');
       const server = new RubberDuckServer();
-      // Access the internal McpServer's registered tools
+      // Access the registered tools of a fresh McpServer built by the factory
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      tools = (server as any).server._registeredTools;
+      tools = (server.buildMcpServer() as any)._registeredTools;
     });
 
     afterAll(() => {

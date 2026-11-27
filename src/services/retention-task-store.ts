@@ -27,11 +27,46 @@
  * (rather than returning `Promise.resolve`) ensures a guard-clause `throw`
  * surfaces as a rejected promise instead of a synchronous throw. */
 
-import { isTerminal } from '@modelcontextprotocol/sdk/experimental';
-import type { TaskStore, CreateTaskOptions } from '@modelcontextprotocol/sdk/experimental';
-import type { Task, RequestId, Request, Result } from '@modelcontextprotocol/sdk/types.js';
+import type { Task, RequestId, Request, Result } from '@modelcontextprotocol/server';
 import { randomBytes } from 'node:crypto';
 import { logger } from '../utils/logger.js';
+
+/** Options accepted by `TaskStore.createTask` (local copy of the removed v1 SDK type). */
+export interface CreateTaskOptions {
+  ttl?: number | null;
+  pollInterval?: number;
+  context?: Record<string, unknown>;
+}
+
+/** Task storage contract (local copy of the removed v1 SDK `TaskStore` interface). */
+export interface TaskStore {
+  createTask(
+    taskParams: CreateTaskOptions,
+    requestId: RequestId,
+    request: Request,
+    sessionId?: string
+  ): Promise<Task>;
+  getTask(taskId: string, sessionId?: string): Promise<Task | null>;
+  storeTaskResult(
+    taskId: string,
+    status: 'completed' | 'failed',
+    result: Result,
+    sessionId?: string
+  ): Promise<void>;
+  getTaskResult(taskId: string, sessionId?: string): Promise<Result>;
+  updateTaskStatus(
+    taskId: string,
+    status: Task['status'],
+    statusMessage?: string,
+    sessionId?: string
+  ): Promise<void>;
+  listTasks(cursor?: string, sessionId?: string): Promise<{ tasks: Task[]; nextCursor?: string }>;
+}
+
+/** True when a task status is terminal (`completed`, `failed` or `cancelled`). */
+export function isTerminal(status: Task['status']): boolean {
+  return status === 'completed' || status === 'failed' || status === 'cancelled';
+}
 
 /** Internal record wrapping a task with its request context and retention window. */
 interface StoredTask {
@@ -213,9 +248,7 @@ export class RetentionTaskStore implements TaskStore {
     const pageTaskIds = allTaskIds.slice(startIndex, startIndex + PAGE_SIZE);
     const tasks = pageTaskIds.map((taskId) => ({ ...this.tasks.get(taskId)!.task }));
     const nextCursor =
-      startIndex + PAGE_SIZE < allTaskIds.length
-        ? pageTaskIds[pageTaskIds.length - 1]
-        : undefined;
+      startIndex + PAGE_SIZE < allTaskIds.length ? pageTaskIds[pageTaskIds.length - 1] : undefined;
     return { tasks, nextCursor };
   }
 

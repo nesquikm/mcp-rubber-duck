@@ -13,6 +13,7 @@
     "dev": "tsx watch src/index.ts",
     "start": "node dist/index.js",
     "test": "NODE_OPTIONS='--experimental-vm-modules' jest",
+    "test:e2e": "NODE_OPTIONS='--experimental-vm-modules' jest --config e2e.config.js",
     "test:watch": "NODE_OPTIONS='--experimental-vm-modules' jest --watch",
     "lint": "eslint src",
     "format": "prettier --write \"src/**/*.ts\"",
@@ -42,9 +43,13 @@
     "provenance": true,
     "access": "public"
   },
+  "engines": {
+    "node": ">=20"
+  },
   "dependencies": {
-    "@modelcontextprotocol/ext-apps": "^1.0.1",
-    "@modelcontextprotocol/sdk": "^1.31.0",
+    "@modelcontextprotocol/client": "~2.4.0",
+    "@modelcontextprotocol/ext-apps": "^2.0.4",
+    "@modelcontextprotocol/server": "~2.4.0",
     "ajv": "^8.17.1",
     "dotenv": "^16.4.0",
     "openai": "^4.0.0",

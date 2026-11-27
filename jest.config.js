@@ -15,6 +15,8 @@ export default {
     ],
   },
   testMatch: ['**/tests/**/*.test.ts'],
+  // tests/e2e/ is its own project (e2e.config.js, `npm run test:e2e`).
+  testPathIgnorePatterns: ['/node_modules/', '<rootDir>/tests/e2e/'],
   collectCoverage: true,
   coverageDirectory: 'coverage',
   coverageReporters: ['text', 'lcov', 'html'],

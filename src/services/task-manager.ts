@@ -6,11 +6,52 @@
  * API only require updates here.
  */
 
-import { InMemoryTaskMessageQueue } from '@modelcontextprotocol/sdk/experimental';
-import type { TaskStore, TaskMessageQueue } from '@modelcontextprotocol/sdk/experimental';
-import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
+import type { CallToolResult } from '@modelcontextprotocol/server';
 import { RetentionTaskStore } from './retention-task-store.js';
+import type { TaskStore } from './retention-task-store.js';
 import { logger } from '../utils/logger.js';
+
+/** Per-task message queue contract (local copy of the removed v1 SDK type). */
+export interface TaskMessageQueue {
+  enqueue(taskId: string, message: unknown, sessionId?: string, maxSize?: number): Promise<void>;
+  dequeue(taskId: string, sessionId?: string): Promise<unknown>;
+  dequeueAll(taskId: string, sessionId?: string): Promise<unknown[]>;
+}
+
+/** In-memory FIFO `TaskMessageQueue` (local replacement for the removed v1 SDK class). */
+export class InMemoryTaskMessageQueue implements TaskMessageQueue {
+  private queues = new Map<string, unknown[]>();
+
+  private key(taskId: string, sessionId?: string): string {
+    return sessionId ? `${sessionId}:${taskId}` : taskId;
+  }
+
+  enqueue(taskId: string, message: unknown, sessionId?: string, maxSize?: number): Promise<void> {
+    const k = this.key(taskId, sessionId);
+    const queue = this.queues.get(k) ?? [];
+    if (maxSize !== undefined && queue.length >= maxSize) {
+      return Promise.reject(
+        new Error(
+          `Task message queue overflow: queue size (${queue.length}) exceeds maximum (${maxSize})`
+        )
+      );
+    }
+    queue.push(message);
+    this.queues.set(k, queue);
+    return Promise.resolve();
+  }
+
+  dequeue(taskId: string, sessionId?: string): Promise<unknown> {
+    return Promise.resolve(this.queues.get(this.key(taskId, sessionId))?.shift());
+  }
+
+  dequeueAll(taskId: string, sessionId?: string): Promise<unknown[]> {
+    const k = this.key(taskId, sessionId);
+    const queue = this.queues.get(k) ?? [];
+    this.queues.delete(k);
+    return Promise.resolve(queue);
+  }
+}
 
 export interface TaskManagerConfig {
   /** Time-to-live for completed task results (milliseconds). */

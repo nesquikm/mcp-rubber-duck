@@ -1,4 +1,4 @@
-import { Prompt, GetPromptResult } from '@modelcontextprotocol/sdk/types.js';
+import { Prompt, GetPromptResult } from '@modelcontextprotocol/server';
 import { PromptDefinition } from './types.js';
 
 // Import all prompt definitions
