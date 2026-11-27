@@ -1,0 +1,175 @@
+[
+  {
+    "name": "architecture",
+    "description": "Structured architecture or design review from multiple engineering perspectives. Each reviewer focuses on different cross-cutting concerns.",
+    "arguments": [
+      {
+        "name": "design",
+        "description": "Description of the architecture, system design, or technical approach",
+        "required": true
+      },
+      {
+        "name": "workloads",
+        "description": "Key use cases, workloads, or scenarios the design must handle",
+        "required": true
+      },
+      {
+        "name": "priorities",
+        "description": "Non-functional priorities (e.g., \"latency, cost, simplicity, observability\")",
+        "required": true
+      },
+      {
+        "name": "uncertainties",
+        "description": "Areas where you feel most unsure or want extra scrutiny",
+        "required": false
+      }
+    ]
+  },
+  {
+    "name": "assumptions",
+    "description": "Surface and challenge hidden assumptions in a plan, design, or idea. Identifies implicit premises that could be risky if wrong.",
+    "arguments": [
+      {
+        "name": "plan",
+        "description": "The plan, design, or idea to analyze for hidden assumptions",
+        "required": true
+      },
+      {
+        "name": "constraints",
+        "description": "Known hard constraints that are definitely true",
+        "required": false
+      },
+      {
+        "name": "concerns",
+        "description": "Areas where you feel uncertain or worried",
+        "required": false
+      }
+    ]
+  },
+  {
+    "name": "blindspots",
+    "description": "Hunt for missing considerations, overlooked risks, and gaps in a proposal. Acts as a panel of critical reviewers looking for what might be underweighted.",
+    "arguments": [
+      {
+        "name": "proposal",
+        "description": "The plan, code, design, or proposal to review for blindspots",
+        "required": true
+      },
+      {
+        "name": "covered",
+        "description": "What you think you have already addressed or considered",
+        "required": false
+      },
+      {
+        "name": "risk_tolerance",
+        "description": "Your risk tolerance level: low, medium, or high",
+        "required": false
+      }
+    ]
+  },
+  {
+    "name": "diverge_converge",
+    "description": "Structure divergent thinking (explore many options) followed by convergence (evaluate and select). Maximizes creative exploration before narrowing down.",
+    "arguments": [
+      {
+        "name": "challenge",
+        "description": "The problem or challenge to solve",
+        "required": true
+      },
+      {
+        "name": "width",
+        "description": "Exploration width: \"wild\" for creative/unconventional, \"focused\" for practical",
+        "required": false
+      },
+      {
+        "name": "convergence_criteria",
+        "description": "What makes a solution \"good\" - criteria for evaluating options",
+        "required": false
+      }
+    ]
+  },
+  {
+    "name": "perspectives",
+    "description": "Analyze a problem from multiple perspectives. Each LLM adopts a different analytical lens (e.g., security, performance, UX) for comprehensive multi-angle analysis.",
+    "arguments": [
+      {
+        "name": "problem",
+        "description": "The problem, design, or code to analyze",
+        "required": true
+      },
+      {
+        "name": "perspectives",
+        "description": "Comma-separated analytical lenses (e.g., \"security, performance, UX, maintainability\")",
+        "required": true
+      },
+      {
+        "name": "context",
+        "description": "Additional background or constraints",
+        "required": false
+      }
+    ]
+  },
+  {
+    "name": "red_team",
+    "description": "Conduct attack surface analysis from multiple angles. Each reviewer focuses on different risk dimensions (security, privacy, abuse, compliance).",
+    "arguments": [
+      {
+        "name": "target",
+        "description": "The system, feature, code, or plan to red-team",
+        "required": true
+      },
+      {
+        "name": "threat_model",
+        "description": "Known threat actors, attack scenarios, or security context",
+        "required": false
+      },
+      {
+        "name": "dimensions",
+        "description": "Risk dimensions to focus on (e.g., \"security, privacy, abuse, compliance, reputation\")",
+        "required": false
+      }
+    ]
+  },
+  {
+    "name": "reframe",
+    "description": "Reframe a problem from multiple angles and abstraction levels. Helps break out of mental ruts by viewing the problem differently.",
+    "arguments": [
+      {
+        "name": "problem",
+        "description": "The current problem statement or challenge",
+        "required": true
+      },
+      {
+        "name": "stuck_on",
+        "description": "What specifically you are stuck on or frustrated by",
+        "required": false
+      }
+    ]
+  },
+  {
+    "name": "tradeoffs",
+    "description": "Compare options with explicit criteria and trade-off analysis. Provides structured evaluation to help make informed decisions.",
+    "arguments": [
+      {
+        "name": "options",
+        "description": "The options to compare (comma-separated list or detailed descriptions)",
+        "required": true
+      },
+      {
+        "name": "criteria",
+        "description": "Evaluation criteria (comma-separated, e.g., \"cost, complexity, performance\")",
+        "required": true
+      },
+      {
+        "name": "context",
+        "description": "Decision context, constraints, or background",
+        "required": false
+      },
+      {
+        "name": "weights",
+        "description": "Which criteria matter most (priority order or weights)",
+        "required": false
+      }
+    ]
+  }
+]

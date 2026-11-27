@@ -1,0 +1,26 @@
+[
+  {
+    "name": "Compare Ducks",
+    "uri": "ui://rubber-duck/compare-ducks",
+    "description": "Interactive UI for Compare Ducks",
+    "mimeType": "text/html;profile=mcp-app"
+  },
+  {
+    "name": "Duck Debate",
+    "uri": "ui://rubber-duck/duck-debate",
+    "description": "Interactive UI for Duck Debate",
+    "mimeType": "text/html;profile=mcp-app"
+  },
+  {
+    "name": "Duck Vote",
+    "uri": "ui://rubber-duck/duck-vote",
+    "description": "Interactive UI for Duck Vote",
+    "mimeType": "text/html;profile=mcp-app"
+  },
+  {
+    "name": "Usage Stats",
+    "uri": "ui://rubber-duck/usage-stats",
+    "description": "Interactive UI for Usage Stats",
+    "mimeType": "text/html;profile=mcp-app"
+  }
+]
