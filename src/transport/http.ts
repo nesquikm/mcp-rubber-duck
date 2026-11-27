@@ -101,7 +101,10 @@ export async function serveHttp(
     responseMode: 'auto',
     onerror: options.onerror,
   });
-  const guarded = guardHttpFetch((req, opts) => handler.fetch(req, opts as McpHandlerRequestOptions), options);
+  const guarded = guardHttpFetch(
+    (req, opts) => handler.fetch(req, opts as McpHandlerRequestOptions),
+    options
+  );
   const nodeHandler = toNodeHandler({ fetch: guarded }, { onerror: options.onerror });
   const server = createServer((req, res) => void nodeHandler(req, res));
 

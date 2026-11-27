@@ -14,6 +14,7 @@ npm run dev            # Development with watch mode
 npm test               # Run all tests
 npm test -- tests/config.test.ts                    # Single test file
 npm test -- --testNamePattern="should load config"  # Specific test
+npm run build && npm run test:e2e                   # E2E: spawn dist/index.js (stdio + HTTP) against a mock provider
 npm run lint           # ESLint
 npm run format         # Prettier
 npm run typecheck      # Type check without emit
@@ -105,7 +106,7 @@ Config uses Zod schemas in `src/config/types.ts`. When adding config options:
 
 - **Language:** TypeScript 5.x (ESM, `"type": "module"`)
 - **Runtime:** Node.js
-- **Framework:** MCP SDK (`@modelcontextprotocol/sdk`)
+- **Framework:** MCP SDK v2 (`@modelcontextprotocol/server` + `@modelcontextprotocol/client` ~2.4, `@modelcontextprotocol/node` for HTTP; ext-apps 2 for UI views)
 - **Build:** `tsc` + Vite (UI builds)
 - **Testing:** Jest 29 with `ts-jest` (ESM via `--experimental-vm-modules`)
 - **Validation:** Zod (types inferred via `z.infer<>`)

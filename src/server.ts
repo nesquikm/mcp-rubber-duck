@@ -378,7 +378,7 @@ export class RubberDuckServer {
         description: this.mcpEnabled
           ? 'Ask a question to a specific LLM provider (duck) with MCP tool access'
           : 'Ask a question to a specific LLM provider (duck)',
-        inputSchema: {
+        inputSchema: z.object({
           prompt: z.string().describe('The question or prompt to send to the duck'),
           provider: this.providerEnum()
             .optional()
@@ -397,7 +397,7 @@ export class RubberDuckServer {
             .array(ImageInputSchema)
             .optional()
             .describe('Optional images to include with the prompt (for vision-capable models)'),
-        },
+        }),
         annotations: {
           readOnlyHint: true,
           openWorldHint: true,
@@ -421,7 +421,7 @@ export class RubberDuckServer {
       {
         title: 'Chat with a Duck',
         description: 'Have a conversation with a duck, maintaining context across messages',
-        inputSchema: {
+        inputSchema: z.object({
           conversation_id: z.string().describe('Conversation ID (creates new if not exists)'),
           message: z.string().describe('Your message to the duck'),
           provider: this.providerEnum()
@@ -432,7 +432,7 @@ export class RubberDuckServer {
             .array(ImageInputSchema)
             .optional()
             .describe('Optional images to include with the message (for vision-capable models)'),
-        },
+        }),
         annotations: {
           openWorldHint: true,
         },
@@ -475,12 +475,12 @@ export class RubberDuckServer {
       {
         title: 'List Ducks',
         description: 'List all available LLM providers (ducks) and their status',
-        inputSchema: {
+        inputSchema: z.object({
           check_health: z
             .boolean()
             .default(false)
             .describe('Perform health check on all providers'),
-        },
+        }),
         annotations: {
           readOnlyHint: true,
           openWorldHint: true,
@@ -503,7 +503,7 @@ export class RubberDuckServer {
       {
         title: 'List Models',
         description: 'List available models for LLM providers',
-        inputSchema: {
+        inputSchema: z.object({
           provider: this.providerEnum()
             .optional()
             .describe('Provider name (optional, lists all if not specified)'),
@@ -511,7 +511,7 @@ export class RubberDuckServer {
             .boolean()
             .default(false)
             .describe('Fetch latest models from API vs using cached/configured'),
-        },
+        }),
         annotations: {
           readOnlyHint: true,
           openWorldHint: true,
@@ -533,7 +533,7 @@ export class RubberDuckServer {
       {
         title: 'Compare Ducks',
         description: 'Ask the same question to multiple ducks simultaneously',
-        inputSchema: {
+        inputSchema: z.object({
           prompt: z.string().describe('The question to ask all ducks'),
           providers: z
             .array(this.providerEnum())
@@ -547,8 +547,8 @@ export class RubberDuckServer {
             .array(ImageInputSchema)
             .optional()
             .describe('Optional images to include with the prompt (for vision-capable models)'),
-        },
-        outputSchema: {
+        }),
+        outputSchema: z.object({
           responses: z.array(
             z.object({
               provider: z.string(),
@@ -566,7 +566,7 @@ export class RubberDuckServer {
               error: z.string().optional(),
             })
           ),
-        },
+        }),
         annotations: {
           readOnlyHint: true,
           openWorldHint: true,
@@ -592,14 +592,14 @@ export class RubberDuckServer {
       {
         title: 'Duck Council',
         description: 'Get responses from all configured ducks (like a panel discussion)',
-        inputSchema: {
+        inputSchema: z.object({
           prompt: z.string().describe('The question for the duck council'),
           model: z.string().optional().describe('Specific model to use for all ducks (optional)'),
           images: z
             .array(ImageInputSchema)
             .optional()
             .describe('Optional images to include with the prompt (for vision-capable models)'),
-        },
+        }),
         annotations: {
           readOnlyHint: true,
           openWorldHint: true,
@@ -626,7 +626,7 @@ export class RubberDuckServer {
         title: 'Duck Vote',
         description:
           'Have multiple ducks vote on options with reasoning. Returns vote tally, confidence scores, and consensus level.',
-        inputSchema: {
+        inputSchema: z.object({
           question: z
             .string()
             .describe('The question to vote on (e.g., "Best approach for error handling?")'),
@@ -643,8 +643,8 @@ export class RubberDuckServer {
             .boolean()
             .default(true)
             .describe('Require ducks to explain their vote (default: true)'),
-        },
-        outputSchema: {
+        }),
+        outputSchema: z.object({
           question: z.string(),
           options: z.array(z.string()),
           winner: z.string().nullable(),
@@ -664,7 +664,7 @@ export class RubberDuckServer {
           totalVoters: z.number(),
           validVotes: z.number(),
           consensusLevel: z.enum(['unanimous', 'majority', 'plurality', 'split', 'none']),
-        },
+        }),
         annotations: {
           readOnlyHint: true,
           openWorldHint: true,
@@ -688,7 +688,7 @@ export class RubberDuckServer {
         title: 'Duck Judge',
         description:
           "Have one duck evaluate and rank other ducks' responses. Use after duck_council to get a comparative evaluation.",
-        inputSchema: {
+        inputSchema: z.object({
           responses: z
             .array(
               z.object({
@@ -711,7 +711,7 @@ export class RubberDuckServer {
             .string()
             .optional()
             .describe('Judge persona (e.g., "senior engineer", "security expert")'),
-        },
+        }),
         annotations: {
           readOnlyHint: true,
           openWorldHint: true,
@@ -733,7 +733,7 @@ export class RubberDuckServer {
         title: 'Duck Iteration',
         description:
           'Iteratively refine a response between two ducks. One generates, the other critiques/improves, alternating for multiple rounds.',
-        inputSchema: {
+        inputSchema: z.object({
           prompt: z.string().describe('The initial prompt/task to iterate on'),
           iterations: z
             .number()
@@ -751,7 +751,7 @@ export class RubberDuckServer {
             .describe(
               'refine: each duck improves the previous response. critique-improve: alternates between critiquing and improving.'
             ),
-        },
+        }),
         annotations: {
           readOnlyHint: true,
           openWorldHint: true,
@@ -781,7 +781,7 @@ export class RubberDuckServer {
         title: 'Duck Debate',
         description:
           'Structured multi-round debate between ducks. Supports oxford (pro/con), socratic (questioning), and adversarial (attack/defend) formats.',
-        inputSchema: {
+        inputSchema: z.object({
           prompt: z.string().describe('The debate topic or proposition'),
           rounds: z
             .number()
@@ -802,8 +802,8 @@ export class RubberDuckServer {
           synthesizer: this.providerEnum()
             .optional()
             .describe('Provider to synthesize the debate (optional, uses first provider)'),
-        },
-        outputSchema: {
+        }),
+        outputSchema: z.object({
           topic: z.string(),
           format: z.enum(['oxford', 'socratic', 'adversarial']),
           totalRounds: z.number(),
@@ -828,7 +828,7 @@ export class RubberDuckServer {
           ),
           synthesis: z.string(),
           synthesizer: z.string(),
-        },
+        }),
         annotations: {
           readOnlyHint: true,
           openWorldHint: true,
@@ -860,13 +860,13 @@ export class RubberDuckServer {
         title: 'Usage Statistics',
         description:
           'Get usage statistics for a time period. Shows token counts and costs (when pricing configured).',
-        inputSchema: {
+        inputSchema: z.object({
           period: z
             .enum(['today', '7d', '30d', 'all'])
             .default('today')
             .describe('Time period for stats'),
-        },
-        outputSchema: {
+        }),
+        outputSchema: z.object({
           period: z.string(),
           startDate: z.string(),
           endDate: z.string(),
@@ -891,7 +891,7 @@ export class RubberDuckServer {
             )
           ),
           costByProvider: z.record(z.string(), z.number()).optional(),
-        },
+        }),
         annotations: {
           readOnlyHint: true,
           openWorldHint: false,
@@ -915,9 +915,9 @@ export class RubberDuckServer {
         {
           title: 'Pending Approvals',
           description: 'Get list of pending MCP tool approvals from ducks',
-          inputSchema: {
+          inputSchema: z.object({
             duck: this.providerEnum().optional().describe('Filter by duck name (optional)'),
-          },
+          }),
           annotations: {
             readOnlyHint: true,
             openWorldHint: false,
@@ -941,13 +941,13 @@ export class RubberDuckServer {
         {
           title: 'Approve MCP Request',
           description: "Approve or deny a duck's MCP tool request",
-          inputSchema: {
+          inputSchema: z.object({
             approval_id: z.string().describe('The approval request ID'),
             decision: z
               .enum(['approve', 'deny'])
               .describe('Whether to approve or deny the request'),
             reason: z.string().optional().describe('Reason for denial (optional)'),
-          },
+          }),
           annotations: {
             idempotentHint: true,
             openWorldHint: false,
@@ -999,10 +999,10 @@ export class RubberDuckServer {
 
   private registerPrompts(server: McpServer) {
     for (const [name, prompt] of Object.entries(PROMPTS)) {
-      // Convert prompt.arguments array to Zod schema
-      const argsSchema: Record<string, z.ZodType> = {};
+      // Convert prompt.arguments array to a Zod object schema
+      const argsShape: Record<string, z.ZodType> = {};
       for (const arg of prompt.arguments || []) {
-        argsSchema[arg.name] = arg.required
+        argsShape[arg.name] = arg.required
           ? z.string().describe(arg.description || '')
           : z
               .string()
@@ -1014,7 +1014,7 @@ export class RubberDuckServer {
         name,
         {
           description: prompt.description,
-          argsSchema,
+          argsSchema: z.object(argsShape),
         },
         (args) => {
           try {

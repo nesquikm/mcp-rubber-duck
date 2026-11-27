@@ -11,16 +11,16 @@
 A multi-agent research pass (codebase audit + MCP-spec frontier + competitive landscape + 2025–26 LLM literature) produced these picks:
 
 1. **Debiased `duck_judge` Panel** ([#119](https://github.com/nesquikm/mcp-rubber-duck/issues/119)) — *top pick.* Harden the least-developed consensus tool into a multi-provider judge panel: position-bias swap-and-average, criterion-separated rubric, Borda/mean-rank across heterogeneous judges, agreement-derived confidence, and the `outputSchema` it currently lacks. Lands on the project's structural moat (a judge can't cancel its own bias; inter-judge agreement needs multiple providers). Medium effort, client-agnostic, ships on STDIO today.
-2. **Streamable HTTP transport** ([#57](https://github.com/nesquikm/mcp-rubber-duck/issues/57)) — *top strategic lever.* The 2026-07-28 MCP RC pivots to a stateless core; HTTP is now the single biggest reach gap and the prerequisite for Server Cards (#49/#98/#101) and hosted/multi-tenant deployment. Elevate above the cognitive Duck-X tools.
+2. ~~**Streamable HTTP transport** ([#57](https://github.com/nesquikm/mcp-rubber-duck/issues/57))~~ ✅ — shipped in v2.0.0 with the move to MCP SDK v2 and the final 2026-07-28 spec (stateless, bearer token, both protocol eras). This unblocks Server Cards ([#98](https://github.com/nesquikm/mcp-rubber-duck/issues/98)), now the next step for hosted deployment.
 3. **`duck_check` cross-vendor action gate** ([#120](https://github.com/nesquikm/mcp-rubber-duck/issues/120)) — best genuinely-new idea. An agent-facing GO/BLOCK/ASK-HUMAN gate for risky actions; `dissent_ratio` is only meaningful across vendors. Pair with #40 so the shared cross-model disagreement signal is built once.
 
 ### Positioning: aligned with the post-Sampling spec direction
 
-The 2026-07-28 MCP RC ([SEP-2577](https://github.com/modelcontextprotocol/modelcontextprotocol/pull/2577), merged 2026-05-15 — annotation-only, 12-month window) deprecates **Sampling** (the primitive that let a server borrow the host's model) and points servers needing model access toward **direct integration with LLM provider APIs**. That is exactly what Rubber Duck does: it brings its own provider connections rather than depending on host Sampling. The project is already aligned with the spec's recommended direction — worth stating explicitly in the README and registry card. (Caveat: annotation-only, and reviewers noted sampling may return in a more flexible form — frame as "aligned with," not "official replacement.")
+The 2026-07-28 MCP spec ([SEP-2577](https://github.com/modelcontextprotocol/modelcontextprotocol/pull/2577), merged 2026-05-15 — annotation-only, 12-month window) deprecates **Sampling** (the primitive that let a server borrow the host's model) and points servers needing model access toward **direct integration with LLM provider APIs**. That is exactly what Rubber Duck does: it brings its own provider connections rather than depending on host Sampling. The project is already aligned with the spec's recommended direction — worth stating explicitly in the README and registry card. (Caveat: annotation-only, and reviewers noted sampling may return in a more flexible form — frame as "aligned with," not "official replacement.")
 
 ### Backlog reprioritization
 
-- **Elevate #57** to the top of Phase 1; sequence Server Cards (#49/#98/#101) explicitly *after* it (they're inert on STDIO-only).
+- ~~**Elevate #57** to the top of Phase 1~~ ✅ (shipped in v2.0.0); Server Cards (#49/#98/#101) are next — tracked in [#98](https://github.com/nesquikm/mcp-rubber-duck/issues/98).
 - **Fold "cross-model confidence" into #40 Calibrate** as its lead implementation (semantic answer-clustering); don't file it separately. Build the disagreement signal once — #120 and #40 both consume it.
 - **Re-scope #10 Router + #20 Fallback as one "consensus-aware cascade"** that escalates *only on measured disagreement* into the council (Self-MoA: strongest duck synthesizes) — sequence strictly after #40.
 - **Defer #55** listChanged (weak client uptake); **gate #35 Deliberate / #12 Autopilot** behind the disagreement signal — 2025–26 evidence shows multi-agent debate/MoA don't reliably beat self-consistency, so avoid shipping more unconditional debate rounds.
@@ -36,7 +36,7 @@ The 2026-07-28 MCP RC ([SEP-2577](https://github.com/modelcontextprotocol/modelc
 | 1c | ~~Image URL support in multimodal input~~ ✅ | [#87](https://github.com/nesquikm/mcp-rubber-duck/issues/87) | Medium | Low |
 | 2 | ~~outputSchema for voting/consensus tools~~ ✅ | [#53](https://github.com/nesquikm/mcp-rubber-duck/issues/53) | High | Low-Medium |
 | 3 | ~~Multi-round tool calling loop~~ ✅ | [#69](https://github.com/nesquikm/mcp-rubber-duck/issues/69) | High | Medium |
-| 4 | Streamable HTTP transport + Streaming responses | [#57](https://github.com/nesquikm/mcp-rubber-duck/issues/57), [#47](https://github.com/nesquikm/mcp-rubber-duck/issues/47) | High | Medium |
+| 4 | ~~Streamable HTTP transport~~ ✅ + Streaming responses | [#57](https://github.com/nesquikm/mcp-rubber-duck/issues/57), [#47](https://github.com/nesquikm/mcp-rubber-duck/issues/47) | High | Medium |
 | 5 | MCP Resources + resource_link | [#48](https://github.com/nesquikm/mcp-rubber-duck/issues/48), [#56](https://github.com/nesquikm/mcp-rubber-duck/issues/56) | Medium-High | Medium |
 | 5b | OpenAI Responses API path (unblocks gpt-5.6 / gpt-6 with MCP Bridge tools; then move OpenAI default to gpt-6) | [#166](https://github.com/nesquikm/mcp-rubber-duck/issues/166) | High | Medium |
 
@@ -66,9 +66,9 @@ The 2026-07-28 MCP RC ([SEP-2577](https://github.com/modelcontextprotocol/modelc
 
 ## Suggested Phases
 
-- **Phase 1** (Foundation): ~~outputSchema (#53)~~ → ~~Multi-round tool calling (#69)~~ → **Streamable HTTP (#57)** + Streaming (#47), plus debiased duck_judge Panel (#119) as a near-term hardening
+- **Phase 1** (Foundation): ~~outputSchema (#53)~~ → ~~Multi-round tool calling (#69)~~ → ~~Streamable HTTP (#57)~~ ✅ + Streaming (#47), plus debiased duck_judge Panel (#119) as a near-term hardening
 - **Phase 2** (Differentiation): duck_check action gate (#120) + Duck Calibrate (#40, builds the shared disagreement signal) + Duck Hypothesis (#45)
-- **Phase 3** (Platform): Server Cards (#49/#98/#101, after #57) + Resources (#48) + consensus-aware cascade (#10 + #20, after #40)
+- **Phase 3** (Platform): Server Cards (#49/#98/#101, now unblocked by #57) + Resources (#48) + consensus-aware cascade (#10 + #20, after #40)
 - **Phase 4** (Agentic): Duck Autopilot (#12) + Duck Deliberate (#35), both gated behind the disagreement signal
 
 ## What We Already Have
@@ -102,7 +102,7 @@ The 2026-07-28 MCP RC ([SEP-2577](https://github.com/modelcontextprotocol/modelc
 - [Multi-Agent Collaboration Survey](https://arxiv.org/abs/2501.06322)
 - [Tree of Thoughts](https://arxiv.org/abs/2305.10601) - 74% vs 4% success on hard problems
 - [KVCOMM](https://arxiv.org/abs/2510.12872) - KV-cache sharing, 70%+ reuse rate
-- [MCP 2026-07-28 Release Candidate](https://blog.modelcontextprotocol.io/posts/2026-07-28-release-candidate/) - stateless core; Sampling/Roots/Logging deprecated ([SEP-2577](https://github.com/modelcontextprotocol/modelcontextprotocol/pull/2577))
+- [MCP 2026-07-28 specification](https://blog.modelcontextprotocol.io/posts/2026-07-28-release-candidate/) (release-candidate announcement) - stateless core; Sampling/Roots/Logging deprecated ([SEP-2577](https://github.com/modelcontextprotocol/modelcontextprotocol/pull/2577))
 - [Judging LLM-as-a-Judge (MT-Bench)](https://arxiv.org/abs/2306.05685) - position/verbosity/self-enhancement bias in LLM judges (backs #119)
 - [LLMs are not Fair Evaluators](https://arxiv.org/abs/2305.17926) - Balanced Position Calibration / swap-and-average (backs #119)
 - [Multi-Agent Verification](https://arxiv.org/abs/2502.20379) - aspect verifiers / BoN-MAV (backs #120)

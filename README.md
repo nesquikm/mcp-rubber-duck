@@ -10,7 +10,7 @@ An MCP (Model Context Protocol) server that acts as a bridge to query multiple L
   <img src="assets/mcp-rubber-duck.jpg" alt="MCP Rubber Duck - AI ducks helping debug code" width="600">
 </p>
 
-> **Why direct provider integration?** MCP's `sampling` primitive -- a server borrowing the *host's* model -- was deprecated in the [2026-07-28 spec RC](https://github.com/modelcontextprotocol/modelcontextprotocol/pull/2577) in favor of servers integrating directly with LLM provider APIs. Rubber Duck has always worked this way (it brings its own ducks), so it's aligned with where the protocol is heading -- no migration required.
+> **Why direct provider integration?** MCP's `sampling` primitive -- a server borrowing the *host's* model -- was deprecated in the [2026-07-28 spec](https://github.com/modelcontextprotocol/modelcontextprotocol/pull/2577) in favor of servers integrating directly with LLM provider APIs. Rubber Duck has always worked this way (it brings its own ducks), so it's aligned with where the protocol is heading -- no migration required.
 
 ## Features
 
@@ -121,6 +121,27 @@ Create a `.env` file or `config/config.json`. Key environment variables:
 | `CLI_{AGENT}_ENABLED` | Enable CLI agents (`CLAUDE`, `CODEX`, `GEMINI`, `GROK`, `AIDER`) |
 
 Full reference: **[Configuration docs](./docs/configuration.md)**
+
+### Transports
+
+The server speaks MCP over **stdio** by default, which is what Claude Desktop, Claude Code and most MCP hosts launch. Clients on the 2026-07-28 protocol and on 2025-11-25 are both served from the same binary.
+
+**Streamable HTTP is opt-in.** Set `MCP_TRANSPORT=http` and the server answers `POST /mcp` on `MCP_HTTP_HOST:MCP_HTTP_PORT` (`127.0.0.1:3000` by default), statelessly, in both protocol eras:
+
+```bash
+MCP_TRANSPORT=http MCP_HTTP_TOKEN=$(openssl rand -hex 32) npx mcp-rubber-duck
+```
+
+- **Token.** When `MCP_HTTP_TOKEN` is set, every request needs `Authorization: Bearer <token>`; anything else gets `401`. Binding to anything other than loopback (`127.x`, `localhost`, `::1`) **without** a token refuses to start.
+- **Host and Origin.** Requests whose `Host` is not localhost or the configured host, or whose `Origin` is not localhost or listed in `MCP_HTTP_ALLOWED_ORIGINS` (comma-separated hostnames), get `403`. Requests with no `Origin` (non-browser clients) are served.
+- **Progress** streams as `notifications/progress` on the response SSE stream.
+
+### Breaking changes in 2.0
+
+- **MCP SDK v2.** Built on `@modelcontextprotocol/server` / `client` 2.4 (the final 2026-07-28 spec); Node.js 20+ is required.
+- **Background tasks are 2026-07-28 only.** `duck_iterate` and `duck_debate` return a task (the `io.modelcontextprotocol/tasks` extension) only when the client declares that extension. Clients on 2025-11-25, and 2026-07-28 clients without it, get the ordinary synchronous result. `tasks/cancel` now really aborts the work.
+- **Unknown tool** calls return the JSON-RPC error `-32602` instead of an `isError` result.
+- **No MCP logging capability** is advertised (deprecated in 2026-07-28); logs go to stderr.
 
 ## Interactive UIs (MCP Apps)
 
