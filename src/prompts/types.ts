@@ -1,4 +1,4 @@
-import { Prompt, PromptMessage } from '@modelcontextprotocol/sdk/types.js';
+import { Prompt, PromptMessage } from '@modelcontextprotocol/server';
 
 /**
  * Extended Prompt definition that includes a buildMessages function

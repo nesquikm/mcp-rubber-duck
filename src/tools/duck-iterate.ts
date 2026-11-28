@@ -65,7 +65,7 @@ export async function duckIterateTool(
   }
 
   // Round 1: Initial generation by provider A
-  const initialResponse = await providerManager.askDuck(providers[0], prompt);
+  const initialResponse = await providerManager.askDuck(providers[0], prompt, { signal });
   const providerAInfo = providerManager.getProvider(providers[0]);
 
   rounds.push({
@@ -97,7 +97,7 @@ export async function duckIterateTool(
 
     const iterationPrompt = buildIterationPrompt(prompt, lastResponse, mode, i, rounds);
 
-    const response = await providerManager.askDuck(currentProvider, iterationPrompt);
+    const response = await providerManager.askDuck(currentProvider, iterationPrompt, { signal });
 
     // Check for convergence
     if (checkConvergence(lastResponse, response.content)) {

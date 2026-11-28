@@ -1,0 +1,1048 @@
+[
+  {
+    "name": "approve_mcp_request",
+    "title": "Approve MCP Request",
+    "description": "Approve or deny a duck's MCP tool request",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "approval_id": {
+          "type": "string",
+          "description": "The approval request ID"
+        },
+        "decision": {
+          "type": "string",
+          "enum": [
+            "approve",
+            "deny"
+          ],
+          "description": "Whether to approve or deny the request"
+        },
+        "reason": {
+          "description": "Reason for denial (optional)",
+          "type": "string"
+        }
+      },
+      "required": [
+        "approval_id",
+        "decision"
+      ],
+      "$schema": "http://json-schema.org/draft-07/schema#"
+    },
+    "annotations": {
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "execution": {
+      "taskSupport": "forbidden"
+    }
+  },
+  {
+    "name": "ask_duck",
+    "title": "Ask a Duck",
+    "description": "Ask a question to a specific LLM provider (duck) with MCP tool access",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "prompt": {
+          "type": "string",
+          "description": "The question or prompt to send to the duck"
+        },
+        "provider": {
+          "description": "The provider name (optional, uses default if not specified)",
+          "type": "string",
+          "enum": [
+            "openai"
+          ]
+        },
+        "model": {
+          "description": "Specific model to use (optional, uses provider default if not specified)",
+          "type": "string"
+        },
+        "temperature": {
+          "description": "Temperature for response generation (0-2)",
+          "type": "number",
+          "minimum": 0,
+          "maximum": 2
+        },
+        "images": {
+          "description": "Optional images to include with the prompt (for vision-capable models)",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "data": {
+                "description": "Base64-encoded image data",
+                "type": "string"
+              },
+              "url": {
+                "description": "Image URL — passed directly to the LLM provider",
+                "type": "string"
+              },
+              "mimeType": {
+                "description": "MIME type (e.g., \"image/png\") — required for base64 data, optional for URLs",
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      "required": [
+        "prompt"
+      ],
+      "$schema": "http://json-schema.org/draft-07/schema#"
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "openWorldHint": true
+    },
+    "execution": {
+      "taskSupport": "forbidden"
+    }
+  },
+  {
+    "name": "chat_with_duck",
+    "title": "Chat with a Duck",
+    "description": "Have a conversation with a duck, maintaining context across messages",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "conversation_id": {
+          "type": "string",
+          "description": "Conversation ID (creates new if not exists)"
+        },
+        "message": {
+          "type": "string",
+          "description": "Your message to the duck"
+        },
+        "provider": {
+          "description": "Provider to use (can switch mid-conversation)",
+          "type": "string",
+          "enum": [
+            "openai"
+          ]
+        },
+        "model": {
+          "description": "Specific model to use (optional)",
+          "type": "string"
+        },
+        "images": {
+          "description": "Optional images to include with the message (for vision-capable models)",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "data": {
+                "description": "Base64-encoded image data",
+                "type": "string"
+              },
+              "url": {
+                "description": "Image URL — passed directly to the LLM provider",
+                "type": "string"
+              },
+              "mimeType": {
+                "description": "MIME type (e.g., \"image/png\") — required for base64 data, optional for URLs",
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      "required": [
+        "conversation_id",
+        "message"
+      ],
+      "$schema": "http://json-schema.org/draft-07/schema#"
+    },
+    "annotations": {
+      "openWorldHint": true
+    },
+    "execution": {
+      "taskSupport": "forbidden"
+    }
+  },
+  {
+    "name": "clear_conversations",
+    "title": "Clear Conversations",
+    "description": "Clear all conversation history and start fresh",
+    "inputSchema": {
+      "type": "object",
+      "properties": {}
+    },
+    "annotations": {
+      "destructiveHint": true,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "execution": {
+      "taskSupport": "forbidden"
+    }
+  },
+  {
+    "name": "compare_ducks",
+    "title": "Compare Ducks",
+    "description": "Ask the same question to multiple ducks simultaneously",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "prompt": {
+          "type": "string",
+          "description": "The question to ask all ducks"
+        },
+        "providers": {
+          "description": "List of provider names to query (optional, uses all if not specified)",
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "openai"
+            ]
+          }
+        },
+        "model": {
+          "description": "Specific model to use for all providers (optional)",
+          "type": "string"
+        },
+        "images": {
+          "description": "Optional images to include with the prompt (for vision-capable models)",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "data": {
+                "description": "Base64-encoded image data",
+                "type": "string"
+              },
+              "url": {
+                "description": "Image URL — passed directly to the LLM provider",
+                "type": "string"
+              },
+              "mimeType": {
+                "description": "MIME type (e.g., \"image/png\") — required for base64 data, optional for URLs",
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      "required": [
+        "prompt"
+      ],
+      "$schema": "http://json-schema.org/draft-07/schema#"
+    },
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "responses": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "provider": {
+                "type": "string"
+              },
+              "nickname": {
+                "type": "string"
+              },
+              "model": {
+                "type": "string"
+              },
+              "content": {
+                "type": "string"
+              },
+              "latency": {
+                "type": "number"
+              },
+              "tokens": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "prompt": {
+                        "type": "number"
+                      },
+                      "completion": {
+                        "type": "number"
+                      },
+                      "total": {
+                        "type": "number"
+                      }
+                    },
+                    "required": [
+                      "prompt",
+                      "completion",
+                      "total"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "error": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "provider",
+              "nickname",
+              "model",
+              "content",
+              "latency",
+              "tokens"
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      "required": [
+        "responses"
+      ],
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "openWorldHint": true
+    },
+    "execution": {
+      "taskSupport": "forbidden"
+    },
+    "_meta": {
+      "ui": {
+        "resourceUri": "ui://rubber-duck/compare-ducks"
+      },
+      "ui/resourceUri": "ui://rubber-duck/compare-ducks"
+    }
+  },
+  {
+    "name": "duck_council",
+    "title": "Duck Council",
+    "description": "Get responses from all configured ducks (like a panel discussion)",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "prompt": {
+          "type": "string",
+          "description": "The question for the duck council"
+        },
+        "model": {
+          "description": "Specific model to use for all ducks (optional)",
+          "type": "string"
+        },
+        "images": {
+          "description": "Optional images to include with the prompt (for vision-capable models)",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "data": {
+                "description": "Base64-encoded image data",
+                "type": "string"
+              },
+              "url": {
+                "description": "Image URL — passed directly to the LLM provider",
+                "type": "string"
+              },
+              "mimeType": {
+                "description": "MIME type (e.g., \"image/png\") — required for base64 data, optional for URLs",
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      "required": [
+        "prompt"
+      ],
+      "$schema": "http://json-schema.org/draft-07/schema#"
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "openWorldHint": true
+    },
+    "execution": {
+      "taskSupport": "forbidden"
+    }
+  },
+  {
+    "name": "duck_debate",
+    "title": "Duck Debate",
+    "description": "Structured multi-round debate between ducks. Supports oxford (pro/con), socratic (questioning), and adversarial (attack/defend) formats.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "prompt": {
+          "type": "string",
+          "description": "The debate topic or proposition"
+        },
+        "rounds": {
+          "default": 3,
+          "description": "Number of debate rounds (default: 3)",
+          "type": "number",
+          "minimum": 1,
+          "maximum": 10
+        },
+        "providers": {
+          "description": "Provider names to participate (min 2, uses all if not specified)",
+          "minItems": 2,
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "openai"
+            ]
+          }
+        },
+        "format": {
+          "type": "string",
+          "enum": [
+            "oxford",
+            "socratic",
+            "adversarial"
+          ],
+          "description": "Debate format: oxford (pro/con), socratic (questioning), adversarial (attack/defend)"
+        },
+        "synthesizer": {
+          "description": "Provider to synthesize the debate (optional, uses first provider)",
+          "type": "string",
+          "enum": [
+            "openai"
+          ]
+        }
+      },
+      "required": [
+        "prompt",
+        "format"
+      ],
+      "$schema": "http://json-schema.org/draft-07/schema#"
+    },
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "topic": {
+          "type": "string"
+        },
+        "format": {
+          "type": "string",
+          "enum": [
+            "oxford",
+            "socratic",
+            "adversarial"
+          ]
+        },
+        "totalRounds": {
+          "type": "number"
+        },
+        "participants": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "provider": {
+                "type": "string"
+              },
+              "nickname": {
+                "type": "string"
+              },
+              "position": {
+                "type": "string",
+                "enum": [
+                  "pro",
+                  "con",
+                  "neutral"
+                ]
+              }
+            },
+            "required": [
+              "provider",
+              "nickname",
+              "position"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "rounds": {
+          "type": "array",
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "round": {
+                  "type": "number"
+                },
+                "provider": {
+                  "type": "string"
+                },
+                "nickname": {
+                  "type": "string"
+                },
+                "position": {
+                  "type": "string",
+                  "enum": [
+                    "pro",
+                    "con",
+                    "neutral"
+                  ]
+                },
+                "content": {
+                  "type": "string"
+                },
+                "error": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "round",
+                "provider",
+                "nickname",
+                "position",
+                "content"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "synthesis": {
+          "type": "string"
+        },
+        "synthesizer": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "topic",
+        "format",
+        "totalRounds",
+        "participants",
+        "rounds",
+        "synthesis",
+        "synthesizer"
+      ],
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "openWorldHint": true
+    },
+    "execution": {
+      "taskSupport": "optional"
+    },
+    "_meta": {
+      "ui": {
+        "resourceUri": "ui://rubber-duck/duck-debate"
+      }
+    }
+  },
+  {
+    "name": "duck_iterate",
+    "title": "Duck Iteration",
+    "description": "Iteratively refine a response between two ducks. One generates, the other critiques/improves, alternating for multiple rounds.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "prompt": {
+          "type": "string",
+          "description": "The initial prompt/task to iterate on"
+        },
+        "iterations": {
+          "default": 3,
+          "description": "Number of iteration rounds (default: 3, max: 10)",
+          "type": "number",
+          "minimum": 1,
+          "maximum": 10
+        },
+        "providers": {
+          "minItems": 2,
+          "maxItems": 2,
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "openai"
+            ]
+          },
+          "description": "Exactly 2 provider names for the ping-pong iteration"
+        },
+        "mode": {
+          "type": "string",
+          "enum": [
+            "refine",
+            "critique-improve"
+          ],
+          "description": "refine: each duck improves the previous response. critique-improve: alternates between critiquing and improving."
+        }
+      },
+      "required": [
+        "prompt",
+        "providers",
+        "mode"
+      ],
+      "$schema": "http://json-schema.org/draft-07/schema#"
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "openWorldHint": true
+    },
+    "execution": {
+      "taskSupport": "optional"
+    }
+  },
+  {
+    "name": "duck_judge",
+    "title": "Duck Judge",
+    "description": "Have one duck evaluate and rank other ducks' responses. Use after duck_council to get a comparative evaluation.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "responses": {
+          "minItems": 2,
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "provider": {
+                "type": "string"
+              },
+              "nickname": {
+                "type": "string"
+              },
+              "model": {
+                "type": "string"
+              },
+              "content": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "provider",
+              "nickname",
+              "content"
+            ]
+          },
+          "description": "Array of duck responses to evaluate (from duck_council output)"
+        },
+        "judge": {
+          "description": "Provider name of the judge duck (optional, uses first available)",
+          "type": "string",
+          "enum": [
+            "openai"
+          ]
+        },
+        "criteria": {
+          "description": "Evaluation criteria (default: [\"accuracy\", \"completeness\", \"clarity\"])",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "persona": {
+          "description": "Judge persona (e.g., \"senior engineer\", \"security expert\")",
+          "type": "string"
+        }
+      },
+      "required": [
+        "responses"
+      ],
+      "$schema": "http://json-schema.org/draft-07/schema#"
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "openWorldHint": true
+    },
+    "execution": {
+      "taskSupport": "forbidden"
+    }
+  },
+  {
+    "name": "duck_vote",
+    "title": "Duck Vote",
+    "description": "Have multiple ducks vote on options with reasoning. Returns vote tally, confidence scores, and consensus level.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "question": {
+          "type": "string",
+          "description": "The question to vote on (e.g., \"Best approach for error handling?\")"
+        },
+        "options": {
+          "minItems": 2,
+          "maxItems": 10,
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "The options to vote on (2-10 options)"
+        },
+        "voters": {
+          "description": "List of provider names to vote (optional, uses all if not specified)",
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "openai"
+            ]
+          }
+        },
+        "require_reasoning": {
+          "default": true,
+          "description": "Require ducks to explain their vote (default: true)",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "question",
+        "options"
+      ],
+      "$schema": "http://json-schema.org/draft-07/schema#"
+    },
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "question": {
+          "type": "string"
+        },
+        "options": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "winner": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "isTie": {
+          "type": "boolean"
+        },
+        "tally": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {
+            "type": "number"
+          }
+        },
+        "confidenceByOption": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {
+            "type": "number"
+          }
+        },
+        "votes": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "voter": {
+                "type": "string"
+              },
+              "nickname": {
+                "type": "string"
+              },
+              "choice": {
+                "type": "string"
+              },
+              "confidence": {
+                "type": "number"
+              },
+              "reasoning": {
+                "type": "string"
+              },
+              "error": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "voter",
+              "nickname",
+              "choice",
+              "confidence",
+              "reasoning"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "totalVoters": {
+          "type": "number"
+        },
+        "validVotes": {
+          "type": "number"
+        },
+        "consensusLevel": {
+          "type": "string",
+          "enum": [
+            "unanimous",
+            "majority",
+            "plurality",
+            "split",
+            "none"
+          ]
+        }
+      },
+      "required": [
+        "question",
+        "options",
+        "winner",
+        "isTie",
+        "tally",
+        "confidenceByOption",
+        "votes",
+        "totalVoters",
+        "validVotes",
+        "consensusLevel"
+      ],
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "openWorldHint": true
+    },
+    "execution": {
+      "taskSupport": "forbidden"
+    },
+    "_meta": {
+      "ui": {
+        "resourceUri": "ui://rubber-duck/duck-vote"
+      },
+      "ui/resourceUri": "ui://rubber-duck/duck-vote"
+    }
+  },
+  {
+    "name": "get_pending_approvals",
+    "title": "Pending Approvals",
+    "description": "Get list of pending MCP tool approvals from ducks",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "duck": {
+          "description": "Filter by duck name (optional)",
+          "type": "string",
+          "enum": [
+            "openai"
+          ]
+        }
+      },
+      "$schema": "http://json-schema.org/draft-07/schema#"
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "openWorldHint": false
+    },
+    "execution": {
+      "taskSupport": "forbidden"
+    }
+  },
+  {
+    "name": "get_usage_stats",
+    "title": "Usage Statistics",
+    "description": "Get usage statistics for a time period. Shows token counts and costs (when pricing configured).",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "period": {
+          "default": "today",
+          "description": "Time period for stats",
+          "type": "string",
+          "enum": [
+            "today",
+            "7d",
+            "30d",
+            "all"
+          ]
+        }
+      },
+      "$schema": "http://json-schema.org/draft-07/schema#"
+    },
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "period": {
+          "type": "string"
+        },
+        "startDate": {
+          "type": "string"
+        },
+        "endDate": {
+          "type": "string"
+        },
+        "totals": {
+          "type": "object",
+          "properties": {
+            "requests": {
+              "type": "number"
+            },
+            "promptTokens": {
+              "type": "number"
+            },
+            "completionTokens": {
+              "type": "number"
+            },
+            "errors": {
+              "type": "number"
+            },
+            "estimatedCostUSD": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "requests",
+            "promptTokens",
+            "completionTokens",
+            "errors"
+          ],
+          "additionalProperties": false
+        },
+        "usage": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {
+              "type": "object",
+              "properties": {
+                "requests": {
+                  "type": "number"
+                },
+                "promptTokens": {
+                  "type": "number"
+                },
+                "completionTokens": {
+                  "type": "number"
+                },
+                "errors": {
+                  "type": "number"
+                },
+                "estimatedCostUSD": {
+                  "type": "number"
+                }
+              },
+              "required": [
+                "requests",
+                "promptTokens",
+                "completionTokens",
+                "errors"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "costByProvider": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {
+            "type": "number"
+          }
+        }
+      },
+      "required": [
+        "period",
+        "startDate",
+        "endDate",
+        "totals",
+        "usage"
+      ],
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "openWorldHint": false
+    },
+    "execution": {
+      "taskSupport": "forbidden"
+    },
+    "_meta": {
+      "ui": {
+        "resourceUri": "ui://rubber-duck/usage-stats"
+      },
+      "ui/resourceUri": "ui://rubber-duck/usage-stats"
+    }
+  },
+  {
+    "name": "list_ducks",
+    "title": "List Ducks",
+    "description": "List all available LLM providers (ducks) and their status",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "check_health": {
+          "default": false,
+          "description": "Perform health check on all providers",
+          "type": "boolean"
+        }
+      },
+      "$schema": "http://json-schema.org/draft-07/schema#"
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "openWorldHint": true
+    },
+    "execution": {
+      "taskSupport": "forbidden"
+    }
+  },
+  {
+    "name": "list_models",
+    "title": "List Models",
+    "description": "List available models for LLM providers",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "provider": {
+          "description": "Provider name (optional, lists all if not specified)",
+          "type": "string",
+          "enum": [
+            "openai"
+          ]
+        },
+        "fetch_latest": {
+          "default": false,
+          "description": "Fetch latest models from API vs using cached/configured",
+          "type": "boolean"
+        }
+      },
+      "$schema": "http://json-schema.org/draft-07/schema#"
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "openWorldHint": true
+    },
+    "execution": {
+      "taskSupport": "forbidden"
+    }
+  },
+  {
+    "name": "mcp_status",
+    "title": "MCP Bridge Status",
+    "description": "Get status of MCP bridge, servers, and pending approvals",
+    "inputSchema": {
+      "type": "object",
+      "properties": {}
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "openWorldHint": true
+    },
+    "execution": {
+      "taskSupport": "forbidden"
+    }
+  }
+]

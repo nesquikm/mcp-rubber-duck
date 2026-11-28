@@ -120,7 +120,30 @@ export class ConfigManager {
     // Apply guardrails configuration from environment
     merged.guardrails = this.getGuardrailsConfig(merged.guardrails as Partial<GuardrailsConfig>);
 
+    // Apply transport configuration from environment
+    merged.transport = this.getTransportConfig(merged.transport as Record<string, unknown>);
+
     return merged;
+  }
+
+  private getTransportConfig(base?: Record<string, unknown>): Record<string, unknown> {
+    const transport: Record<string, unknown> = { ...base };
+    if (process.env.MCP_TRANSPORT) transport.mode = process.env.MCP_TRANSPORT;
+    if (process.env.MCP_HTTP_HOST) transport.host = process.env.MCP_HTTP_HOST;
+    // Number(), not parseInt: '80.5' or '8080abc' must fail validation, not truncate.
+    if (process.env.MCP_HTTP_PORT) transport.port = Number(process.env.MCP_HTTP_PORT);
+    if (process.env.MCP_HTTP_TOKEN) transport.token = process.env.MCP_HTTP_TOKEN;
+    if (process.env.MCP_HTTP_ALLOWED_ORIGINS) {
+      transport.allowed_origins = process.env.MCP_HTTP_ALLOWED_ORIGINS.split(',')
+        .map((origin) => origin.trim())
+        .filter((origin) => origin.length > 0);
+    }
+    if (process.env.MCP_HTTP_ALLOWED_HOSTS) {
+      transport.allowed_hosts = process.env.MCP_HTTP_ALLOWED_HOSTS.split(',')
+        .map((host) => host.trim())
+        .filter((host) => host.length > 0);
+    }
+    return transport;
   }
 
   private getDefaultProviders(): Record<string, ProviderConfig> {

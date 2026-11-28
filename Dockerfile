@@ -54,7 +54,16 @@ RUN chown -R nodejs:nodejs /app
 # Switch to non-root user
 USER nodejs
 
-# Expose stdio
+# In HTTP mode the container listens on all interfaces (see below)
+ENV MCP_HTTP_HOST=0.0.0.0
+
+# Default transport is stdio (no port). Opt-in HTTP mode: set MCP_TRANSPORT=http
+# to serve Streamable HTTP at /mcp on port 3000. The container binds 0.0.0.0 so
+# the published port is reachable, which makes MCP_HTTP_TOKEN required in HTTP
+# mode (the server refuses to start without it), e.g.:
+#   docker run -p 3000:3000 -e MCP_TRANSPORT=http -e MCP_HTTP_TOKEN=... <image>
+# The Host header must be localhost or a name listed in MCP_HTTP_ALLOWED_HOSTS,
+# e.g. -e MCP_HTTP_ALLOWED_HOSTS=duck.example.com
 EXPOSE 3000
 
 # Add healthcheck for monitoring

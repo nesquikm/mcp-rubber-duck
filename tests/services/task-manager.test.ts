@@ -2,7 +2,14 @@ import { describe, it, expect, jest, beforeEach, afterEach } from '@jest/globals
 
 import { TaskManager } from '../../src/services/task-manager.js';
 import { logger } from '../../src/utils/logger.js';
-import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
+
+// FR R2JF69: the task store is SDK-free; a minimal local result shape stands in
+// for the removed v1 `@modelcontextprotocol/sdk/types.js` CallToolResult.
+interface CallToolResult {
+  content: { type: 'text'; text: string }[];
+  isError?: boolean;
+  [key: string]: unknown;
+}
 
 // Under this repo's ESM Jest config (ts-jest default-esm, isolatedModules),
 // `jest.mock(path, factory)` is a no-op. Spy on the real winston singleton
@@ -40,7 +47,6 @@ describe('TaskManager', () => {
         // AC-XNJKNA.3: default TTL is now the 30-min post-terminal retention window.
         expect(tm.config.defaultTtl).toBe(1_800_000);
         expect(tm.config.pollInterval).toBe(2_000);
-        expect(tm.config.maxQueueSize).toBe(100);
         expect(tm.config.cleanupInterval).toBe(60_000);
       } finally {
         tm.shutdown();
@@ -57,9 +63,8 @@ describe('TaskManager', () => {
       }
     });
 
-    it('should provide a task store and message queue', () => {
+    it('should provide a task store', () => {
       expect(taskManager.taskStore).toBeDefined();
-      expect(taskManager.taskMessageQueue).toBeDefined();
     });
   });
 

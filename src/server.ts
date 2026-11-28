@@ -1,6 +1,11 @@
-import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
-import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
+import {
+  McpServer,
+  CLIENT_CAPABILITIES_META_KEY,
+  ProtocolError,
+  ProtocolErrorCode,
+} from '@modelcontextprotocol/server';
+import type { CallToolResult, ServerContext } from '@modelcontextprotocol/server';
+import { serveStdio, type StdioServerHandle } from '@modelcontextprotocol/server/stdio';
 import { z } from 'zod';
 import { readFileSync } from 'fs';
 import { join, dirname } from 'path';
@@ -22,6 +27,9 @@ import { PricingService } from './services/pricing.js';
 import { UsageService } from './services/usage.js';
 import { DuckResponse, ImageInput, buildContent } from './config/types.js';
 
+/** Extension id of the hand-built tasks extension (SEP-2663). */
+const TASKS_EXTENSION = 'io.modelcontextprotocol/tasks';
+
 // Shared schema for image inputs used across multiple tools
 // Accepts either base64 data+mimeType OR a url (or both)
 const ImageInputSchema = z
@@ -42,8 +50,10 @@ const ImageInputSchema = z
 import { ApprovalService } from './services/approval.js';
 import { FunctionBridge } from './services/function-bridge.js';
 import { GuardrailsService } from './guardrails/service.js';
+import { createProgressReporter, type ProgressReporter } from './services/progress.js';
 import { TaskManager } from './services/task-manager.js';
-import { createProgressReporter } from './services/progress.js';
+import { isTerminal } from './services/retention-task-store.js';
+import { serveHttp, validateHttpBind, type HttpServerHandle } from './transport/http.js';
 import { logger } from './utils/logger.js';
 import { getRandomDuckMessage, formatDuckReply, formatDuckFooter } from './utils/ascii-art.js';
 import { printWelcomeBanner } from './utils/banner.js';
@@ -74,7 +84,8 @@ import { PROMPTS } from './prompts/index.js';
 import { getPackageVersion } from './utils/version.js';
 
 export class RubberDuckServer {
-  private server: McpServer;
+  private stdioHandle?: StdioServerHandle;
+  private httpHandle?: HttpServerHandle;
   private configManager: ConfigManager;
   private pricingService: PricingService;
   private usageService: UsageService;
@@ -89,35 +100,12 @@ export class RubberDuckServer {
   private approvalService?: ApprovalService;
   private functionBridge?: FunctionBridge;
   private mcpEnabled: boolean = false;
+  // Process-scoped: tasks outlive the per-connection McpServer instances.
+  private taskManager = new TaskManager();
 
-  // Task management
-  private taskManager: TaskManager;
-
+  // Services are built once per process; buildMcpServer() is the cheap
+  // per-connection factory that only registers tools/prompts/resources.
   constructor() {
-    this.taskManager = new TaskManager();
-
-    this.server = new McpServer(
-      {
-        name: 'mcp-rubber-duck',
-        version: getPackageVersion(),
-      },
-      {
-        capabilities: {
-          tasks: {
-            list: {},
-            cancel: {},
-            requests: {
-              tools: { call: {} },
-            },
-          },
-        },
-        taskStore: this.taskManager.taskStore,
-        taskMessageQueue: this.taskManager.taskMessageQueue,
-        defaultTaskPollInterval: this.taskManager.config.pollInterval,
-        maxTaskQueueSize: this.taskManager.config.maxQueueSize,
-      }
-    );
-
     // Initialize managers
     this.configManager = new ConfigManager();
     const config = this.configManager.getConfig();
@@ -131,26 +119,47 @@ export class RubberDuckServer {
       this.guardrailsService = new GuardrailsService(config.guardrails);
     }
 
-    // Initialize provider manager with usage tracking and guardrails
-    this.providerManager = new ProviderManager(
-      this.configManager,
-      this.usageService,
-      this.guardrailsService
-    );
-    this.conversationManager = new ConversationManager();
-    this.healthMonitor = new HealthMonitor(this.providerManager);
-
     // Initialize MCP bridge if enabled
     this.initializeMCPBridge();
 
-    this.registerTools();
-    this.registerPrompts();
-    this.registerUIResources();
+    // EnhancedProviderManager extends ProviderManager, so with the bridge on it
+    // serves both roles and providers are constructed once per process.
+    this.providerManager =
+      this.enhancedProviderManager ??
+      new ProviderManager(this.configManager, this.usageService, this.guardrailsService);
+    this.conversationManager = new ConversationManager();
+    this.healthMonitor = new HealthMonitor(this.providerManager);
+  }
+
+  /**
+   * Create a fresh McpServer with every tool, prompt and UI resource registered.
+   * Cheap and side-effect free: it reuses the services built in the constructor,
+   * so serveStdio may call it more than once per connection (probe + fallback).
+   */
+  buildMcpServer(): McpServer {
+    const server = new McpServer({
+      name: 'mcp-rubber-duck',
+      version: getPackageVersion(),
+    });
+
+    // Hand-built tasks extension (SEP-2663): advertised in capabilities.extensions,
+    // which 2026-07-28 clients see on server/discover. No legacy `tasks` key.
+    server.server.registerCapabilities({
+      extensions: { [TASKS_EXTENSION]: {} },
+    });
+
+    this.registerTools(server);
+    this.skipOutputValidationForTasks(server);
+    this.registerTaskHandlers(server);
+    this.registerPrompts(server);
+    this.registerUIResources(server);
 
     // Handle errors
-    this.server.server.onerror = (error) => {
+    server.server.onerror = (error) => {
       logger.error('Server error:', error);
     };
+
+    return server;
   }
 
   private initializeMCPBridge(): void {
@@ -209,6 +218,143 @@ export class RubberDuckServer {
     return result as CallToolResult;
   }
 
+  /**
+   * McpServer validates every tools/call result against the tool's outputSchema,
+   * which a CreateTaskResult (resultType 'task') never satisfies. The SDK has no
+   * hook for this, so wrap its private validator on this instance to let task
+   * results through; the real result is validated by shape when it completes.
+   */
+  private skipOutputValidationForTasks(server: McpServer): void {
+    type Validator = (tool: unknown, result: unknown, toolName: string) => Promise<void>;
+    const target = server as unknown as { validateToolOutput: Validator };
+    if (typeof target.validateToolOutput !== 'function') {
+      throw new Error(
+        'McpServer.validateToolOutput not found: the tasks extension relies on this private ' +
+          'hook of @modelcontextprotocol/server ~2.4.x; re-check it after an SDK upgrade.'
+      );
+    }
+    const original = target.validateToolOutput.bind(server);
+    target.validateToolOutput = async (tool, result, toolName) => {
+      if ((result as { resultType?: unknown } | undefined)?.resultType === 'task') return;
+      return original(tool, result, toolName);
+    };
+  }
+
+  /** tasks/get, tasks/cancel and tasks/update; an unknown taskId is -32602 on all three. */
+  private registerTaskHandlers(server: McpServer): void {
+    const store = this.taskManager.taskStore;
+    const taskIdParams = { params: z.object({ taskId: z.string() }) };
+    const requireTask = async (taskId: string) => {
+      const task = await store.getTask(taskId);
+      if (!task) {
+        throw new ProtocolError(ProtocolErrorCode.InvalidParams, `Unknown task: ${taskId}`);
+      }
+      return task;
+    };
+    // tasks/get: the DetailedTask, with `result` once completed or `error` once failed.
+    server.server.setRequestHandler('tasks/get', taskIdParams, async ({ taskId }) => {
+      const task = await requireTask(taskId);
+      const detailed: Record<string, unknown> = {
+        taskId: task.taskId,
+        status: task.status,
+        createdAt: task.createdAt,
+        lastUpdatedAt: task.lastUpdatedAt,
+        ttlMs: task.ttl,
+        ...(task.pollInterval !== undefined && { pollIntervalMs: task.pollInterval }),
+        ...(task.statusMessage !== undefined && { statusMessage: task.statusMessage }),
+      };
+      if (task.status === 'completed') {
+        detailed.result = await store.getTaskResult(taskId);
+      } else if (task.status === 'failed') {
+        const failed = (await store.getTaskResult(taskId)) as {
+          content?: { text?: string }[];
+        };
+        detailed.error = {
+          code: ProtocolErrorCode.InternalError,
+          message: failed.content?.[0]?.text ?? 'Task failed',
+        };
+      }
+      return detailed;
+    });
+    // tasks/cancel: abort the running work, mark the task cancelled, empty ack.
+    server.server.setRequestHandler('tasks/cancel', taskIdParams, async ({ taskId }) => {
+      const task = await requireTask(taskId);
+      this.taskManager.cancel(taskId);
+      if (!isTerminal(task.status)) {
+        try {
+          await store.updateTaskStatus(taskId, 'cancelled', 'Task was cancelled');
+        } catch {
+          // The work reached a terminal state between the read and this write;
+          // cancellation of a finished task is still acknowledged.
+        }
+      }
+      return {};
+    });
+    // tasks/update: the SDK lifts inputResponses into ctx.mcpReq.inputResponses, so the
+    // params carry only taskId. No duck task asks for input, so every key is ignored.
+    server.server.setRequestHandler('tasks/update', taskIdParams, async ({ taskId }) => {
+      await requireTask(taskId);
+      return {};
+    });
+  }
+
+  /** True when this request's envelope declares the io.modelcontextprotocol/tasks extension. */
+  private tasksRequested(ctx: ServerContext): boolean {
+    const envelope = ctx.mcpReq.envelope as Record<string, unknown> | undefined;
+    const caps = envelope?.[CLIENT_CAPABILITIES_META_KEY] as
+      | { extensions?: Record<string, unknown> }
+      | undefined;
+    return caps?.extensions?.[TASKS_EXTENSION] !== undefined;
+  }
+
+  /**
+   * Create a task, start `work` in the background and return the CreateTaskResult.
+   * The work never sees the finished request's notify, only the task's own signal
+   * and a reporter that surfaces progress as the task's statusMessage and lastUpdatedAt.
+   */
+  private async startToolTask(
+    name: string,
+    args: Record<string, unknown>,
+    ctx: ServerContext,
+    work: (signal: AbortSignal, progress: ProgressReporter) => Promise<CallToolResult>
+  ): Promise<CallToolResult> {
+    const task = await this.taskManager.taskStore.createTask(
+      {
+        ttl: this.taskManager.config.defaultTtl,
+        pollInterval: this.taskManager.config.pollInterval,
+      },
+      ctx.mcpReq.id,
+      { method: 'tools/call', params: { name, arguments: args } }
+    );
+    // A throw from `work` marks the task failed; tasks/get reports it as a JSON-RPC error.
+    const store = this.taskManager.taskStore;
+    const progress: ProgressReporter = {
+      enabled: true,
+      report: async (_current, _total, message) => {
+        try {
+          await store.updateTaskStatus(task.taskId, 'working', message);
+        } catch {
+          // The task already reached a terminal state (e.g. cancelled); drop the update.
+        }
+      },
+    };
+    this.taskManager.startBackground(task.taskId, (signal) => work(signal, progress));
+    return {
+      resultType: 'task',
+      taskId: task.taskId,
+      status: task.status,
+      createdAt: task.createdAt,
+      lastUpdatedAt: task.lastUpdatedAt,
+      ttlMs: task.ttl ?? this.taskManager.config.defaultTtl,
+      pollIntervalMs: task.pollInterval ?? this.taskManager.config.pollInterval,
+    } as unknown as CallToolResult;
+  }
+
+  /** Progress reporter bound to a tool call's progress token (no-op without one). */
+  private progressFor(ctx: ServerContext): ProgressReporter {
+    return createProgressReporter(ctx.mcpReq._meta?.progressToken, ctx.mcpReq.notify);
+  }
+
   private toolErrorResult(error: unknown): CallToolResult {
     logger.error('Tool execution error:', error);
     const errorMessage = error instanceof Error ? error.message : String(error);
@@ -233,16 +379,16 @@ export class RubberDuckServer {
     return z.enum(names as [string, ...string[]]);
   }
 
-  private registerTools() {
+  private registerTools(server: McpServer) {
     // ask_duck
-    this.server.registerTool(
+    server.registerTool(
       'ask_duck',
       {
         title: 'Ask a Duck',
         description: this.mcpEnabled
           ? 'Ask a question to a specific LLM provider (duck) with MCP tool access'
           : 'Ask a question to a specific LLM provider (duck)',
-        inputSchema: {
+        inputSchema: z.object({
           prompt: z.string().describe('The question or prompt to send to the duck'),
           provider: this.providerEnum()
             .optional()
@@ -261,7 +407,7 @@ export class RubberDuckServer {
             .array(ImageInputSchema)
             .optional()
             .describe('Optional images to include with the prompt (for vision-capable models)'),
-        },
+        }),
         annotations: {
           readOnlyHint: true,
           openWorldHint: true,
@@ -280,12 +426,12 @@ export class RubberDuckServer {
     );
 
     // chat_with_duck
-    this.server.registerTool(
+    server.registerTool(
       'chat_with_duck',
       {
         title: 'Chat with a Duck',
         description: 'Have a conversation with a duck, maintaining context across messages',
-        inputSchema: {
+        inputSchema: z.object({
           conversation_id: z.string().describe('Conversation ID (creates new if not exists)'),
           message: z.string().describe('Your message to the duck'),
           provider: this.providerEnum()
@@ -296,7 +442,7 @@ export class RubberDuckServer {
             .array(ImageInputSchema)
             .optional()
             .describe('Optional images to include with the message (for vision-capable models)'),
-        },
+        }),
         annotations: {
           openWorldHint: true,
         },
@@ -313,7 +459,7 @@ export class RubberDuckServer {
     );
 
     // clear_conversations
-    this.server.registerTool(
+    server.registerTool(
       'clear_conversations',
       {
         title: 'Clear Conversations',
@@ -334,17 +480,17 @@ export class RubberDuckServer {
     );
 
     // list_ducks
-    this.server.registerTool(
+    server.registerTool(
       'list_ducks',
       {
         title: 'List Ducks',
         description: 'List all available LLM providers (ducks) and their status',
-        inputSchema: {
+        inputSchema: z.object({
           check_health: z
             .boolean()
             .default(false)
             .describe('Perform health check on all providers'),
-        },
+        }),
         annotations: {
           readOnlyHint: true,
           openWorldHint: true,
@@ -362,12 +508,12 @@ export class RubberDuckServer {
     );
 
     // list_models
-    this.server.registerTool(
+    server.registerTool(
       'list_models',
       {
         title: 'List Models',
         description: 'List available models for LLM providers',
-        inputSchema: {
+        inputSchema: z.object({
           provider: this.providerEnum()
             .optional()
             .describe('Provider name (optional, lists all if not specified)'),
@@ -375,7 +521,7 @@ export class RubberDuckServer {
             .boolean()
             .default(false)
             .describe('Fetch latest models from API vs using cached/configured'),
-        },
+        }),
         annotations: {
           readOnlyHint: true,
           openWorldHint: true,
@@ -392,12 +538,12 @@ export class RubberDuckServer {
 
     // compare_ducks
     registerAppTool(
-      this.server,
+      server,
       'compare_ducks',
       {
         title: 'Compare Ducks',
         description: 'Ask the same question to multiple ducks simultaneously',
-        inputSchema: {
+        inputSchema: z.object({
           prompt: z.string().describe('The question to ask all ducks'),
           providers: z
             .array(this.providerEnum())
@@ -411,8 +557,8 @@ export class RubberDuckServer {
             .array(ImageInputSchema)
             .optional()
             .describe('Optional images to include with the prompt (for vision-capable models)'),
-        },
-        outputSchema: {
+        }),
+        outputSchema: z.object({
           responses: z.array(
             z.object({
               provider: z.string(),
@@ -430,19 +576,16 @@ export class RubberDuckServer {
               error: z.string().optional(),
             })
           ),
-        },
+        }),
         annotations: {
           readOnlyHint: true,
           openWorldHint: true,
         },
         _meta: { ui: { resourceUri: 'ui://rubber-duck/compare-ducks' } },
       },
-      async (args, extra) => {
+      async (args, ctx) => {
         try {
-          const progress = createProgressReporter(
-            extra._meta?.progressToken,
-            extra.sendNotification
-          );
+          const progress = this.progressFor(ctx);
           if (this.mcpEnabled && this.enhancedProviderManager) {
             return this.toolResult(await this.handleCompareDucksWithMCP(args, progress));
           }
@@ -454,30 +597,27 @@ export class RubberDuckServer {
     );
 
     // duck_council
-    this.server.registerTool(
+    server.registerTool(
       'duck_council',
       {
         title: 'Duck Council',
         description: 'Get responses from all configured ducks (like a panel discussion)',
-        inputSchema: {
+        inputSchema: z.object({
           prompt: z.string().describe('The question for the duck council'),
           model: z.string().optional().describe('Specific model to use for all ducks (optional)'),
           images: z
             .array(ImageInputSchema)
             .optional()
             .describe('Optional images to include with the prompt (for vision-capable models)'),
-        },
+        }),
         annotations: {
           readOnlyHint: true,
           openWorldHint: true,
         },
       },
-      async (args, extra) => {
+      async (args, ctx) => {
         try {
-          const progress = createProgressReporter(
-            extra._meta?.progressToken,
-            extra.sendNotification
-          );
+          const progress = this.progressFor(ctx);
           if (this.mcpEnabled && this.enhancedProviderManager) {
             return this.toolResult(await this.handleDuckCouncilWithMCP(args, progress));
           }
@@ -490,13 +630,13 @@ export class RubberDuckServer {
 
     // duck_vote
     registerAppTool(
-      this.server,
+      server,
       'duck_vote',
       {
         title: 'Duck Vote',
         description:
           'Have multiple ducks vote on options with reasoning. Returns vote tally, confidence scores, and consensus level.',
-        inputSchema: {
+        inputSchema: z.object({
           question: z
             .string()
             .describe('The question to vote on (e.g., "Best approach for error handling?")'),
@@ -513,8 +653,8 @@ export class RubberDuckServer {
             .boolean()
             .default(true)
             .describe('Require ducks to explain their vote (default: true)'),
-        },
-        outputSchema: {
+        }),
+        outputSchema: z.object({
           question: z.string(),
           options: z.array(z.string()),
           winner: z.string().nullable(),
@@ -534,19 +674,16 @@ export class RubberDuckServer {
           totalVoters: z.number(),
           validVotes: z.number(),
           consensusLevel: z.enum(['unanimous', 'majority', 'plurality', 'split', 'none']),
-        },
+        }),
         annotations: {
           readOnlyHint: true,
           openWorldHint: true,
         },
         _meta: { ui: { resourceUri: 'ui://rubber-duck/duck-vote' } },
       },
-      async (args, extra) => {
+      async (args, ctx) => {
         try {
-          const progress = createProgressReporter(
-            extra._meta?.progressToken,
-            extra.sendNotification
-          );
+          const progress = this.progressFor(ctx);
           return this.toolResult(await duckVoteTool(this.providerManager, args, progress));
         } catch (error) {
           return this.toolErrorResult(error);
@@ -555,13 +692,13 @@ export class RubberDuckServer {
     );
 
     // duck_judge
-    this.server.registerTool(
+    server.registerTool(
       'duck_judge',
       {
         title: 'Duck Judge',
         description:
           "Have one duck evaluate and rank other ducks' responses. Use after duck_council to get a comparative evaluation.",
-        inputSchema: {
+        inputSchema: z.object({
           responses: z
             .array(
               z.object({
@@ -584,7 +721,7 @@ export class RubberDuckServer {
             .string()
             .optional()
             .describe('Judge persona (e.g., "senior engineer", "security expert")'),
-        },
+        }),
         annotations: {
           readOnlyHint: true,
           openWorldHint: true,
@@ -599,14 +736,14 @@ export class RubberDuckServer {
       }
     );
 
-    // duck_iterate (task-based: supports async execution for long-running iterations)
-    this.server.experimental.tasks.registerToolTask(
+    // duck_iterate
+    server.registerTool(
       'duck_iterate',
       {
         title: 'Duck Iteration',
         description:
           'Iteratively refine a response between two ducks. One generates, the other critiques/improves, alternating for multiple rounds.',
-        inputSchema: {
+        inputSchema: z.object({
           prompt: z.string().describe('The initial prompt/task to iterate on'),
           iterations: z
             .number()
@@ -624,50 +761,37 @@ export class RubberDuckServer {
             .describe(
               'refine: each duck improves the previous response. critique-improve: alternates between critiquing and improving.'
             ),
-        },
+        }),
         annotations: {
           readOnlyHint: true,
           openWorldHint: true,
         },
-        execution: {
-          taskSupport: 'optional',
-        },
       },
-      {
-        createTask: async (args, extra) => {
-          const task = await extra.taskStore.createTask({
-            ttl: this.taskManager.config.defaultTtl,
-            pollInterval: this.taskManager.config.pollInterval,
-          });
-          const progress = createProgressReporter(
-            extra._meta?.progressToken,
-            extra.sendNotification
+      async (args, ctx) => {
+        if (this.tasksRequested(ctx)) {
+          return this.startToolTask('duck_iterate', args, ctx, async (signal, progress) =>
+            this.toolResult(await duckIterateTool(this.providerManager, args, progress, signal))
           );
-          this.taskManager.startBackground(task.taskId, async (signal) => {
-            return this.toolResult(
-              await duckIterateTool(this.providerManager, args, progress, signal)
-            );
-          });
-          return { task };
-        },
-        getTask: async (_args, extra) => {
-          const task = await extra.taskStore.getTask(extra.taskId);
-          return task;
-        },
-        getTaskResult: async (_args, extra) => {
-          return (await extra.taskStore.getTaskResult(extra.taskId)) as CallToolResult;
-        },
+        }
+        try {
+          const progress = this.progressFor(ctx);
+          return this.toolResult(
+            await duckIterateTool(this.providerManager, args, progress, ctx.mcpReq.signal)
+          );
+        } catch (error) {
+          return this.toolErrorResult(error);
+        }
       }
     );
 
-    // duck_debate (task-based: supports async execution for multi-round debates)
-    this.server.experimental.tasks.registerToolTask(
+    // duck_debate
+    server.registerTool(
       'duck_debate',
       {
         title: 'Duck Debate',
         description:
           'Structured multi-round debate between ducks. Supports oxford (pro/con), socratic (questioning), and adversarial (attack/defend) formats.',
-        inputSchema: {
+        inputSchema: z.object({
           prompt: z.string().describe('The debate topic or proposition'),
           rounds: z
             .number()
@@ -688,8 +812,8 @@ export class RubberDuckServer {
           synthesizer: this.providerEnum()
             .optional()
             .describe('Provider to synthesize the debate (optional, uses first provider)'),
-        },
-        outputSchema: {
+        }),
+        outputSchema: z.object({
           topic: z.string(),
           format: z.enum(['oxford', 'socratic', 'adversarial']),
           totalRounds: z.number(),
@@ -714,58 +838,45 @@ export class RubberDuckServer {
           ),
           synthesis: z.string(),
           synthesizer: z.string(),
-        },
+        }),
         annotations: {
           readOnlyHint: true,
           openWorldHint: true,
         },
         _meta: { ui: { resourceUri: 'ui://rubber-duck/duck-debate' } },
-        execution: {
-          taskSupport: 'optional',
-        },
       },
-      {
-        createTask: async (args, extra) => {
-          const task = await extra.taskStore.createTask({
-            ttl: this.taskManager.config.defaultTtl,
-            pollInterval: this.taskManager.config.pollInterval,
-          });
-          const progress = createProgressReporter(
-            extra._meta?.progressToken,
-            extra.sendNotification
+      async (args, ctx) => {
+        if (this.tasksRequested(ctx)) {
+          return this.startToolTask('duck_debate', args, ctx, async (signal, progress) =>
+            this.toolResult(await duckDebateTool(this.providerManager, args, progress, signal))
           );
-          this.taskManager.startBackground(task.taskId, async (signal) => {
-            return this.toolResult(
-              await duckDebateTool(this.providerManager, args, progress, signal)
-            );
-          });
-          return { task };
-        },
-        getTask: async (_args, extra) => {
-          const task = await extra.taskStore.getTask(extra.taskId);
-          return task;
-        },
-        getTaskResult: async (_args, extra) => {
-          return (await extra.taskStore.getTaskResult(extra.taskId)) as CallToolResult;
-        },
+        }
+        try {
+          const progress = this.progressFor(ctx);
+          return this.toolResult(
+            await duckDebateTool(this.providerManager, args, progress, ctx.mcpReq.signal)
+          );
+        } catch (error) {
+          return this.toolErrorResult(error);
+        }
       }
     );
 
     // get_usage_stats
     registerAppTool(
-      this.server,
+      server,
       'get_usage_stats',
       {
         title: 'Usage Statistics',
         description:
           'Get usage statistics for a time period. Shows token counts and costs (when pricing configured).',
-        inputSchema: {
+        inputSchema: z.object({
           period: z
             .enum(['today', '7d', '30d', 'all'])
             .default('today')
             .describe('Time period for stats'),
-        },
-        outputSchema: {
+        }),
+        outputSchema: z.object({
           period: z.string(),
           startDate: z.string(),
           endDate: z.string(),
@@ -790,7 +901,7 @@ export class RubberDuckServer {
             )
           ),
           costByProvider: z.record(z.string(), z.number()).optional(),
-        },
+        }),
         annotations: {
           readOnlyHint: true,
           openWorldHint: false,
@@ -809,14 +920,14 @@ export class RubberDuckServer {
     // Conditionally register MCP tools
     if (this.mcpEnabled) {
       // get_pending_approvals
-      this.server.registerTool(
+      server.registerTool(
         'get_pending_approvals',
         {
           title: 'Pending Approvals',
           description: 'Get list of pending MCP tool approvals from ducks',
-          inputSchema: {
+          inputSchema: z.object({
             duck: this.providerEnum().optional().describe('Filter by duck name (optional)'),
-          },
+          }),
           annotations: {
             readOnlyHint: true,
             openWorldHint: false,
@@ -835,18 +946,18 @@ export class RubberDuckServer {
       );
 
       // approve_mcp_request
-      this.server.registerTool(
+      server.registerTool(
         'approve_mcp_request',
         {
           title: 'Approve MCP Request',
           description: "Approve or deny a duck's MCP tool request",
-          inputSchema: {
+          inputSchema: z.object({
             approval_id: z.string().describe('The approval request ID'),
             decision: z
               .enum(['approve', 'deny'])
               .describe('Whether to approve or deny the request'),
             reason: z.string().optional().describe('Reason for denial (optional)'),
-          },
+          }),
           annotations: {
             idempotentHint: true,
             openWorldHint: false,
@@ -865,7 +976,7 @@ export class RubberDuckServer {
       );
 
       // mcp_status
-      this.server.registerTool(
+      server.registerTool(
         'mcp_status',
         {
           title: 'MCP Bridge Status',
@@ -896,12 +1007,12 @@ export class RubberDuckServer {
     }
   }
 
-  private registerPrompts() {
+  private registerPrompts(server: McpServer) {
     for (const [name, prompt] of Object.entries(PROMPTS)) {
-      // Convert prompt.arguments array to Zod schema
-      const argsSchema: Record<string, z.ZodType> = {};
+      // Convert prompt.arguments array to a Zod object schema
+      const argsShape: Record<string, z.ZodType> = {};
       for (const arg of prompt.arguments || []) {
-        argsSchema[arg.name] = arg.required
+        argsShape[arg.name] = arg.required
           ? z.string().describe(arg.description || '')
           : z
               .string()
@@ -909,11 +1020,11 @@ export class RubberDuckServer {
               .describe(arg.description || '');
       }
 
-      this.server.registerPrompt(
+      server.registerPrompt(
         name,
         {
           description: prompt.description,
-          argsSchema,
+          argsSchema: z.object(argsShape),
         },
         (args) => {
           try {
@@ -929,7 +1040,7 @@ export class RubberDuckServer {
     }
   }
 
-  private registerUIResources() {
+  private registerUIResources(server: McpServer) {
     const currentDir = dirname(fileURLToPath(import.meta.url));
     const uiDir = join(currentDir, '..', 'dist', 'ui');
 
@@ -954,7 +1065,7 @@ export class RubberDuckServer {
 
     for (const app of uiApps) {
       registerAppResource(
-        this.server,
+        server,
         app.name,
         app.uri,
         { description: `Interactive UI for ${app.name}` },
@@ -1165,6 +1276,14 @@ export class RubberDuckServer {
     // safe to print in every mode — stdout stays reserved for framed JSON-RPC.
     printWelcomeBanner();
 
+    // Refuse an unsafe HTTP bind before anything else starts (guardrails, MCP
+    // Bridge connections), not just before listen (AC-R2JF6A.3).
+    const transport = this.configManager.getConfig().transport;
+    if (transport?.mode === 'http') {
+      const refusal = validateHttpBind(transport);
+      if (refusal) throw new Error(refusal);
+    }
+
     // Initialize guardrails service if configured
     if (this.guardrailsService) {
       try {
@@ -1190,9 +1309,17 @@ export class RubberDuckServer {
       }
     }
 
-    // Start the server
-    const transport = new StdioServerTransport();
-    await this.server.connect(transport);
+    // Serve: HTTP builds an McpServer per request; stdio pins one per connection
+    // (serveStdio may discard a server/discover probe and call the factory again).
+    if (transport?.mode === 'http') {
+      this.httpHandle = await serveHttp(() => this.buildMcpServer(), {
+        ...transport,
+        onerror: (error) => logger.error('HTTP transport error:', error.message),
+      });
+      logger.info(`Serving MCP over HTTP at http://${transport.host}:${transport.port}/mcp`);
+    } else {
+      this.stdioHandle = serveStdio(() => this.buildMcpServer());
+    }
 
     if (this.mcpEnabled) {
       logger.info('🦆 MCP Rubber Duck server with MCP bridge started successfully!');
@@ -1202,7 +1329,6 @@ export class RubberDuckServer {
   }
 
   async stop() {
-    // Cleanup task manager (cancel active tasks, clear timers)
     this.taskManager.shutdown();
 
     // Cleanup usage service (flush pending writes)
@@ -1223,7 +1349,10 @@ export class RubberDuckServer {
     }
 
     // Stop the server
-    await this.server.close();
+    await this.stdioHandle?.close();
+    this.stdioHandle = undefined;
+    await this.httpHandle?.close();
+    this.httpHandle = undefined;
 
     logger.info('Server stopped');
   }

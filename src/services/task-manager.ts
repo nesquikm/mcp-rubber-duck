@@ -1,15 +1,14 @@
 /**
- * Task lifecycle adapter wrapping the MCP SDK's experimental Tasks API.
+ * Task lifecycle manager for the hand-built `io.modelcontextprotocol/tasks`
+ * extension (SEP-2663): background execution, cancellation and retention.
  *
- * This module isolates all direct usage of `@modelcontextprotocol/sdk/experimental`
- * behind a single adapter class so that future breaking changes in the experimental
- * API only require updates here.
+ * SDK-free apart from the `CallToolResult` type; the task store contract is
+ * local (see `retention-task-store.ts`).
  */
 
-import { InMemoryTaskMessageQueue } from '@modelcontextprotocol/sdk/experimental';
-import type { TaskStore, TaskMessageQueue } from '@modelcontextprotocol/sdk/experimental';
-import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
+import type { CallToolResult } from '@modelcontextprotocol/server';
 import { RetentionTaskStore } from './retention-task-store.js';
+import type { TaskStore } from './retention-task-store.js';
 import { logger } from '../utils/logger.js';
 
 export interface TaskManagerConfig {
@@ -17,8 +16,6 @@ export interface TaskManagerConfig {
   defaultTtl: number;
   /** Suggested interval between client polls (milliseconds). */
   pollInterval: number;
-  /** Maximum messages per task queue (prevents unbounded growth). */
-  maxQueueSize: number;
   /** Interval for cleanup/monitoring sweep (milliseconds). */
   cleanupInterval: number;
 }
@@ -26,21 +23,19 @@ export interface TaskManagerConfig {
 const DEFAULT_CONFIG: TaskManagerConfig = {
   defaultTtl: 1_800_000, // 30 minutes
   pollInterval: 2_000, // 2 seconds
-  maxQueueSize: 100,
   cleanupInterval: 60_000, // 1 minute
 };
 
 /**
  * Manages MCP task lifecycle: creation, background execution, cancellation, and cleanup.
  *
- * - Provides `RetentionTaskStore` and `InMemoryTaskMessageQueue` instances for
- *   `McpServer`'s `ProtocolOptions`.
+ * - Owns the process-scoped `RetentionTaskStore` read by the server's
+ *   `tasks/*` handlers.
  * - Tracks active background work via `AbortController` per task for cancellation.
  * - Handles graceful shutdown (cancels active tasks, clears timers).
  */
 export class TaskManager {
   readonly taskStore: TaskStore;
-  readonly taskMessageQueue: TaskMessageQueue;
   readonly config: TaskManagerConfig;
 
   /**
@@ -61,7 +56,6 @@ export class TaskManager {
     // than becoming an immortal terminal entry.
     this.retentionStore = new RetentionTaskStore(this.config.defaultTtl);
     this.taskStore = this.retentionStore;
-    this.taskMessageQueue = new InMemoryTaskMessageQueue();
     this.startCleanup();
   }
 

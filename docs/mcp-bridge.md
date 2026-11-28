@@ -87,7 +87,7 @@ The bridge works by attaching the connected servers' tools to each duck's reques
 
 ## MCP Server Configuration
 
-Configure MCP servers using environment variables:
+The bridge connects with the `@modelcontextprotocol/client` v2 SDK using its default legacy (2025-11-25 `initialize`) negotiation, the safest choice for arbitrary external servers; HTTP servers are reached over Streamable HTTP. Configure MCP servers using environment variables:
 
 ### HTTP Servers
 ```bash

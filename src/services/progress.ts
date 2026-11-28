@@ -3,7 +3,7 @@
  *
  * Provides a lightweight abstraction over MCP's stable `notifications/progress`
  * mechanism. Tool functions accept an optional `ProgressReporter` to emit
- * per-step progress without depending on the full `RequestHandlerExtra` type.
+ * per-step progress without depending on the full SDK `ServerContext` type.
  */
 
 export interface ProgressReporter {
@@ -14,14 +14,14 @@ export interface ProgressReporter {
 }
 
 /**
- * Creates a `ProgressReporter` from an MCP tool handler's `extra` parameter.
+ * Creates a `ProgressReporter` from an MCP tool handler's `ctx` parameter.
  *
  * If the client did not include a `progressToken` in `_meta`, the returned
  * reporter is a no-op (`.enabled === false`), so callers can always call
  * `progress.report()` unconditionally.
  *
- * @param progressToken   Value of `extra._meta?.progressToken`
- * @param sendNotification  Value of `extra.sendNotification` — typed loosely to
+ * @param progressToken   Value of `ctx.mcpReq._meta?.progressToken`
+ * @param sendNotification  Value of `ctx.mcpReq.notify` — typed loosely to
  *   avoid coupling to SDK's strict discriminated union. At runtime the SDK
  *   accepts any valid JSON-RPC notification including `notifications/progress`.
  */

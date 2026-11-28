@@ -1,7 +1,6 @@
 import { describe, it, expect, jest, beforeEach, afterEach } from '@jest/globals';
-import { Tool } from '@modelcontextprotocol/sdk/types.js';
-import { Client } from '@modelcontextprotocol/sdk/client/index.js';
-import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
+import { Client, InMemoryTransport } from '@modelcontextprotocol/client';
+import type { Tool } from '@modelcontextprotocol/client';
 
 // We need to test the tool annotations from RubberDuckServer
 // Using the proper MCP protocol to list tools via Client + InMemoryTransport
@@ -43,9 +42,9 @@ describe('Tool Annotations', () => {
     // Create in-memory client-server pair
     const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
 
-    // Connect server (access underlying McpServer)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await (server as any).server.connect(serverTransport);
+    // Connect a fresh, fully registered McpServer built by the factory
+    const mcp = server.buildMcpServer();
+    await mcp.connect(serverTransport);
 
     client = new Client({ name: 'test-client', version: '1.0.0' });
     await client.connect(clientTransport);
@@ -728,9 +727,9 @@ describe('MCP-specific Tool Annotations', () => {
     // Create in-memory client-server pair
     const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
 
-    // Connect server (access underlying McpServer)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await (server as any).server.connect(serverTransport);
+    // Connect a fresh, fully registered McpServer built by the factory
+    const mcp = server.buildMcpServer();
+    await mcp.connect(serverTransport);
 
     client = new Client({ name: 'test-client', version: '1.0.0' });
     await client.connect(clientTransport);

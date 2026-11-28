@@ -142,6 +142,15 @@ export const GuardrailsConfigSchema = z.object({
   plugins: GuardrailsPluginsConfigSchema.optional(),
 });
 
+export const TransportConfigSchema = z.object({
+  mode: z.enum(['stdio', 'http']).default('stdio'),
+  host: z.string().min(1).default('127.0.0.1'),
+  port: z.number().int().min(1).max(65535).default(3000),
+  token: z.string().min(1).optional(),
+  allowed_origins: z.array(z.string()).default([]),
+  allowed_hosts: z.array(z.string()).default([]),
+});
+
 export const ConfigSchema = z.object({
   providers: z.record(z.string(), ProviderConfigSchema),
   default_provider: z.string().optional(),
@@ -151,6 +160,7 @@ export const ConfigSchema = z.object({
   mcp_bridge: MCPBridgeConfigSchema.optional(),
   pricing: PricingConfigSchema.optional(),
   guardrails: GuardrailsConfigSchema.optional(),
+  transport: TransportConfigSchema.optional(),
 });
 
 export type HttpProviderConfig = z.infer<typeof HttpProviderConfigSchema>;
@@ -166,6 +176,7 @@ export type PatternBlockerConfig = z.infer<typeof PatternBlockerConfigSchema>;
 export type PIIRedactorConfig = z.infer<typeof PIIRedactorConfigSchema>;
 export type GuardrailsPluginsConfig = z.infer<typeof GuardrailsPluginsConfigSchema>;
 export type GuardrailsConfig = z.infer<typeof GuardrailsConfigSchema>;
+export type TransportConfig = z.infer<typeof TransportConfigSchema>;
 export type Config = z.infer<typeof ConfigSchema>;
 
 // Multimodal content types

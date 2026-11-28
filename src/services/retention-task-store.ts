@@ -6,7 +6,7 @@
  * treats `ttl` as a *retention window that starts when the task reaches a
  * terminal state*. Consequences:
  *
- * - A non-terminal task (`submitted`/`working`) is immortal: it has no
+ * - A non-terminal task (`working`/`input_required`) is immortal: it has no
  *   `expiresAt` and is never evicted, no matter how much time elapses.
  * - Once a task reaches a terminal state (`completed`/`failed`/`cancelled`),
  *   its retention window opens (`expiresAt = now + ttl`). It stays retrievable
@@ -16,8 +16,9 @@
  * Method contracts and error-message strings mirror `InMemoryTaskStore` so the
  * only behavioral difference is timer semantics.
  *
- * WARNING: builds on the experimental `@modelcontextprotocol/sdk/experimental`
- * Tasks API, which may change without notice.
+ * The store is SDK-free and process-scoped: tasks are keyed by `taskId` alone,
+ * and the task types (`TaskStatus`, `Task`, ...) are defined here rather than
+ * imported from any `@modelcontextprotocol/*` package.
  */
 
 /* eslint-disable @typescript-eslint/require-await --
@@ -27,11 +28,72 @@
  * (rather than returning `Promise.resolve`) ensures a guard-clause `throw`
  * surfaces as a rejected promise instead of a synchronous throw. */
 
-import { isTerminal } from '@modelcontextprotocol/sdk/experimental';
-import type { TaskStore, CreateTaskOptions } from '@modelcontextprotocol/sdk/experimental';
-import type { Task, RequestId, Request, Result } from '@modelcontextprotocol/sdk/types.js';
 import { randomBytes } from 'node:crypto';
 import { logger } from '../utils/logger.js';
+
+/** The five SEP-2663 task statuses. */
+export type TaskStatus = 'working' | 'input_required' | 'completed' | 'failed' | 'cancelled';
+
+/** A task record as exposed to callers. */
+export interface Task {
+  taskId: string;
+  status: TaskStatus;
+  /** Post-terminal retention window (ms); `null` means unlimited. */
+  ttl: number | null;
+  createdAt: string;
+  lastUpdatedAt: string;
+  pollInterval?: number;
+  statusMessage?: string;
+}
+
+/** JSON-RPC request id of the request that created a task. */
+export type RequestId = string | number;
+
+/** The originating request a task was created for. */
+export interface Request {
+  method: string;
+  params?: Record<string, unknown>;
+}
+
+/** A task's stored result payload (e.g. a `CallToolResult`). */
+export type Result = { [key: string]: unknown };
+
+/** Options accepted by `TaskStore.createTask` (local copy of the removed v1 SDK type). */
+export interface CreateTaskOptions {
+  ttl?: number | null;
+  pollInterval?: number;
+  context?: Record<string, unknown>;
+}
+
+/** Task storage contract (local copy of the removed v1 SDK `TaskStore` interface). */
+export interface TaskStore {
+  createTask(
+    taskParams: CreateTaskOptions,
+    requestId: RequestId,
+    request: Request,
+    sessionId?: string
+  ): Promise<Task>;
+  getTask(taskId: string, sessionId?: string): Promise<Task | null>;
+  storeTaskResult(
+    taskId: string,
+    status: 'completed' | 'failed',
+    result: Result,
+    sessionId?: string
+  ): Promise<void>;
+  getTaskResult(taskId: string, sessionId?: string): Promise<Result>;
+  updateTaskStatus(
+    taskId: string,
+    status: TaskStatus,
+    statusMessage?: string,
+    sessionId?: string
+  ): Promise<void>;
+  listTasks(cursor?: string, sessionId?: string): Promise<{ tasks: Task[]; nextCursor?: string }>;
+}
+
+/** True when a task status is terminal (`completed`, `failed` or `cancelled`). */
+export function isTerminal(status: TaskStatus): boolean {
+  return status === 'completed' || status === 'failed' || status === 'cancelled';
+}
 
 /** Internal record wrapping a task with its request context and retention window. */
 interface StoredTask {
@@ -162,7 +224,7 @@ export class RetentionTaskStore implements TaskStore {
 
   async updateTaskStatus(
     taskId: string,
-    status: Task['status'],
+    status: TaskStatus,
     statusMessage?: string,
     _sessionId?: string
   ): Promise<void> {
@@ -213,9 +275,7 @@ export class RetentionTaskStore implements TaskStore {
     const pageTaskIds = allTaskIds.slice(startIndex, startIndex + PAGE_SIZE);
     const tasks = pageTaskIds.map((taskId) => ({ ...this.tasks.get(taskId)!.task }));
     const nextCursor =
-      startIndex + PAGE_SIZE < allTaskIds.length
-        ? pageTaskIds[pageTaskIds.length - 1]
-        : undefined;
+      startIndex + PAGE_SIZE < allTaskIds.length ? pageTaskIds[pageTaskIds.length - 1] : undefined;
     return { tasks, nextCursor };
   }
 

@@ -37,7 +37,7 @@ const periodLabels: Record<string, string> = {
 
 const app = new App({ name: 'UsageStats', version: '1.0.0' }, {});
 
-app.ontoolresult = (params) => {
+app.addEventListener('toolresult', (params) => {
   const container = document.getElementById('app')!;
   if (params.isError) {
     container.innerHTML = `<div class="error-banner">Tool execution failed</div>`;
@@ -56,7 +56,7 @@ app.ontoolresult = (params) => {
   } catch {
     container.innerHTML = `<div class="error-banner">Failed to parse usage data</div>`;
   }
-};
+});
 
 function render(data: UsageData) {
   const container = document.getElementById('app')!;

@@ -44,6 +44,8 @@ export interface ChatOptions {
   systemPrompt?: string;
   tools?: FunctionDefinition[];
   toolChoice?: 'auto' | 'none' | { type: 'function'; function: { name: string } };
+  /** Aborts the in-flight provider request (e.g. on task cancellation). */
+  signal?: AbortSignal;
 }
 
 export interface ChatResponse {

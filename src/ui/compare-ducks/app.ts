@@ -13,7 +13,7 @@ interface CompareResponse {
 
 const app = new App({ name: 'CompareDucks', version: '1.0.0' }, {});
 
-app.ontoolresult = (params) => {
+app.addEventListener('toolresult', (params) => {
   const container = document.getElementById('app')!;
   if (params.isError) {
     container.innerHTML = `<div class="error-banner">Tool execution failed</div>`;
@@ -33,7 +33,7 @@ app.ontoolresult = (params) => {
   } catch {
     container.innerHTML = `<div class="error-banner">Failed to parse response data</div>`;
   }
-};
+});
 
 function render(responses: CompareResponse[]) {
   const container = document.getElementById('app')!;
