@@ -1,3 +1,34 @@
+# [2.0.0](https://github.com/nesquikm/mcp-rubber-duck/compare/v1.20.15...v2.0.0) (2026-11-28)
+
+
+### Bug Fixes
+
+* **mcp:** tidy review findings on the 2.0 transport and tasks ([d546cef](https://github.com/nesquikm/mcp-rubber-duck/commit/d546cefaedbfa6bc8a05acded0f1f9a176c20f1a))
+
+
+### chore
+
+* **release:** v2.0.0 ([8861e2c](https://github.com/nesquikm/mcp-rubber-duck/commit/8861e2ca2f3195b8aae193316c1dc5fb6095d265))
+
+
+### Features
+
+* **http:** let operators name extra allowed Host headers ([407f3bd](https://github.com/nesquikm/mcp-rubber-duck/commit/407f3bd995df9bddd1cc0ae9b85183afb770d8aa))
+* **http:** opt-in Streamable HTTP transport behind a bearer token ([7a76fa5](https://github.com/nesquikm/mcp-rubber-duck/commit/7a76fa55ec323f2e6d7bdc27892b36c1457aab9f))
+* **mcp:** move server and bridge to MCP SDK v2, serve both eras ([56cca72](https://github.com/nesquikm/mcp-rubber-duck/commit/56cca7215890f58219427437ec68323f8df35fc1))
+* **tasks:** hand-built tasks extension with a cancel that bites ([b6ffc5b](https://github.com/nesquikm/mcp-rubber-duck/commit/b6ffc5bb462679b2e5d0e3e9b362f491d32ef159))
+
+
+### BREAKING CHANGES
+
+* **release:** the server is built on @modelcontextprotocol/server
+and /client 2.4 (final 2026-07-28 spec) and needs Node.js 20+.
+duck_iterate and duck_debate return a background task only to
+2026-07-28 clients that declare the io.modelcontextprotocol/tasks
+extension; 2025-11-25 clients get the synchronous result. Calling an
+unknown tool returns JSON-RPC error -32602 instead of an isError
+result, and the MCP logging capability is no longer advertised.
+
 ## [1.20.15](https://github.com/nesquikm/mcp-rubber-duck/compare/v1.20.14...v1.20.15) (2026-11-23)
 
 
