@@ -134,7 +134,7 @@ MCP_TRANSPORT=http MCP_HTTP_TOKEN=$(openssl rand -hex 32) npx mcp-rubber-duck
 ```
 
 - **Token.** When `MCP_HTTP_TOKEN` is set, every request needs `Authorization: Bearer <token>`; anything else gets `401`. Binding to anything other than loopback (`127.x`, `localhost`, `::1`) **without** a token refuses to start.
-- **Host and Origin.** Requests whose `Host` is not localhost, the configured host or listed in `MCP_HTTP_ALLOWED_HOSTS`, or whose `Origin` is not localhost or listed in `MCP_HTTP_ALLOWED_ORIGINS` (comma-separated hostnames), get `403`. Requests with no `Origin` (non-browser clients) are served. The allowed `Host` set is localhost, `MCP_HTTP_HOST` itself, and any hostnames listed in `MCP_HTTP_ALLOWED_HOSTS` (comma-separated). When binding `0.0.0.0` (as in Docker), add the hostname clients use to reach the server to `MCP_HTTP_ALLOWED_HOSTS`; otherwise only clients that reach it as `localhost` pass.
+- **Host and Origin.** A request whose `Host` is not localhost, `MCP_HTTP_HOST` itself, or a hostname listed in `MCP_HTTP_ALLOWED_HOSTS` gets `403`, and so does one whose `Origin` is not localhost or listed in `MCP_HTTP_ALLOWED_ORIGINS`; both lists are comma-separated hostnames. Requests with no `Origin` (non-browser clients) are served. When binding `0.0.0.0` (as in Docker), add the hostname clients use to `MCP_HTTP_ALLOWED_HOSTS`; otherwise only clients that reach the server as `localhost` pass.
 - **Progress** streams as `notifications/progress` on the response SSE stream.
 
 ### Breaking changes in 2.0
